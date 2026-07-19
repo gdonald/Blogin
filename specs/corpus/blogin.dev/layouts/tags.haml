@@ -1,0 +1,6 @@
+%section
+  %h1.mb-4= heading
+  %p.text-body-secondary.mb-4 Browse pages by topic.
+  .d-flex.flex-wrap.gap-2
+    - for posts -> $tag
+      %a.badge.text-bg-secondary.text-decoration-none.fs-6.py-2.px-3{href: "#{$tag<url>}"}= $tag<title>

@@ -1,0 +1,157 @@
+%nav.doc-nav{'aria-label' => 'ORM-Factory documentation'}
+  %h4.doc-nav-group Introduction
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-Factory/overview'
+        %a.current{href: '/docs/ORM-Factory/overview'} Overview
+      - else
+        %a{href: '/docs/ORM-Factory/overview'} Overview
+    %li
+      - if url() eq '/docs/ORM-Factory/getting-started'
+        %a.current{href: '/docs/ORM-Factory/getting-started'} Getting started
+      - else
+        %a{href: '/docs/ORM-Factory/getting-started'} Getting started
+  %h4.doc-nav-group Defining factories
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-Factory/dsl-design'
+        %a.current{href: '/docs/ORM-Factory/dsl-design'} DSL design
+      - else
+        %a{href: '/docs/ORM-Factory/dsl-design'} DSL design
+    %li
+      - if url() eq '/docs/ORM-Factory/bare-name-dsl'
+        %a.current{href: '/docs/ORM-Factory/bare-name-dsl'} Bare-name DSL
+      - else
+        %a{href: '/docs/ORM-Factory/bare-name-dsl'} Bare-name DSL
+    %li
+      - if url() eq '/docs/ORM-Factory/methods-syntax'
+        %a.current{href: '/docs/ORM-Factory/methods-syntax'} Methods syntax
+      - else
+        %a{href: '/docs/ORM-Factory/methods-syntax'} Methods syntax
+    %li
+      - if url() eq '/docs/ORM-Factory/aliases'
+        %a.current{href: '/docs/ORM-Factory/aliases'} Aliases
+      - else
+        %a{href: '/docs/ORM-Factory/aliases'} Aliases
+    %li
+      - if url() eq '/docs/ORM-Factory/class-resolution'
+        %a.current{href: '/docs/ORM-Factory/class-resolution'} Class resolution
+      - else
+        %a{href: '/docs/ORM-Factory/class-resolution'} Class resolution
+  %h4.doc-nav-group Attributes
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-Factory/overrides'
+        %a.current{href: '/docs/ORM-Factory/overrides'} Overrides
+      - else
+        %a{href: '/docs/ORM-Factory/overrides'} Overrides
+    %li
+      - if url() eq '/docs/ORM-Factory/dependent-attrs'
+        %a.current{href: '/docs/ORM-Factory/dependent-attrs'} Dependent attributes
+      - else
+        %a{href: '/docs/ORM-Factory/dependent-attrs'} Dependent attributes
+    %li
+      - if url() eq '/docs/ORM-Factory/transient'
+        %a.current{href: '/docs/ORM-Factory/transient'} Transient attributes
+      - else
+        %a{href: '/docs/ORM-Factory/transient'} Transient attributes
+    %li
+      - if url() eq '/docs/ORM-Factory/sequences'
+        %a.current{href: '/docs/ORM-Factory/sequences'} Sequences
+      - else
+        %a{href: '/docs/ORM-Factory/sequences'} Sequences
+    %li
+      - if url() eq '/docs/ORM-Factory/associations'
+        %a.current{href: '/docs/ORM-Factory/associations'} Associations
+      - else
+        %a{href: '/docs/ORM-Factory/associations'} Associations
+  %h4.doc-nav-group Reuse
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-Factory/inheritance'
+        %a.current{href: '/docs/ORM-Factory/inheritance'} Inheritance
+      - else
+        %a{href: '/docs/ORM-Factory/inheritance'} Inheritance
+    %li
+      - if url() eq '/docs/ORM-Factory/variants'
+        %a.current{href: '/docs/ORM-Factory/variants'} Variants
+      - else
+        %a{href: '/docs/ORM-Factory/variants'} Variants
+  %h4.doc-nav-group Building objects
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-Factory/build-strategies'
+        %a.current{href: '/docs/ORM-Factory/build-strategies'} Build strategies
+      - else
+        %a{href: '/docs/ORM-Factory/build-strategies'} Build strategies
+    %li
+      - if url() eq '/docs/ORM-Factory/strategy'
+        %a.current{href: '/docs/ORM-Factory/strategy'} Strategies
+      - else
+        %a{href: '/docs/ORM-Factory/strategy'} Strategies
+    %li
+      - if url() eq '/docs/ORM-Factory/collections'
+        %a.current{href: '/docs/ORM-Factory/collections'} Collections
+      - else
+        %a{href: '/docs/ORM-Factory/collections'} Collections
+    %li
+      - if url() eq '/docs/ORM-Factory/construction'
+        %a.current{href: '/docs/ORM-Factory/construction'} Construction
+      - else
+        %a{href: '/docs/ORM-Factory/construction'} Construction
+    %li
+      - if url() eq '/docs/ORM-Factory/custom-strategies'
+        %a.current{href: '/docs/ORM-Factory/custom-strategies'} Custom strategies
+      - else
+        %a{href: '/docs/ORM-Factory/custom-strategies'} Custom strategies
+    %li
+      - if url() eq '/docs/ORM-Factory/callbacks'
+        %a.current{href: '/docs/ORM-Factory/callbacks'} Callbacks
+      - else
+        %a{href: '/docs/ORM-Factory/callbacks'} Callbacks
+  %h4.doc-nav-group Persistence
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-Factory/persistence'
+        %a.current{href: '/docs/ORM-Factory/persistence'} Persistence
+      - else
+        %a{href: '/docs/ORM-Factory/persistence'} Persistence
+    %li
+      - if url() eq '/docs/ORM-Factory/active-record'
+        %a.current{href: '/docs/ORM-Factory/active-record'} ORM::ActiveRecord adapter
+      - else
+        %a{href: '/docs/ORM-Factory/active-record'} ORM::ActiveRecord adapter
+  %h4.doc-nav-group Operations
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-Factory/configuration'
+        %a.current{href: '/docs/ORM-Factory/configuration'} Configuration
+      - else
+        %a{href: '/docs/ORM-Factory/configuration'} Configuration
+    %li
+      - if url() eq '/docs/ORM-Factory/lint'
+        %a.current{href: '/docs/ORM-Factory/lint'} Linting &amp; diagnostics
+      - else
+        %a{href: '/docs/ORM-Factory/lint'} Linting &amp; diagnostics
+    %li
+      - if url() eq '/docs/ORM-Factory/concurrency'
+        %a.current{href: '/docs/ORM-Factory/concurrency'} Concurrency
+      - else
+        %a{href: '/docs/ORM-Factory/concurrency'} Concurrency
+    %li
+      - if url() eq '/docs/ORM-Factory/performance'
+        %a.current{href: '/docs/ORM-Factory/performance'} Performance
+      - else
+        %a{href: '/docs/ORM-Factory/performance'} Performance
+  %h4.doc-nav-group Guides
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-Factory/cookbook'
+        %a.current{href: '/docs/ORM-Factory/cookbook'} Cookbook
+      - else
+        %a{href: '/docs/ORM-Factory/cookbook'} Cookbook
+    %li
+      - if url() eq '/docs/ORM-Factory/tests'
+        %a.current{href: '/docs/ORM-Factory/tests'} Tests
+      - else
+        %a{href: '/docs/ORM-Factory/tests'} Tests

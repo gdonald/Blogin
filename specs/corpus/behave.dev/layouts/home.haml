@@ -1,0 +1,254 @@
+:plain
+  
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <h1><span class="accent">Behavior-driven</span><br>development for <span class="accent-2">Raku</span>.</h1>
+          <p class="hero-lede">
+            A complete behavior-driven testing framework for Raku, with expressive spec syntax,
+            rich matchers, first-class mocks, built-in coverage, and pluggable output formatters.
+            Specs that read like prose and run like tests.
+          </p>
+          <p class="hero-lede">
+            Run your suite with the included <code>behave</code> CLI, focus on a single example with tags,
+            bisect flaky specs down to the offending interaction, and benchmark hot paths without leaving the framework.
+            Tight feedback loops, readable failure output, and tests that double as living documentation for the rest of your team.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="/install">
+              Get started
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="/behavior">Tour the syntax</a>
+          </div>
+        </div>
+  
+        <div class="terminal" data-hero-terminal>
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title">specs/account-spec.<span class="accent">raku</span></span>
+          </div>
+          <div class="terminal-body"><code class="raku" data-hero-code></code></div>
+          <div class="terminal-bar" style="border-top: 1px solid var(--border); border-bottom: 0;">
+            <span class="terminal-title prompt"><span data-hero-cmd></span></span>
+          </div>
+          <div class="terminal-body" style="padding-top: .8rem;"><code class="behave-out" data-hero-out></code></div>
+        </div>
+      </div>
+    </section>
+  
+    <section>
+      <div class="container">
+        <div class="section-head reveal">
+          <div class="eyebrow">// concepts</div>
+          <h2>Every piece you need, in one library.</h2>
+          <p>From the spec syntax to the runner, from mocks to coverage, Behave ships the whole stack so you can skip the meta-work and write specs.</p>
+        </div>
+  
+        <div class="card-grid">
+          <a class="card reveal" href="/behavior">
+            <div class="card-icon">{ }</div>
+            <h3>Expressive syntax</h3>
+            <p><code>describe</code>, <code>context</code>, <code>it</code>, <code>let</code>, <code>before-each</code>. The vocabulary you already know, ported to Raku idioms.</p>
+            <span class="card-link">Tour the syntax →</span>
+          </a>
+  
+          <a class="card reveal" href="/matchers">
+            <div class="card-icon">~~</div>
+            <h3>Rich matchers</h3>
+            <p>Smart-match, <code>eq</code>, <code>include</code>, <code>match</code>, <code>raise-error</code>, <code>change.by</code>, <code>be-within</code>, async. All composable with <code>.and</code> / <code>.or</code>.</p>
+            <span class="card-link">See every matcher →</span>
+          </a>
+  
+          <a class="card reveal" href="/mocks">
+            <div class="card-icon">2X</div>
+            <h3>Mocks, stubs &amp; spies</h3>
+            <p><code>double()</code> for ad-hoc test doubles, <code>allow()</code> for partial stubs, <code>spy()</code> to record calls. All auto-cleaned between examples.</p>
+            <span class="card-link">Stub anything →</span>
+          </a>
+  
+          <a class="card reveal" href="/formatters">
+            <div class="card-icon">&lt;/&gt;</div>
+            <h3>Output formatters</h3>
+            <p>Tree, Progress, Documentation, HTML, JSON, JUnit XML, TAP. Same run, every output your tooling speaks.</p>
+            <span class="card-link">Compare formatters →</span>
+          </a>
+  
+          <a class="card reveal" href="/coverage#coverage">
+            <div class="card-icon">%</div>
+            <h3>Built-in coverage</h3>
+            <p>Line coverage out of the box. No extra modules, no plugins, no ceremony. Just <code>--coverage</code>.</p>
+            <span class="card-link">Coverage reports →</span>
+          </a>
+  
+          <a class="card reveal" href="/coverage#docs">
+            <div class="card-icon">¶</div>
+            <h3>Doc extraction</h3>
+            <p>Generate human-readable documentation directly from your spec tree. Descriptions become headings, examples become prose.</p>
+            <span class="card-link">Docs from specs →</span>
+          </a>
+  
+          <a class="card reveal" href="/behavior#shared">
+            <div class="card-icon">⇄</div>
+            <h3>Shared contexts &amp; examples</h3>
+            <p>Factor common setup into <code>shared-context</code>. Share example suites across implementations with <code>shared-examples</code>.</p>
+            <span class="card-link">DRY your specs →</span>
+          </a>
+  
+          <a class="card reveal" href="/coverage#timing">
+            <div class="card-icon">⏱</div>
+            <h3>Timing &amp; benchmarks</h3>
+            <p>Per-example timing, slow-test warnings, memory profiling, and statistical benchmarks with regression detection, all first-class.</p>
+            <span class="card-link">Profile &amp; bench →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  
+    <section>
+      <div class="container">
+        <div class="feature reverse">
+          <div class="feature-copy reveal">
+            <div class="eyebrow">// why behave</div>
+            <h2>Specs that read like the conversation you had about the bug.</h2>
+            <p>
+              Group related expectations with <code>describe</code> and <code>context</code>.
+              Lazy-evaluate fixtures with <code>let</code>. Bind the subject under test with <code>subject</code>.
+              Behave's spec syntax maps the way you actually think about behavior to Raku without losing
+              the language's syntactic personality.
+            </p>
+            <ul>
+              <li><strong>Lazy &amp; memoized lets.</strong> Values are computed once per example, reset between examples.</li>
+              <li><strong>Composable matchers.</strong> Chain <code>.and</code>, <code>.or</code>, <code>.not</code>, with short-circuit semantics built in.</li>
+              <li><strong>Auto-cleaned mocks.</strong> Every stub installed in an example is uninstalled when the example ends.</li>
+              <li><strong>Junctions, ranges, regex.</strong> All the smart-match power Raku already gives you.</li>
+            </ul>
+          </div>
+          <div class="feature-code reveal">
+            <div class="code">
+              <pre><code class="raku">use BDD::Behave;
+  
+  describe 'String#flip', {
+    let(:word, { 'hello world' });
+  
+    it 'reverses the characters', {
+      expect(word.flip).to.be('dlrow olleh');
+    }
+
+    it 'is its own inverse', {
+      expect(word.flip.flip).to.be(word);
+    }
+
+    context 'on the empty string', {
+      let(:word, { '' });
+
+      it 'returns the empty string', {
+        expect(word.flip).to.be('');
+      }
+    }
+  }</code></pre>
+            </div>
+          </div>
+        </div>
+  
+        <div class="feature">
+          <div class="feature-copy reveal">
+            <div class="eyebrow">// matchers</div>
+            <h2>Rich matchers, one consistent grammar.</h2>
+            <p>
+              Behave's matcher role is small and the built-ins are deep. Numeric tolerance,
+              collection membership, attribute checks, regex, async streams, promises,
+              exceptions, all expressed through the same <code>expect(...).to.<i>matcher</i>(...)</code>
+              chain, with first-class <code>.not</code> and structural failure metadata.
+            </p>
+            <ul>
+              <li><strong>Numeric.</strong> <code>be-greater-than</code>, <code>be-between(1, 10).exclusive</code>, <code>be-within(0.1).of(5.0)</code></li>
+              <li><strong>Collections.</strong> <code>include</code>, <code>contain-exactly</code>, <code>start-with</code>, <code>all(Int)</code></li>
+              <li><strong>Async.</strong> <code>be-kept</code>, <code>complete-within(2)</code>, <code>emit(1, 2, 3)</code>, <code>eventually</code></li>
+              <li><strong>Custom.</strong> Define matchers with <code>define-matcher</code> or compose existing ones.</li>
+            </ul>
+          </div>
+          <div class="feature-code reveal">
+            <div class="code">
+              <pre><code class="raku">expect(5.05).to.be-within(0.1).of(5.0);
+  
+  expect([1, 2, 3]).to.contain-exactly(3, 1, 2);
+  expect([1, 2, 3]).to.all(Int);
+  expect('hello world').to.match(/world/);
+  
+  expect({ die "boom" }).to.raise-error(X::AdHoc, /boom/);
+  
+  my $counter = 0;
+  expect({ $counter += 5 }).to.change({ $counter })
+    .from(0).to(5).by(5);
+  
+  expect(start { compute() }).to.complete-within(1);
+  
+  expect(user.age).to.be-greater-than(17)
+    .and.be-less-than(65);</code></pre>
+            </div>
+          </div>
+        </div>
+  
+        <div class="feature reverse">
+          <div class="feature-copy reveal">
+            <div class="eyebrow">// mocks &amp; spies</div>
+            <h2>Stand-ins that don't leak between examples.</h2>
+            <p>
+              <code>double(SomeClass)</code> produces a verifying double that rejects stubs for
+              methods the class doesn't have. <code>allow($obj).to.receive('m')</code> stubs a single
+              method on a real instance. Every other method keeps its real behavior, perfect
+              for partial mocks. <code>spy($real)</code> records every call without changing what
+              the object does. Behave uninstalls everything at end-of-example, so the next
+              example sees the world as it was.
+            </p>
+          </div>
+          <div class="feature-code reveal">
+            <div class="code">
+              <pre><code class="raku">describe 'partial mock', {
+    it 'stubs label but lets deposit run for real', {
+      my $a = Account.new(balance => 100);
+  
+      allow($a).to.receive('label').and-return('STUB');
+  
+      expect($a.label).to.be('STUB');           # stubbed
+      expect($a.deposit(50)).to.be(150);        # real method
+      expect($a.balance).to.be(150);            # real state
+    }
+  
+    it 'records calls on a spy', {
+      my $log = double('Logger');
+      $log.info('starting');
+      $log.warn('careful', :reason<low-disk>);
+  
+      expect($log).to.have-received('info').once;
+      expect($log).to.have-received('warn')
+        .with(anything, :reason<low-disk>);
+    }
+  }</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  
+    <section>
+      <div class="container">
+        <div class="section-head reveal" style="margin-bottom: 1.5rem;">
+          <div class="eyebrow">// install</div>
+          <h2>Thirty seconds to first green.</h2>
+          <p>One command to install. One <code>specs/</code> directory to create. <code>behave</code> finds and runs every <code>*spec.raku</code> it sees.</p>
+        </div>
+  
+        <div class="install-block reveal">
+          <span class="dollar">$</span>
+          <span class="cmd">zef install <b>BDD::Behave</b></span>
+        </div>
+  
+        <div style="margin-top: 1.4rem;">
+          <a class="btn btn-ghost" href="/install">Full install guide →</a>
+          <a class="btn btn-ghost" href="https://docs.behave.dev" rel="noopener">Browse the docs →</a>
+        </div>
+      </div>
+    </section>
+  

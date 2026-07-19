@@ -1,0 +1,65 @@
+%footer.site-footer
+  .container
+    .footer-grid
+      .footer-brand
+        %a.brand{href: '/'}
+          %span.brand-mark{'aria-hidden' => 'true'}
+            :plain
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 4 L7 20" stroke="#22d3ee" stroke-width="2.2"/>
+                <path d="M7 12 L16 4" stroke="#845ef7" stroke-width="2.2"/>
+                <path d="M7 12 L16 20" stroke="#845ef7" stroke-width="2.2"/>
+              </svg>
+          %span.brand-name
+            :plain
+              ke<b>ayl</b>
+        %p A Model-View-Controller web framework for Raku. Open source under the Artistic License 2.0.
+      %div
+        %h4 Framework
+        %ul
+          %li
+            %a{href: '/routing'} Routing
+          %li
+            %a{href: '/controllers'} Controllers
+          %li
+            %a{href: '/views'} Views
+          %li
+            %a{href: '/helpers'} Helpers
+          %li
+            %a{href: '/security'} Security
+          %li
+            %a{href: '/toolkit'} Toolkit
+      %div
+        %h4 Get started
+        %ul
+          %li
+            %a{href: '/install'} Install
+          %li
+            %a{href: '/docs'} Documentation
+          %li
+            %a{href: 'https://github.com/gdonald/MVC-Keayl/tree/main/specs', rel: 'noopener', target: '_blank'} Example specs
+      %div
+        %h4 Project
+        %ul
+          %li
+            %a{href: 'https://github.com/gdonald/MVC-Keayl', rel: 'noopener', target: '_blank'} GitHub
+          %li
+            %a{href: 'https://github.com/gdonald/MVC-Keayl/issues', rel: 'noopener', target: '_blank'} Issue tracker
+          %li
+            %a{href: 'https://raku.land/zef:gdonald/MVC::Keayl', rel: 'noopener', target: '_blank'} raku.land
+          %li
+            %a{href: 'https://raku.org/', rel: 'noopener', target: '_blank'} Raku
+    .footer-bottom
+      %span
+        :plain
+          &copy;
+        %span{data: {year: True}} 2026
+        \ keayl.dev
+      %span
+        Powered by
+        %a{href: '/docs/MVC-Keayl'} MVC::Keayl
+        %span.footer-dot{'aria-hidden' => 'true'}
+          :plain
+            &middot;
+        Tested by
+        %a{href: 'https://behave.dev/', rel: 'noopener', target: '_blank'} BDD::Behave

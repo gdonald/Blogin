@@ -1,0 +1,272 @@
+:plain
+  
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// matchers</div>
+        <h1>Rich matchers, one grammar.</h1>
+        <p>
+          Every assertion in Behave reads <code>expect(<i>actual</i>).to.<i>matcher</i>(<i>expected</i>)</code>.
+          Negate any matcher with <code>.not</code>. Compose with <code>.and</code> / <code>.or</code>.
+          Plug in your own with <code>define-matcher</code>. They integrate with the same role
+          the built-ins do.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#core">core</a>
+          <a href="#collections">collections</a>
+          <a href="#types">types</a>
+          <a href="#numeric">numeric</a>
+          <a href="#strings">strings &amp; regex</a>
+          <a href="#exceptions">exceptions</a>
+          <a href="#change">change</a>
+          <a href="#async">async</a>
+          <a href="#compose">compose</a>
+          <a href="#custom">custom</a>
+        </nav>
+      </div>
+    </div>
+  
+    <div class="container">
+  
+      <section class="anchor-section reveal" id="core">
+        <h2><span class="hash">#</span>core</h2>
+        <p>
+          <code>be</code> wraps Raku's smart-match operator (<code>~~</code>) so values,
+          regexes, ranges, and junctions all compose naturally. <code>eq</code> uses
+          order-dependent structural equality via <code>eqv</code>.
+        </p>
+        <div class="code">
+          <pre><code class="raku">expect(42).to.be(42);
+  expect('hello').to.be(/hell/);
+  expect(5).to.be(1..10);
+  expect($x).to.be(any(1, 2, 3));
+  
+  expect([1, 2, 3]).to.eq([1, 2, 3]);          # passes
+  expect([1, 2, 3]).to.eq([3, 2, 1]);          # fails, order matters
+  expect({ a => 1, b => 2 }).to.eq({ a => 1, b => 2 });</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="collections">
+        <h2><span class="hash">#</span>collections</h2>
+        <table class="api-table">
+          <tbody>
+            <tr><td>include</td><td>Membership across arrays, hashes, sets, ranges, and substrings.</td></tr>
+            <tr><td>contain-exactly</td><td>Multiset equality. Counts and totals must match.</td></tr>
+            <tr><td>match-array</td><td>Array-form alias for <code>contain-exactly</code>.</td></tr>
+            <tr><td>start-with / end-with</td><td>In-order prefix / suffix for sequences, or each-prefix-AND for strings.</td></tr>
+            <tr><td>all</td><td>Every element must match the inner matcher (a value, type, range, regex, or matcher).</td></tr>
+          </tbody>
+        </table>
+  
+        <div class="code">
+          <pre><code class="raku">expect([1, 2, 3]).to.include(1, 3);
+  expect({ a => 1, b => 2 }).to.include(:a(1));
+  expect('hello world').to.include('world');
+  expect(1..10).to.include(5);
+  
+  expect([1, 1, 2]).to.contain-exactly(1, 2, 1);   # multiset
+  
+  expect([1, 2, 3]).to.start-with(1, 2);
+  expect('hello world').to.start-with('hello', 'h');
+  
+  expect([1, 5, 10]).to.all(1..10);
+  expect(['foo', 'food']).to.all(/^foo/);
+  expect(@rows).to.all(IncludeMatcher.new(:expected([status => 'ok'])));</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="types">
+        <h2><span class="hash">#</span>types &amp; attributes</h2>
+        <p>
+          <code>be-a</code> uses smart-match against a type, so subclasses, composed roles,
+          and <code>subset</code> types all match. <code>be-an-instance-of</code> is strict:
+          the runtime type must be exactly the given type. <code>respond-to</code> uses the
+          meta-object protocol's <code>^can</code>. <code>have-attributes</code> checks several
+          accessors in one call.
+        </p>
+        <div class="code">
+          <pre><code class="raku">expect(Dog.new).to.be-a(Animal);          # subclass passes
+  expect(Dog.new).to.be-an-instance-of(Animal);  # strict, fails
+  
+  subset Positive of Int where * > 0;
+  expect(5).to.be-a(Positive);              # passes
+  
+  expect(Calculator.new).to.respond-to('add', 'subtract');
+  
+  expect($alice).to.have-attributes(
+    :name<Alice>,
+    :age(BeAMatcher.new(:type(Int))),
+  );</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="numeric">
+        <h2><span class="hash">#</span>numeric</h2>
+        <p>
+          Comparison matchers, inclusive / exclusive ranges, and tolerance checks.
+          All accept <code>Real</code> values, so <code>Int</code>, <code>Rat</code>, and
+          <code>Num</code> mix freely. Undefined or non-numeric actuals record a failure
+          rather than throwing.
+        </p>
+        <div class="code">
+          <pre><code class="raku">expect(5).to.be-greater-than(3);
+  expect(5).to.be-gte(5);                              # alias
+  expect(3).to.be-lt(5);
+  
+  expect(5).to.be-between(1, 10);                      # inclusive default
+  expect(5).to.be-between(1, 10).exclusive;            # strict interior
+  expect(1).to.be-between(1, 10).exclusive;            # fails
+  
+  expect(5.05).to.be-within(0.1).of(5.0);              # |actual - target| <= delta
+  expect(5).to.be-within(0).of(5);                     # equality with delta 0</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="strings">
+        <h2><span class="hash">#</span>strings &amp; regex</h2>
+        <p>
+          <code>match</code> smart-matches a <code>Str</code> actual against a <code>Regex</code>,
+          with full Raku regex syntax including modifiers and <code>rx//</code> forms.
+          Truthiness and nil checks round out the basics.
+        </p>
+        <div class="code">
+          <pre><code class="raku">expect('abc123').to.match(/\d+/);
+  expect('HELLO').to.match(rx:i/hello/);            # case-insensitive
+  expect('hello').to.match(/^hello$/);              # anchored
+  
+  expect(True).to.be-truthy;
+  expect('').to.not.be-truthy;
+  expect([]).to.not.be-truthy;                      # empty collections are falsy in Raku
+  
+  expect(Nil).to.be-nil;
+  expect(Int).to.be-nil;                            # type objects are undefined
+  expect(0).to.not.be-nil;                          # defined value</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="exceptions">
+        <h2><span class="hash">#</span>exceptions</h2>
+        <p>
+          Wrap the code under test in a block. Optionally filter by exception type and
+          message, including subclass / role-composition matches. Failures surface what
+          actually happened so you can diagnose without re-running.
+        </p>
+        <div class="code">
+          <pre><code class="raku">expect({ die "boom" }).to.raise-error;
+  expect({ X::Demo.new.throw }).to.raise-error(X::Demo);   # exact / subclass
+  expect({ die "code=42" }).to.raise-error(/'code=42'/);
+  expect({ die "boom" }).to.raise-error.with-message('boom');
+  
+  # A different type raised? The failure message tells you which:
+  #   expected block to raise X::Demo, but raised X::AdHoc: boom</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="change">
+        <h2><span class="hash">#</span>change</h2>
+        <p>
+          Observe state transitions. <code>change</code> takes an action block and an
+          observable block. It invokes the observable, runs the action, invokes the
+          observable again, and compares with <code>eqv</code>. Chain <code>.from</code>,
+          <code>.to</code>, <code>.by</code>, <code>.by-at-least</code>, and <code>.by-at-most</code>
+          for precise transitions.
+        </p>
+        <div class="code">
+          <pre><code class="raku">my $counter = 0;
+  expect({ $counter++ }).to.change({ $counter });
+  
+  expect({ $counter = 10 }).to.change({ $counter })
+    .from(1).to(10);
+  
+  expect({ $score += 5 }).to.change({ $score })
+    .by-at-least(1).by-at-most(10);
+  
+  # Negation with constraints: change must NOT be this specific transition
+  expect({ $counter = 7 }).to.not.change({ $counter }).from(0).to(10);</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="async">
+        <h2><span class="hash">#</span>async &amp; streams</h2>
+        <p>
+          First-class matchers for <code>Promise</code>, <code>Supply</code>, and
+          <code>Channel</code>. Configurable timeouts. <code>eventually</code> polls a block
+          until an inner matcher passes. Perfect for eventually-consistent state.
+        </p>
+        <div class="code">
+          <pre><code class="raku">expect(Promise.kept('done')).to.be-kept;
+  expect(start { compute() }).to.be-kept(0.5);     # 500ms timeout
+  expect(Promise.broken('oops')).to.be-broken;
+  
+  expect($promise).to.complete-within(1);
+  
+  expect(Supply.from-list(1, 2, 3)).to.emit(1, 2, 3);
+  expect($supply).to.emit-at-least(3, :within(0.5));
+  expect($supply).to.complete(:within(1));
+  
+  # Poll until match, with timeout + interval
+  expect({ get-job-status() }).to.eventually.be('done');
+  expect({ counter() }).to.eventually(:timeout(5)).be-greater-than(100);</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="compose">
+        <h2><span class="hash">#</span>compose with .and / .or</h2>
+        <p>
+          Every type that does <code>Matcher</code> automatically gets <code>.and</code> /
+          <code>.or</code> methods. Composites short-circuit, flatten across chained calls,
+          and report which inner matcher decided the outcome.
+        </p>
+        <div class="code">
+          <pre><code class="raku">expect(user.age).to.be-greater-than(17)
+    .and.be-less-than(65);
+
+  expect(status).to.be('queued').or.be('running');
+  
+  # Negation flips the boolean result *before* the framework decides whether
+  # to record a failure. Every matcher honors .not the same way.
+  expect([1, 2, 3]).to.not.include(99);</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="custom">
+        <h2><span class="hash">#</span>writing your own matcher</h2>
+        <p>
+          Define a class that does the <code>Matcher</code> role, or use the
+          <code>define-matcher</code> helper for a class-free declaration. Custom matchers integrate
+          with <code>.not</code>, <code>.and</code>, and the failure reporter exactly like
+          built-ins.
+        </p>
+        <div class="code">
+          <pre><code class="raku">use BDD::Behave;
+  use BDD::Behave::Matcher;
+  
+  class EvenMatcher does Matcher {
+    method matches($actual --> Bool) { ?($actual %% 2) }
+    method failure-message($actual --> Str) {
+      "expected $actual to be even";
+    }
+    method failure-message-negated($actual --> Str) {
+      "expected $actual not to be even";
+    }
+    method expected-value(--> Mu) { 'an even number' }
+  }
+  
+  describe 'EvenMatcher', {
+    it 'matches even numbers', {
+      expect(4).to.be(EvenMatcher.new);
+      expect(5).to.not.be(EvenMatcher.new);
+    }
+  }</code></pre>
+        </div>
+  
+        <div class="callout cyan">
+          <strong>Tooling-ready failures.</strong> Custom matchers populate
+          <code>Failure.given</code>, <code>Failure.expected</code>, and a structured
+          <code>message</code>, so alternate formatters (JSON, JUnit, HTML) render them
+          identically to the built-ins.
+        </div>
+      </section>
+  
+    </div>
+  

@@ -1,0 +1,319 @@
+:plain
+
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// routing</div>
+        <h1>One file maps every request.</h1>
+        <p>
+          Routes are declared in <code>config/routes.raku</code> with a declarative DSL. A
+          <code>routes</code> block builds a router that maps an incoming method and path to a
+          controller action or an inline handler, and generates the URL helpers that point back at them.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#verbs">verbs</a>
+          <a href="#patterns">path patterns</a>
+          <a href="#resources">resources</a>
+          <a href="#nesting">nesting</a>
+          <a href="#scopes">namespaces &amp; scopes</a>
+          <a href="#concerns">concerns</a>
+          <a href="#redirects">redirects &amp; mounts</a>
+          <a href="#helpers">URL helpers</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="anchor-section reveal" id="verbs">
+        <h2><span class="hash">#</span>verb helpers</h2>
+        <p>
+          <code>get</code>, <code>post</code>, <code>put</code>, <code>patch</code>,
+          <code>delete</code>, and <code>options</code> each declare a route for that method. The target
+          is a <code>'controller#action'</code> string or an inline <code>Callable</code>. A <code>GET</code>
+          route also answers <code>HEAD</code>. <code>root</code> maps <code>GET /</code>, and
+          <code>match</code> registers one path for several verbs with <code>via</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">use MVC::Keayl::Routing;
+
+  routes {
+    root to =&gt; 'home#index';
+
+    get  '/users', to =&gt; 'users#index';
+    post '/users', to =&gt; 'users#create';
+
+    # inline callable
+    get  '/ping',  to =&gt; sub { 'pong' };
+
+    match '/search', to =&gt; 'search#run',
+      via =&gt; &lt;get post&gt;;
+    match '/health', to =&gt; 'health#show',
+      via =&gt; 'all';
+    match '/any',    to =&gt; 'catch#all',   via =&gt; *;
+  }</code></pre>
+        </div>
+
+        <p>
+          At boot the application loads the file with <code>load-routes('config/routes.raku')</code>,
+          which evaluates it and returns the router its <code>routes</code> block built.
+          <code>draw</code> is an alias for <code>routes</code>.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="patterns">
+        <h2><span class="hash">#</span>path patterns</h2>
+        <p>
+          A path can carry dynamic segments, a glob, optional groups, a format, and per-segment
+          constraints. The matched values become params on recognition. A <code>:segment</code> matches a
+          single segment, stopping at a <code>/</code> or a <code>.</code>; a <code>*glob</code> matches
+          everything that remains; anything inside <code>(...)</code> is optional.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># one segment
+  get '/users/:id', to =&gt; 'users#show';
+
+  # the rest, slashes included
+  get '/files/*path', to =&gt; 'files#serve';
+
+  # optional group
+  get '/users(/:id)', to =&gt; 'users#index';
+
+  # peel off an extension
+  get '/users/:id(.:format)', to =&gt; 'users#show';
+
+  # /users/abc falls through
+  get '/users/:id', to =&gt; 'users#show',
+    constraints =&gt; { id =&gt; /^\d+$/ },
+    defaults    =&gt; { format =&gt; 'html' };</code></pre>
+        </div>
+
+        <p>
+          <code>format =&gt; True</code> appends an optional <code>(.:format)</code> without writing it
+          out. <code>defaults</code> supplies values for absent params, and <code>constraints</code>
+          restricts a segment to a pattern. A request whose segment fails the constraint falls through to
+          the next route.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="resources">
+        <h2><span class="hash">#</span>resources</h2>
+        <p>
+          <code>resources 'users'</code> declares the seven REST routes in one call. <code>only</code>
+          and <code>except</code> choose which to generate, <code>member</code> and
+          <code>collection</code> blocks add routes that act on a record or on the set, and a singular
+          <code>resource</code> drops the index and the <code>:id</code>.
+        </p>
+
+        <div class="table-scroll">
+          <table class="api-table">
+            <thead>
+              <tr><th>Verb</th><th>Path</th><th>Action</th><th>Name</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>GET</td><td>/users</td><td>index</td><td>users</td></tr>
+              <tr><td>POST</td><td>/users</td><td>create</td><td>users</td></tr>
+              <tr><td>GET</td><td>/users/new</td><td>new</td><td>new-user</td></tr>
+              <tr><td>GET</td><td>/users/:id</td><td>show</td><td>user</td></tr>
+              <tr><td>GET</td><td>/users/:id/edit</td><td>edit</td><td>edit-user</td></tr>
+              <tr><td>PATCH / PUT</td><td>/users/:id</td><td>update</td><td>user</td></tr>
+              <tr><td>DELETE</td><td>/users/:id</td><td>destroy</td><td>user</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code">
+          <pre><code class="raku">resources 'users', 'posts';
+  resources 'users', :only&lt;index show&gt;;
+  resources 'photos', :except&lt;destroy&gt;;
+
+  resources 'photos', {
+    member {
+      # GET /photos/:id/preview
+      get 'preview', to =&gt; 'photos#preview';
+    }
+    collection {
+      # GET /photos/search
+      get 'search', to =&gt; 'photos#search';
+    }
+  }
+
+  # singular: no index, no :id
+  resource 'profile';</code></pre>
+        </div>
+
+        <p>
+          Resource options rename the pieces: <code>path</code> overrides the URL segment, <code>as</code>
+          the helper base, <code>controller</code> the target, <code>module</code> prefixes it,
+          <code>param</code> renames the member key, and <code>path-names</code> renames the
+          <code>new</code> and <code>edit</code> segments.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="nesting">
+        <h2><span class="hash">#</span>nesting</h2>
+        <p>
+          Resources nest inside a resource block. A nested resource is scoped under the parent member, and
+          its key is named after the parent. <code>shallow</code> keeps the collection routes nested but
+          lifts the member routes to the top level, so member URLs stay short.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">resources 'magazines', {
+    # /magazines/:magazine_id/ads/:id
+    resources 'ads';
+  }
+
+  resources 'magazines', :shallow, {
+    # collection nested, member at /ads/:id
+    resources 'ads';
+  }</code></pre>
+        </div>
+
+        <div class="callout">
+          <strong>Flatten when it gets deep.</strong> Plural and singular resources nest either way, and
+          nesting can go more than one level, though more than one level deep is usually a sign the routes
+          want flattening with <code>shallow</code>.
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="scopes">
+        <h2><span class="hash">#</span>namespaces and scopes</h2>
+        <p>
+          <code>namespace</code> prefixes the path, the controller module, and the helper name all at
+          once. <code>scope</code> controls each independently, <code>controller</code> sets the controller
+          for the routes inside, and an optional scope segment written in parentheses suits an i18n locale
+          prefix.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">namespace 'admin', {
+    # /admin/users =&gt; admin/users, named admin-users
+    resources 'users';
+  }
+
+  scope(path =&gt; 'api',
+    module =&gt; 'v1',
+    as =&gt; 'api', {
+    # /api/ping =&gt; v1/ping#show
+    get '/ping', to =&gt; 'ping#show', as =&gt; 'ping';
+  });
+
+  scope('(:locale)', {
+    # matches /about and /en/about
+    get '/about', to =&gt; 'pages#about';
+  });</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="concerns">
+        <h2><span class="hash">#</span>concerns and constraints</h2>
+        <p>
+          A concern is a reusable block of routes: define it once with <code>concern</code>, then mix it
+          into resources with the <code>concerns</code> option or call. A <code>constraints</code> block
+          restricts the routes inside it, keyed on path params or request attributes like
+          <code>subdomain</code>, <code>host</code>, and <code>format</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">concern 'commentable', { resources 'comments' };
+
+  resources 'posts',  concerns =&gt; 'commentable';
+  resources 'photos', { concerns 'commentable' };
+
+  constraints(:subdomain&lt;api&gt;, {
+    # only when the subdomain is api
+    get '/data', to =&gt; 'data#index';
+  });
+
+  constraints(
+    -&gt; %context {
+      %context&lt;host&gt;.ends-with('.internal')
+    }, {
+    get '/admin', to =&gt; 'admin#index';
+  });</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="redirects">
+        <h2><span class="hash">#</span>redirects and mounting</h2>
+        <p>
+          A route can redirect instead of dispatching. <code>redirect</code> takes a string or a block
+          that computes the location from the params, with an optional status. <code>mount</code> attaches
+          a sub-app at a path, capturing the remainder as <code>mounted_path</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">get '/stories',    to =&gt; redirect('/articles');
+  get '/movies/:id', to =&gt; redirect(
+    -&gt; %params { '/films/' ~ %params&lt;id&gt; },
+    status =&gt; 302);
+
+  # matches /legacy and /legacy/...
+  mount $rack-app, at =&gt; '/legacy';</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="helpers">
+        <h2><span class="hash">#</span>URL helpers</h2>
+        <p>
+          <code>MVC::Keayl::Routing::UrlHelpers</code> generates paths and URLs from named routes.
+          <code>path-for</code> fills the segments and turns leftover params into a sorted query string;
+          <code>url-for</code> builds an absolute URL from <code>default-url-options</code>. Per-route
+          <code>name-path</code> and <code>name-url</code> helpers resolve through <code>FALLBACK</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">my $helpers = MVC::Keayl::Routing::UrlHelpers.new(
+    :$router,
+    :default-url-options({
+      host =&gt; 'example.com'
+    }));
+
+  # /users/5
+  $helpers.path-for('user', 5);
+
+  # /users/5?page=2
+  $helpers.path-for('user', 5, page =&gt; 2);
+
+  # /users/5#comments
+  $helpers.path-for('user', 5,
+    anchor =&gt; 'comments');
+
+  # /users/5
+  $helpers.user-path(5);
+
+  # http://example.com/users
+  $helpers.users-url;
+
+  # /posts/7
+  $helpers.polymorphic-path($persisted-post);
+
+  # /posts
+  $helpers.polymorphic-path($new-post);</code></pre>
+        </div>
+
+        <p>
+          The router answers <code>recognize($method, $path)</code> with a match or an undefined match,
+          and <code>recognition-status</code> distinguishes a hit from a wrong method and from an unknown
+          path. <code>route-table</code> returns the name, verbs, pattern, and target of every route,
+          which <code>keayl routes</code> prints.
+        </p>
+
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">keayl routes</span>
+          </div>
+          <div class="terminal-body"><code class="keayl-out">Name         Verb     Path            Target
+  root         GET      /               home#index
+  articles     GET      /articles       articles#index
+  article      GET      /articles/:id   articles#show
+  new-article  GET      /articles/new   articles#new
+  article      PATCH    /articles/:id   articles#update
+  article      DELETE   /articles/:id   articles#destroy</code></div>
+        </div>
+      </section>
+
+    </div>

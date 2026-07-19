@@ -1,0 +1,241 @@
+%nav.doc-nav{'aria-label' => 'ORM-ActiveRecord documentation'}
+  %h4.doc-nav-group Introduction
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/overview'
+        %a.current{href: '/docs/ORM-ActiveRecord/overview'} Overview
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/overview'} Overview
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/conventions'
+        %a.current{href: '/docs/ORM-ActiveRecord/conventions'} Conventions
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/conventions'} Conventions
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/adapters'
+        %a.current{href: '/docs/ORM-ActiveRecord/adapters'} Adapters
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/adapters'} Adapters
+  %h4.doc-nav-group Schema
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/migrations'
+        %a.current{href: '/docs/ORM-ActiveRecord/migrations'} Migrations
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/migrations'} Migrations
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/generators'
+        %a.current{href: '/docs/ORM-ActiveRecord/generators'} Generators
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/generators'} Generators
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/db-tasks'
+        %a.current{href: '/docs/ORM-ActiveRecord/db-tasks'} Database tasks
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/db-tasks'} Database tasks
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/runtime'
+        %a.current{href: '/docs/ORM-ActiveRecord/runtime'} Runtime tasks
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/runtime'} Runtime tasks
+  %h4.doc-nav-group Models
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/models'
+        %a.current{href: '/docs/ORM-ActiveRecord/models'} Info
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/models'} Info
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/types'
+        %a.current{href: '/docs/ORM-ActiveRecord/types'} Attribute types
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/types'} Attribute types
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/enums'
+        %a.current{href: '/docs/ORM-ActiveRecord/enums'} Enums
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/enums'} Enums
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/normalization'
+        %a.current{href: '/docs/ORM-ActiveRecord/normalization'} Normalisation
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/normalization'} Normalisation
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/serialization'
+        %a.current{href: '/docs/ORM-ActiveRecord/serialization'} Serialization
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/serialization'} Serialization
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/inheritance'
+        %a.current{href: '/docs/ORM-ActiveRecord/inheritance'} Inheritance
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/inheritance'} Inheritance
+  %h4.doc-nav-group Querying
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/finders'
+        %a.current{href: '/docs/ORM-ActiveRecord/finders'} Finders
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/finders'} Finders
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/relations'
+        %a.current{href: '/docs/ORM-ActiveRecord/relations'} Relations
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/relations'} Relations
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/queries'
+        %a.current{href: '/docs/ORM-ActiveRecord/queries'} Queries
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/queries'} Queries
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/joins'
+        %a.current{href: '/docs/ORM-ActiveRecord/joins'} Joins
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/joins'} Joins
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/aggregation'
+        %a.current{href: '/docs/ORM-ActiveRecord/aggregation'} Aggregation
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/aggregation'} Aggregation
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/batching'
+        %a.current{href: '/docs/ORM-ActiveRecord/batching'} Batching
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/batching'} Batching
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/async'
+        %a.current{href: '/docs/ORM-ActiveRecord/async'} Async queries
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/async'} Async queries
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/raw'
+        %a.current{href: '/docs/ORM-ActiveRecord/raw'} Raw SQL &amp; CTEs
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/raw'} Raw SQL &amp; CTEs
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/inspection'
+        %a.current{href: '/docs/ORM-ActiveRecord/inspection'} Inspection
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/inspection'} Inspection
+  %h4.doc-nav-group Writing
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/persistence'
+        %a.current{href: '/docs/ORM-ActiveRecord/persistence'} Persistence
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/persistence'} Persistence
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/callbacks'
+        %a.current{href: '/docs/ORM-ActiveRecord/callbacks'} Callbacks
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/callbacks'} Callbacks
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/transactions'
+        %a.current{href: '/docs/ORM-ActiveRecord/transactions'} Transactions
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/transactions'} Transactions
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/discard'
+        %a.current{href: '/docs/ORM-ActiveRecord/discard'} Soft deletes
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/discard'} Soft deletes
+  %h4.doc-nav-group Validations
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/data'
+        %a.current{href: '/docs/ORM-ActiveRecord/data'} Data
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/data'} Data
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/conditionals'
+        %a.current{href: '/docs/ORM-ActiveRecord/conditionals'} Conditionals
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/conditionals'} Conditionals
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/options'
+        %a.current{href: '/docs/ORM-ActiveRecord/options'} Options
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/options'} Options
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/i18n'
+        %a.current{href: '/docs/ORM-ActiveRecord/i18n'} Messages &amp; locales
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/i18n'} Messages &amp; locales
+  %h4.doc-nav-group Security
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/secure-tokens'
+        %a.current{href: '/docs/ORM-ActiveRecord/secure-tokens'} Tokens &amp; secure data
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/secure-tokens'} Tokens &amp; secure data
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/encryption'
+        %a.current{href: '/docs/ORM-ActiveRecord/encryption'} Encryption
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/encryption'} Encryption
+  %h4.doc-nav-group Cookbook
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/through-associations'
+        %a.current{href: '/docs/ORM-ActiveRecord/through-associations'} Through associations
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/through-associations'} Through associations
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/polymorphic'
+        %a.current{href: '/docs/ORM-ActiveRecord/polymorphic'} Polymorphic associations
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/polymorphic'} Polymorphic associations
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/single-table-inheritance'
+        %a.current{href: '/docs/ORM-ActiveRecord/single-table-inheritance'} Single-table inheritance
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/single-table-inheritance'} Single-table inheritance
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/custom-validators'
+        %a.current{href: '/docs/ORM-ActiveRecord/custom-validators'} Custom validators
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/custom-validators'} Custom validators
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/transactions-and-savepoints'
+        %a.current{href: '/docs/ORM-ActiveRecord/transactions-and-savepoints'} Transactions and savepoints
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/transactions-and-savepoints'} Transactions and savepoints
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/eager-loading'
+        %a.current{href: '/docs/ORM-ActiveRecord/eager-loading'} Eager loading
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/eager-loading'} Eager loading
+  %h4.doc-nav-group Operations
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/errors'
+        %a.current{href: '/docs/ORM-ActiveRecord/errors'} Errors
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/errors'} Errors
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/reflection'
+        %a.current{href: '/docs/ORM-ActiveRecord/reflection'} Reflection
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/reflection'} Reflection
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/logging'
+        %a.current{href: '/docs/ORM-ActiveRecord/logging'} Logging
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/logging'} Logging
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/instrumentation'
+        %a.current{href: '/docs/ORM-ActiveRecord/instrumentation'} Instrumentation
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/instrumentation'} Instrumentation
+  %h4.doc-nav-group Testing
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/tests'
+        %a.current{href: '/docs/ORM-ActiveRecord/tests'} Tests
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/tests'} Tests
+    %li
+      - if url() eq '/docs/ORM-ActiveRecord/test-helpers'
+        %a.current{href: '/docs/ORM-ActiveRecord/test-helpers'} Test helpers
+      - else
+        %a{href: '/docs/ORM-ActiveRecord/test-helpers'} Test helpers

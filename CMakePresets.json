@@ -1,0 +1,239 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "debug",
+      "inherits": "base",
+      "displayName": "Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "sanitize",
+      "inherits": "base",
+      "displayName": "Debug with sanitizers",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BLOGIN_SANITIZE": "ON"
+      }
+    },
+    {
+      "name": "integer",
+      "inherits": "base",
+      "displayName": "Debug with the sanitizers plus the integer checks",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BLOGIN_SANITIZE": "ON",
+        "BLOGIN_SANITIZE_INTEGER": "ON"
+      },
+      "description": "Adds unsigned wraparound, narrowing conversions, stack bounds, and nullability to the address and undefined checks."
+    },
+    {
+      "name": "thread",
+      "inherits": "base",
+      "displayName": "Debug with ThreadSanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BLOGIN_SANITIZE_THREAD": "ON"
+      }
+    },
+    {
+      "name": "coverage",
+      "inherits": "base",
+      "displayName": "Debug with coverage instrumentation",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BLOGIN_COVERAGE": "ON"
+      }
+    },
+    {
+      "name": "tidy",
+      "inherits": "base",
+      "displayName": "Debug with clang-tidy on every compile",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BLOGIN_TIDY": "ON"
+      }
+    },
+    {
+      "name": "fuzz",
+      "inherits": "base",
+      "displayName": "Fuzz targets",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "BLOGIN_FUZZ": "ON",
+        "BLOGIN_SANITIZE": "ON",
+        "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+      },
+      "description": "Apple clang ships no libFuzzer runtime, so this preset uses Homebrew LLVM on macOS. Override CMAKE_CXX_COMPILER elsewhere."
+    },
+    {
+      "name": "release",
+      "inherits": "base",
+      "displayName": "Release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "dist",
+      "inherits": "base",
+      "displayName": "Release, statically linked for distribution",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BLOGIN_STATIC": "ON",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "13.3",
+        "CMAKE_OSX_ARCHITECTURES": "arm64;x86_64"
+      },
+      "description": "Statically linked for distribution. The macOS floor is 13.3 rather than 13.0 because std::format on floating point needs the to_chars introduced there."
+    },
+    {
+      "name": "gcc-base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_C_COMPILER": "gcc"
+      }
+    },
+    {
+      "name": "gcc",
+      "inherits": "gcc-base",
+      "displayName": "Debug, built with GCC against libstdc++",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "gcc-sanitize",
+      "inherits": "gcc-base",
+      "displayName": "Debug with sanitizers, built with GCC",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BLOGIN_SANITIZE": "ON"
+      }
+    },
+    {
+      "name": "gcc-thread",
+      "inherits": "gcc-base",
+      "displayName": "Debug with ThreadSanitizer, built with GCC",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BLOGIN_SANITIZE_THREAD": "ON"
+      }
+    },
+    {
+      "name": "gcc-release",
+      "inherits": "gcc-base",
+      "displayName": "Release, built with GCC",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "sanitize",
+      "configurePreset": "sanitize"
+    },
+    {
+      "name": "integer",
+      "configurePreset": "integer"
+    },
+    {
+      "name": "thread",
+      "configurePreset": "thread"
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage"
+    },
+    {
+      "name": "tidy",
+      "configurePreset": "tidy"
+    },
+    {
+      "name": "fuzz",
+      "configurePreset": "fuzz"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "dist",
+      "configurePreset": "dist"
+    },
+    {
+      "name": "gcc",
+      "configurePreset": "gcc"
+    },
+    {
+      "name": "gcc-sanitize",
+      "configurePreset": "gcc-sanitize"
+    },
+    {
+      "name": "gcc-thread",
+      "configurePreset": "gcc-thread"
+    },
+    {
+      "name": "gcc-release",
+      "configurePreset": "gcc-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "sanitize",
+      "configurePreset": "sanitize",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "integer",
+      "configurePreset": "integer",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "thread",
+      "configurePreset": "thread",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "coverage",
+      "configurePreset": "coverage",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

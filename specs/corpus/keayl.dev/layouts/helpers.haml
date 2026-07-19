@@ -1,0 +1,415 @@
+:plain
+
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// helpers</div>
+        <h1>Helpers that build HTML.</h1>
+        <p>
+          View helpers return <code>SafeString</code> values, so their markup is not re-escaped when emitted
+          with <code>!=</code>. In templates they are bare calls routed through the view context
+          (<code>link-to</code>, <code>image-tag</code>, and so on), with arguments and no sigil. Locals keep
+          their sigil, so <code>$user</code> reads as a value and <code>link-to(...)</code> reads as a call.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#tags">tags</a>
+          <a href="#urls">urls</a>
+          <a href="#assets">assets</a>
+          <a href="#forms">forms</a>
+          <a href="#options">selects &amp; options</a>
+          <a href="#simple-form">simple_form</a>
+          <a href="#formatting">formatting</a>
+          <a href="#modules">helper modules</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="anchor-section reveal" id="tags">
+        <h2><span class="hash">#</span>tag building</h2>
+        <p>
+          <code>content-tag</code> builds an element with content and <code>tag</code> a self-closing one.
+          Attribute values are escaped, a <code>True</code> value becomes a bare boolean attribute, and a
+          <code>False</code> or undefined value is dropped. A <code>data</code> or <code>aria</code> hash
+          expands to dasherized attributes, with structured values JSON encoded.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># &lt;p class="lead"&gt;hi&lt;/p&gt;
+  content-tag('p', 'hi', %( class =&gt; 'lead' ));
+
+  # &lt;input disabled type="text" /&gt;
+  tag('input', %(
+    type =&gt; 'text',
+    disabled =&gt; True,
+  ));
+
+  # &lt;div data-toggle="modal" data-user-id="5"&gt;x&lt;/div&gt;
+  content-tag('div', 'x', %(
+    data =&gt; %( user_id =&gt; 5, toggle =&gt; 'modal' ),
+  ));</code></pre>
+        </div>
+
+        <p>
+          A <code>class</code> attribute accepts an array of tokens or a hash of conditional tokens, and
+          <code>class-names</code> builds the same token list on its own, dropping falsy and duplicate
+          tokens.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># class="a b"
+  tag('span', %( class =&gt; ['a', 'b'] ));
+
+  # class="active" when $on
+  content-tag('div', 'x', %(
+    class =&gt; %( active =&gt; $on ),
+  ));
+
+  # "btn active"
+  class-names('btn', %(
+    active =&gt; True,
+    disabled =&gt; False,
+  ));</code></pre>
+        </div>
+
+        <p>
+          <code>javascript-tag</code> wraps script content in a <code>&lt;script&gt;</code> element,
+          <code>time-tag</code> builds a <code>&lt;time&gt;</code> with a <code>datetime</code> attribute, and
+          <code>auto-discovery-link-tag</code> builds a feed link. <code>atom-feed</code> assembles a full
+          Atom document from a feed builder.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># &lt;script&gt;alert(1)&lt;/script&gt;
+  javascript-tag('alert(1)');
+
+  # &lt;time datetime="2020-01-01"&gt;New Year&lt;/time&gt;
+  time-tag(Date.new(2020, 1, 1), 'New Year');
+  auto-discovery-link-tag('atom', '/feed.atom');</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="urls">
+        <h2><span class="hash">#</span>url helpers</h2>
+        <p>
+          <code>url-for</code> turns a target into a URL string, passing a string through and reading
+          <code>path</code> from a hash. <code>link-to</code> builds an anchor, and <code>button-to</code>
+          builds a small form that posts to a URL, adding a <code>_method</code> override for other verbs.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># &lt;a class="nav" href="/posts"&gt;Posts&lt;/a&gt;
+  link-to('Posts', '/posts', %( class =&gt; 'nav' ));
+
+  # &lt;a href="/only"&gt;/only&lt;/a&gt;
+  link-to('/only');
+  button-to('Delete', '/posts/1', %(
+    method =&gt; 'delete',
+  ));</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="assets">
+        <h2><span class="hash">#</span>asset helpers</h2>
+        <p>
+          <code>asset-path</code> resolves a source to a URL: a bare source is prefixed with
+          <code>/assets/</code>, an absolute path or external URL is left alone, and a <code>:type</code>
+          adds an extension when the source has none. <code>image-tag</code>,
+          <code>stylesheet-link-tag</code>, and <code>javascript-include-tag</code> build their elements,
+          resolving sources through <code>asset-path</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># /assets/logo.png
+  asset-path('logo.png');
+
+  # /assets/app.css
+  asset-path('app', :type('css'));
+
+  # &lt;img alt="Logo" src="/assets/logo.png" /&gt;
+  image-tag('logo.png');
+  stylesheet-link-tag('app', 'admin');
+  javascript-include-tag('app');</code></pre>
+        </div>
+
+        <p>
+          The asset helpers accept a <code>resolver</code>, a routine of <code>($source, $type)</code> that
+          returns the final URL. It is the seam for fingerprinting or a CDN host, and a
+          <code>MVC::Keayl::View</code> carries an <code>asset-resolver</code> its helpers use.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">my $view = MVC::Keayl::View.new(
+    :paths(['app/views']),
+    asset-resolver =&gt; -&gt; $source, $type {
+      'https://cdn.example/' ~ $source
+    },
+  );</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="forms">
+        <h2><span class="hash">#</span>forms</h2>
+        <p>
+          <code>form-with</code> builds a form around a <code>FormBuilder</code>. The builder is passed to a
+          <code>content</code> callback and scopes field names to the model (or an explicit
+          <code>scope</code>), prefills values, and annotates errors. The form posts by default, adding a
+          <code>_method</code> override for other verbs and an <code>authenticity_token</code> field when a
+          <code>csrf-token</code> is given.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">form-with(
+    model      =&gt; $post,
+    url        =&gt; '/posts/1',
+    method     =&gt; 'patch',
+    csrf-token =&gt; $token,
+    content    =&gt; -&gt; $f {
+      $f.text-field('title') ~ $f.submit('Save')
+    },
+  );</code></pre>
+        </div>
+
+        <p>
+          The builder provides <code>text-field</code>, <code>password-field</code>,
+          <code>hidden-field</code>, <code>text-area</code>, <code>check-box</code>,
+          <code>radio-button</code>, <code>select</code>, <code>label</code>, <code>submit</code>, and
+          <code>button</code>, plus the HTML5 typed inputs (<code>email-field</code>,
+          <code>number-field</code>, <code>date-field</code>, and the rest). Names are scoped
+          (<code>post[title]</code>) and ids derived (<code>post_title</code>). A <code>check-box</code>
+          renders a hidden companion, a <code>password-field</code> never emits a value, and
+          <code>file-field</code> takes <code>multiple</code> and <code>direct-upload</code> options.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># type="email"
+  $f.email-field('email');
+
+  # type="date"
+  $f.date-field('born');
+
+  # name="post[photos][]"
+  $f.file-field('photos', %( multiple =&gt; True ));
+
+  $f.fields-for('author', block =&gt; -&gt; $author {
+    # name="post[author][name]"
+    $author.text-field('name')
+  });</code></pre>
+        </div>
+
+        <p>
+          When the builder has a model, fields prefill from it by calling the attribute-named method, an
+          explicit <code>value</code> overrides the model, and a field whose attribute reports errors gets a
+          <code>field-with-errors</code> class. The builder reads errors through the model's
+          <code>errors-on($attribute)</code> method, and <code>errors-for</code> renders the messages.
+          Outside a builder, <code>button-tag</code> and <code>image-submit-tag</code> build a submit button
+          and an image submit input.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="options">
+        <h2><span class="hash">#</span>select and option helpers</h2>
+        <p>
+          <code>options-for-select</code> builds <code>&lt;option&gt;</code> tags from strings, label-value
+          pairs, or <code>[label, value, attrs]</code> triples, marking the selected value.
+          <code>options-from-collection-for-select</code> reads value and text methods off a collection, and
+          <code>grouped-options-for-select</code> wraps choices in <code>&lt;optgroup&gt;</code> elements.
+          <code>select-tag</code> wraps option markup in a <code>&lt;select&gt;</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># &lt;option value="a"&gt;a&lt;/option&gt;&lt;option selected value="b"&gt;b&lt;/option&gt;
+  options-for-select(['a', 'b'], 'b');
+
+  options-from-collection-for-select(
+    @cities,
+    'id',
+    'name',
+    $selected,
+  );
+
+  select-tag(
+    'city',
+    options-for-select(['NY', 'LA']),
+    %( include-blank =&gt; True ),
+  );</code></pre>
+        </div>
+
+        <p>
+          The date-part helpers <code>select-year</code>, <code>select-month</code> (with month names),
+          <code>select-day</code>, <code>select-hour</code>, <code>select-minute</code>, and
+          <code>select-second</code> build one select each, and <code>select-date</code> and
+          <code>select-time</code> combine them. On the builder, <code>collection-select</code>,
+          <code>collection-radio-buttons</code>, and <code>collection-check-boxes</code> build controls from
+          a collection, and <code>date-select</code>, <code>time-select</code>, and
+          <code>datetime-select</code> build multiparameter selects prefilled from a model.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># year, month, and day selects
+  select-date(Date.new(2020, 3, 15));
+
+  $f.collection-select(
+    'city-id',
+    @cities,
+    'id',
+    'name',
+  );
+
+  # post[born](1i), (2i), (3i)
+  $f.date-select('born');</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="simple-form">
+        <h2><span class="hash">#</span>simple_form-style inputs</h2>
+        <p>
+          <code>SimpleFormBuilder</code> adds an <code>input</code> method that assembles a label, control,
+          hint, and error into a wrapper, inferring the control type. <code>simple-form-for</code> wraps it
+          in a form like <code>form-with</code>. The type comes from <code>as</code>, then the attribute name
+          (<code>password</code>, <code>email</code>, the long-text names), then a boolean model value,
+          defaulting to a string input. A required attribute marks the wrapper and stars the label.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">simple-form-for(
+    $post,
+    url =&gt; '/posts',
+    required =&gt; ['title'],
+    content =&gt; -&gt; $f {
+      $f.input('title', hint =&gt; 'Keep it short')
+        # textarea, inferred
+        ~ $f.input('body')
+        # checkbox, inferred from a boolean
+        ~ $f.input('published')
+        ~ $f.input('state',
+            as =&gt; 'select',
+            collection =&gt; ['draft', 'live'])
+    });</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="formatting">
+        <h2><span class="hash">#</span>formatting helpers</h2>
+
+        <h3>text</h3>
+        <p>
+          <code>truncate</code> cuts a string to a length and can break at a separator,
+          <code>pluralize</code> pairs a count with a singular or pluralized word, and
+          <code>simple-format</code> wraps text in paragraphs. <code>highlight</code> wraps phrase matches,
+          <code>excerpt</code> extracts a window around a phrase, and <code>word-wrap</code> breaks lines at
+          a width. <code>strip-tags</code>, <code>strip-links</code>, and <code>sanitize-css</code> clean
+          untrusted markup.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># This is a...
+  truncate('This is a long sentence', length =&gt; 12);
+
+  # 2 people
+  pluralize(2, 'person');
+
+  # &lt;p&gt;Para one&lt;/p&gt;\n&lt;p&gt;Para two&lt;/p&gt;
+  simple-format("Para one\n\nPara two");
+
+  # You searched for &lt;mark&gt;tiger&lt;/mark&gt;
+  highlight('You searched for tiger', 'tiger');
+
+  # Visit here now
+  strip-links('Visit &lt;a href="/x"&gt;here&lt;/a&gt; now');</code></pre>
+        </div>
+
+        <p>
+          <code>cycle</code> rotates through values across calls, <code>capture</code> returns a block's
+          output as a safe string, and <code>provide</code> accumulates content under a name for a layout
+          <code>yield</code>.
+        </p>
+
+        <h3>numbers</h3>
+        <div class="code">
+          <pre><code class="raku"># 1,234,567
+  number-with-delimiter(1234567);
+
+  # $1,234.50
+  number-to-currency(1234.5);
+
+  # 66.7%
+  number-to-percentage(66.666, precision =&gt; 1);
+
+  # 1.5 KB
+  number-to-human-size(1536);
+
+  # (123) 555-1234
+  number-to-phone(1235551234, area-code =&gt; True);
+
+  # 12.3 Million
+  number-to-human(12345678);</code></pre>
+        </div>
+
+        <h3>dates and times</h3>
+        <p>
+          <code>distance-of-time-in-words</code> describes the gap between two times in words, with an
+          optional <code>include-seconds</code> for finer detail under a minute.
+          <code>time-ago-in-words</code> is the same measured against the current time.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># about 5 hours
+  distance-of-time-in-words($from, $to);
+
+  # less than 5 seconds
+  distance-of-time-in-words(
+    $from,
+    $to,
+    include-seconds =&gt; True,
+  );
+
+  # 3 days ago
+  time-ago-in-words($posted-at);</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="modules">
+        <h2><span class="hash">#</span>helper modules</h2>
+        <p>
+          Beyond the built-in helpers, an application defines its own as <code>our sub</code>s in modules
+          under <code>app/helpers/</code>. Each sub becomes a bare template call.
+          <code>ApplicationHelper</code> is global, available in every view.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">-# app/helpers/ApplicationHelper.rakumod
+  unit module ApplicationHelper;
+
+  our sub nav-link($label, $href) {
+    qq{&lt;a href="$href"&gt;$label&lt;/a&gt;}
+  }</code></pre>
+        </div>
+
+        <div class="code">
+          <pre><code class="raku">%nav
+    != nav-link('Home', '/')</code></pre>
+        </div>
+
+        <p>
+          A per-controller helper named after the controller (<code>UsersController</code> &rarr;
+          <code>app/helpers/UsersHelper.rakumod</code>) is available only in that controller's views, and the
+          chain follows controller inheritance: a controller sees its own helper, its ancestors' helpers, and
+          <code>ApplicationHelper</code>. A helper is a plain function. For request state, read
+          <code>$*KEAYL-CONTROLLER</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">our sub current-user-name {
+    $*KEAYL-CONTROLLER.current-user.name
+  }</code></pre>
+        </div>
+
+        <p>
+          Helper modules reload on change in development, the same as templates. The <code>controller</code>
+          and <code>scaffold</code> generators write a matching helper module, and <code>keayl new</code>
+          writes <code>ApplicationHelper</code>.
+        </p>
+      </section>
+
+    </div>

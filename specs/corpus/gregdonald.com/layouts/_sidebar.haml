@@ -1,0 +1,59 @@
+.sidebar.position-sticky.mb-3{style: 'top: 1.2rem;'}
+  .card.p-4.pb-2.mb-3.no-border-radius
+    .blogin-search
+      %form{'data-blogin-search' => 'true', role: 'search'}
+        .form-floating.mb-3
+          %input#search-input.form-control.no-border-radius{type: 'search', name: 'q', placeholder: ' ', 'aria-label' => 'Search'}
+          %label.fs-6{for: 'search-input'} Search
+      %ul{'data-blogin-results' => 'true'}
+
+  .card.collapse-card.p-4.mb-3.no-border-radius
+    .d-flex.justify-content-between.align-items-center
+      %h4.fst-italic.mb-0 Social
+      %span.collapse-toggle &minus;
+    .collapse-body.mt-3
+      .d-flex.flex-wrap.gap-3
+        .mb-1
+          %a.icon64.github{title: 'Follow me on Github!', href: 'https://github.com/gdonald', target: '_blank'}
+        .mb-1
+          %a.icon64.mastodon{title: 'Follow me on Mastodon!', rel: 'me', href: 'https://mastodon.social/@gregdonald', target: '_blank'}
+        .mb-1
+          %a.icon64.bluesky{title: 'Follow me on Bluesky!', rel: 'me', href: 'https://bsky.app/profile/gregdonald.com', target: '_blank'}
+        .mb-1
+          %a.icon64.linkedin{title: 'Follow me on LinkedIn!', href: 'https://www.linkedin.com/in/gregdonald', target: '_blank'}
+        .mb-1
+          %a.icon64.facebook{title: 'Follow me on Facebook!', href: 'https://facebook.com/gregcdonald', target: '_blank'}
+        .mb-1
+          %a.icon64.youtube{title: 'Follow me on Youtube!', href: 'https://www.youtube.com/@GregDonald', target: '_blank'}
+        .mb-1
+          %a.icon64.bingeflow{title: 'Follow me on Bingeflow!', href: 'https://bingeflow.io/@greg', target: '_blank'}
+        .mb-1
+          %a.icon64.reversi{title: 'Follow me on reversi.social!', href: 'https://reversi.social/@gd', target: '_blank'}
+        .mb-1
+          %a.icon64.email{title: 'Email me!', href: 'mailto:gd@darkclear.net', target: '_blank'}
+
+  .card.collapse-card.p-4.mb-3.no-border-radius
+    .d-flex.justify-content-between.align-items-center
+      %h4.fst-italic.mb-0 Other Stuff
+      %span.collapse-toggle &minus;
+    .collapse-body.mt-3
+      %ul.list-unstyled.mb-0
+        %li.mb-1
+          %a{href: 'https://tddbook.com/', target: '_blank'} Hands-on TDD
+        %li.mb-1
+          %a{href: 'https://rspec.io/', target: '_blank'} RSpec.IO
+        %li.mb-1
+          %a{href: 'https://behave.dev/', target: '_blank'} behave.dev
+        %li.mb-1
+          %a{href: 'https://keayl.dev/', target: '_blank'} keayl.dev
+        %li.mb-1
+          %a{href: 'https://learnraku.dev/', target: '_blank'} learnraku.dev
+        %li.mb-1
+          %a{href: 'https://blogin.dev/', target: '_blank'} blogin.dev
+
+  .card.p-4.mb-3.no-border-radius
+    %h4.fst-italic Archives
+    %ol.list-unstyled.mb-0.archives-list
+      - for data<archives> -> $month
+        %li
+          %a{href: "/archives/#{$month<term>}"}= $month<label>

@@ -1,0 +1,177 @@
+:plain
+  
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// install</div>
+        <h1>Thirty seconds to first green.</h1>
+        <p>
+          One command to install. One <code>specs/</code> directory to create.
+          <code>behave</code> finds and runs every <code>*spec.raku</code> it sees.
+        </p>
+      </div>
+    </div>
+  
+    <div class="container">
+  
+      <section class="anchor-section reveal" id="step-1">
+        <h2><span class="hash">#</span>1. install with zef</h2>
+        <p>
+          Behave is distributed through Raku's package manager,
+          <a href="https://github.com/ugexe/zef" rel="noopener">zef</a>. Don't have Raku yet?
+          Grab it from <a href="https://rakudo.org/downloads" rel="noopener">rakudo.org</a>.
+          <code>zef</code> ships with every install.
+        </p>
+  
+        <div class="install-block">
+          <span class="dollar">$</span>
+          <span class="cmd">zef install <b>BDD::Behave</b></span>
+        </div>
+  
+        <p style="margin-top: 1.2rem;">
+          That installs the <code>BDD::Behave</code> module and puts the <code>behave</code> CLI
+          on your PATH. Verify:
+        </p>
+  
+        <div class="code" data-lang="shell">
+          <pre><code>$ behave --version
+  BDD::Behave 0.0.4</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="step-2">
+        <h2><span class="hash">#</span>2. write your first spec</h2>
+        <p>
+          Create a <code>specs/</code> directory next to your <code>lib/</code>, and drop a
+          file named anything ending in <code>spec.raku</code>:
+        </p>
+  
+        <div class="code" data-lang="raku · specs/string-spec.raku">
+          <pre><code class="raku">use BDD::Behave;
+  
+  describe 'String#flip', {
+    it 'reverses the characters', {
+      expect('hello'.flip).to.be('olleh');
+    }
+  
+    it 'is its own inverse', {
+      expect('hello'.flip.flip).to.be('hello');
+    }
+  }</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="step-3">
+        <h2><span class="hash">#</span>3. run it</h2>
+        <p>
+          Point <code>behave</code> at a file, a directory, or run it with no arguments. It
+          will automatically look for a <code>specs/</code> directory and run anything
+          matching <code>spec.raku</code>.
+        </p>
+  
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">behave</span>
+          </div>
+          <div class="terminal-body"><code class="behave-out">..
+  
+  2 examples, 0 failed, 2 passed</code></div>
+        </div>
+  
+        <p>That's the <code>progress</code> formatter's default output. Try a different one:</p>
+  
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">behave --format tree</span>
+          </div>
+          <div class="terminal-body"><code class="behave-out">⮑ 'String#flip'
+    ⮑ 'reverses the characters'
+      ⮑ SUCCESS
+    ⮑ 'is its own inverse'
+      ⮑ SUCCESS
+  
+  2 examples, 0 failed, 2 passed</code></div>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="cli">
+        <h2><span class="hash">#</span>useful flags</h2>
+  
+        <table class="api-table">
+          <thead>
+            <tr><th>Flag</th><th>What it does</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>--format NAME</td><td>Pick an output formatter: <code>tree</code>, <code>progress</code>, <code>documentation</code>, <code>html</code>, <code>json</code>, <code>junit</code>, <code>tap</code>.</td></tr>
+            <tr><td>--tag NAME</td><td>Run only examples tagged <code>NAME</code>. Use <code>~NAME</code> to exclude.</td></tr>
+            <tr><td>--example REGEX</td><td>Filter examples by description regex.</td></tr>
+            <tr><td>--seed N</td><td>Fix the example-order random seed for reproducible runs.</td></tr>
+            <tr><td>--fail-fast</td><td>Stop on the first failure.</td></tr>
+            <tr><td>--profile</td><td>Print the "top N slowest" report at the end.</td></tr>
+            <tr><td>--slow-threshold S</td><td>Mark any example over <em>S</em> seconds inline.</td></tr>
+            <tr><td>--memory-profile</td><td>Print per-example RSS deltas. Pair with <code>--memory-threshold</code>.</td></tr>
+            <tr><td>--coverage</td><td>Record line coverage. Pair with <code>--coverage-dir lib</code>.</td></tr>
+            <tr><td>--benchmark</td><td>Run <code>benchmark</code> blocks and print the summary.</td></tr>
+            <tr><td>--help</td><td>The full list, with descriptions.</td></tr>
+          </tbody>
+        </table>
+      </section>
+  
+      <section class="anchor-section reveal" id="ci">
+        <h2><span class="hash">#</span>continuous integration</h2>
+        <p>For CI dashboards, pick a machine-readable formatter and pipe the output where your runner expects it.</p>
+  
+        <div class="code" data-lang="yaml · GitHub Actions">
+          <pre><code>- name: Run specs
+    run: behave --format junit specs/ &gt; junit.xml
+  
+  - name: Upload test results
+    if: always()
+    uses: actions/upload-artifact@v4
+    with:
+      name: junit
+      path: junit.xml</code></pre>
+        </div>
+  
+        <div class="code" data-lang="shell">
+          <pre><code># JSON for custom dashboards
+  behave --format json specs/ &gt; report.json
+  
+  # TAP for prove / tappy consumers
+  behave --format tap specs/ | tappy
+  
+  # HTML report you can open locally
+  behave --format html specs/ &gt; report.html &amp;&amp; open report.html</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="next">
+        <h2><span class="hash">#</span>where to go next</h2>
+  
+        <div class="card-grid">
+          <a class="card" href="/behavior">
+            <div class="card-icon">{ }</div>
+            <h3>Tour the syntax</h3>
+            <p>describe, context, it, let, hooks, shared contexts and examples.</p>
+          </a>
+          <a class="card" href="/matchers">
+            <div class="card-icon">~~</div>
+            <h3>The matcher catalog</h3>
+            <p>Every built-in matcher, plus how to write and compose your own.</p>
+          </a>
+          <a class="card" href="/mocks">
+            <div class="card-icon">2X</div>
+            <h3>Mocks, stubs &amp; spies</h3>
+            <p>Verifying doubles, partial mocks, argument matchers, auto-cleanup.</p>
+          </a>
+          <a class="card" href="/formatters">
+            <div class="card-icon">&lt;/&gt;</div>
+            <h3>Formatters</h3>
+            <p>Tree, progress, doc, HTML, JSON, JUnit XML, TAP, and how to add yours.</p>
+          </a>
+        </div>
+      </section>
+  
+    </div>
+  

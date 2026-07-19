@@ -1,0 +1,4 @@
+%section
+  %h1.mb-4= heading
+  != render(:partial<entry>, :collection(posts), :as<entry>)
+  != pagination-html

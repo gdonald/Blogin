@@ -1,0 +1,337 @@
+:plain
+  
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// output</div>
+        <h1>One run, every format.</h1>
+        <p>
+          Behave's runner is decoupled from its output. Every line it prints is emitted
+          through a formatter. Switch with <code>--format NAME</code>. The same spec, rendered
+          for humans, for CI, for tools, or for the web.
+        </p>
+      </div>
+    </div>
+  
+    <div class="container">
+  
+      <section class="reveal" style="padding-top: 0;">
+        <h3 style="margin-bottom: .4rem; color: var(--muted); font-weight: 500; letter-spacing: 0; text-transform: none;">The spec we'll run</h3>
+        <div class="code">
+          <pre><code class="raku">describe 'Calculator', {
+    context 'addition', {
+      it 'adds positive numbers',  { expect(1 + 1).to.be(2) }
+      it 'overflows on MAX_INT',   { expect(2147483647 + 1).to.be(-2147483648) }
+      pending 'handles negative-zero', 'not yet implemented', { }
+    }
+  
+    context 'subtraction', {
+      it 'subtracts a positive',   { expect(5 - 3).to.be(2) }
+    }
+  }</code></pre>
+        </div>
+      </section>
+  
+      <section class="reveal" data-tabs>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-target="fmt-tree" role="tab">tree</button>
+          <button class="tab" data-target="fmt-progress" role="tab">progress</button>
+          <button class="tab" data-target="fmt-doc" role="tab">documentation</button>
+          <button class="tab" data-target="fmt-html" role="tab">html</button>
+          <button class="tab" data-target="fmt-json" role="tab">json</button>
+          <button class="tab" data-target="fmt-junit" role="tab">junit</button>
+          <button class="tab" data-target="fmt-tap" role="tab">tap</button>
+        </div>
+  
+        <div class="tab-panel active" id="fmt-tree" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            The classic indented tree. One line per <code>describe</code>/<code>context</code>/<code>it</code>,
+            with a colored <code>SUCCESS</code> / <code>FAILURE</code> marker per example. Useful for
+            debugging: you can see exactly which example is running when something hangs.
+          </p>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span class="terminal-dots"><span></span><span></span><span></span></span>
+              <span class="terminal-title prompt">behave --format <span class="accent">tree</span> specs/calc-spec.raku</span>
+            </div>
+            <div class="terminal-body"><code class="behave-out">⮑ 'Calculator'
+    ⮑ 'addition'
+      ⮑ 'adds positive numbers'
+        ⮑ SUCCESS
+      ⮑ 'overflows on MAX_INT'
+        ⮑ FAILURE
+      ⮑ 'handles negative-zero'
+        ⮑ PENDING
+    ⮑ 'subtraction'
+      ⮑ 'subtracts a positive'
+        ⮑ SUCCESS
+  
+  Failures:
+  
+    [ ✗ ] specs/calc-spec.raku:5
+        Expected: 2147483648
+        to be: -2147483648
+  
+  4 examples, 1 failed, 1 pending, 2 passed</code></div>
+          </div>
+        </div>
+  
+        <div class="tab-panel" id="fmt-progress" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            The default. One character per example: <code>.</code> pass, <code>F</code> fail,
+            <code>*</code> pending, <code>S</code> skipped. Failures and counts print after the
+            stream completes.
+          </p>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span class="terminal-dots"><span></span><span></span><span></span></span>
+              <span class="terminal-title prompt">behave --format <span class="accent">progress</span> specs/calc-spec.raku</span>
+            </div>
+            <div class="terminal-body"><code class="behave-out">.F*.
+  
+  Failures:
+  
+    [ ✗ ] specs/calc-spec.raku:5
+        Expected: 2147483648
+        to be: -2147483648
+  
+  4 examples, 1 failed, 1 pending, 2 passed</code></div>
+          </div>
+        </div>
+  
+        <div class="tab-panel" id="fmt-doc" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            A clean, document-style rendering of the spec tree. Each group is a heading,
+            each example a line beneath it. Outcome suffixes (<code>(FAILED)</code>,
+            <code>(PENDING)</code>) annotate non-passing examples.
+          </p>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span class="terminal-dots"><span></span><span></span><span></span></span>
+              <span class="terminal-title prompt">behave --format <span class="accent">documentation</span> specs/calc-spec.raku</span>
+            </div>
+            <div class="terminal-body"><code class="behave-out">Calculator
+    addition
+      adds positive numbers
+      overflows on MAX_INT (FAILED)
+      handles negative-zero (PENDING)
+    subtraction
+      subtracts a positive
+  
+  Failures:
+  
+    [ ✗ ] specs/calc-spec.raku:5
+        Expected: 2147483648
+        to be: -2147483648
+  
+  4 examples, 1 failed, 1 pending, 2 passed</code></div>
+          </div>
+        </div>
+  
+        <div class="tab-panel" id="fmt-html" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            A self-contained HTML5 report with collapsible <code>describe</code>/<code>context</code>
+            nesting using native <code>&lt;details&gt;</code>, no JavaScript required. Inline styles, no
+            external CSS. Redirect to a file and open it.
+          </p>
+          <div class="terminal" style="margin-bottom: 1rem;">
+            <div class="terminal-bar">
+              <span class="terminal-dots"><span></span><span></span><span></span></span>
+              <span class="terminal-title prompt">behave --format <span class="accent">html</span> specs/ &gt; report.html</span>
+            </div>
+          </div>
+          <div class="html-preview">
+            <p class="summary has-failures">4 examples, 1 failed, 1 pending, 2 passed</p>
+  
+            <details open>
+              <summary>Calculator</summary>
+              <details open>
+                <summary>addition</summary>
+                <div class="example pass">✓ adds positive numbers <span style="color:#888">(0.001s · specs/calc-spec.raku:3)</span></div>
+                <div class="example fail">✗ overflows on MAX_INT <span style="color:#888">(0.001s · specs/calc-spec.raku:5)</span>
+                  <pre class="failure-detail">specs/calc-spec.raku:5
+    Expected: 2147483648
+    to be:    -2147483648</pre>
+                </div>
+                <div class="example pending">⏸ handles negative-zero <span style="color:#888">(pending: not yet implemented)</span></div>
+              </details>
+              <details open>
+                <summary>subtraction</summary>
+                <div class="example pass">✓ subtracts a positive <span style="color:#888">(0.001s · specs/calc-spec.raku:10)</span></div>
+              </details>
+            </details>
+          </div>
+          <p style="color: var(--muted); font-size: .85rem; margin-top: .8rem;">
+            ↑ Rendered preview of the HTML formatter's output. Open the real
+            <code>report.html</code> and you'll see this with click-to-collapse working out of
+            the box.
+          </p>
+        </div>
+  
+        <div class="tab-panel" id="fmt-json" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            A single JSON document emitted on stdout after the run finishes. Designed for
+            CI dashboards and tool integration. Stable, versioned schema.
+          </p>
+          <div class="code" data-lang="json">
+            <pre><code>{
+    "version": 1,
+    "order": "random",
+    "seed": 42,
+    "aborted": false,
+    "examples": [
+      {
+        "description": "adds positive numbers",
+        "full_description": "Calculator addition adds positive numbers",
+        "status": "passed",
+        "file": "specs/calc-spec.raku",
+        "line": 3,
+        "duration": 0.001,
+        "tags": []
+      },
+      {
+        "description": "overflows on MAX_INT",
+        "full_description": "Calculator addition overflows on MAX_INT",
+        "status": "failed",
+        "file": "specs/calc-spec.raku",
+        "line": 5,
+        "duration": 0.001,
+        "failure": {
+          "expectations": [
+            {
+              "file": "specs/calc-spec.raku",
+              "line": 5,
+              "given": 2147483648,
+              "expected": -2147483648,
+              "negated": false
+            }
+          ]
+        }
+      },
+      {
+        "description": "handles negative-zero",
+        "status": "pending",
+        "pending_reason": "not yet implemented",
+        "file": "specs/calc-spec.raku",
+        "line": 6
+      },
+      {
+        "description": "subtracts a positive",
+        "status": "passed",
+        "file": "specs/calc-spec.raku",
+        "line": 10,
+        "duration": 0.001
+      }
+    ],
+    "summary": {
+      "total": 4,
+      "passed": 2,
+      "failed": 1,
+      "pending": 1,
+      "skipped": 0,
+      "duration": 0.045
+    },
+    "summary_line": "4 examples, 1 failed, 1 pending, 2 passed"
+  }</code></pre>
+          </div>
+        </div>
+  
+        <div class="tab-panel" id="fmt-junit" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            JUnit XML, consumable by Jenkins, GitLab CI, CircleCI, and every dashboard that
+            ingests the <code>testsuites</code> / <code>testsuite</code> / <code>testcase</code>
+            schema. The describe/context chain joins into <code>classname</code> for hierarchical grouping.
+          </p>
+          <div class="code" data-lang="xml">
+            <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+  &lt;testsuites name="behave" tests="4" failures="1" errors="0" skipped="1" time="0.045"&gt;
+    &lt;testsuite name="calc-spec.raku" tests="4" failures="1" errors="0" skipped="1" time="0.045"&gt;
+      &lt;testcase classname="Calculator &amp;gt; addition" name="adds positive numbers"
+                file="specs/calc-spec.raku" line="3" time="0.001"/&gt;
+      &lt;testcase classname="Calculator &amp;gt; addition" name="overflows on MAX_INT"
+                file="specs/calc-spec.raku" line="5" time="0.001"&gt;
+        &lt;failure type="Expectation" message="Expected 2147483648 to be -2147483648"&gt;&lt;![CDATA[
+  specs/calc-spec.raku:5
+    Expected: 2147483648
+    to be:    -2147483648
+        ]]&gt;&lt;/failure&gt;
+      &lt;/testcase&gt;
+      &lt;testcase classname="Calculator &amp;gt; addition" name="handles negative-zero"
+                file="specs/calc-spec.raku" line="6" time="0"&gt;
+        &lt;skipped message="pending: not yet implemented"/&gt;
+      &lt;/testcase&gt;
+      &lt;testcase classname="Calculator &amp;gt; subtraction" name="subtracts a positive"
+                file="specs/calc-spec.raku" line="10" time="0.001"/&gt;
+    &lt;/testsuite&gt;
+  &lt;/testsuites&gt;</code></pre>
+          </div>
+        </div>
+  
+        <div class="tab-panel" id="fmt-tap" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            Test Anything Protocol v13. Compatible with <code>prove</code>, <code>tappy</code>,
+            and every TAP consumer. <code># TODO</code> for pending, <code># SKIP</code> for
+            skipped. Pending examples are <em>expected fails</em>, not failures.
+          </p>
+          <div class="code" data-lang="tap">
+            <pre><code>TAP version 13
+  1..4
+  ok 1 - Calculator addition adds positive numbers
+  not ok 2 - Calculator addition overflows on MAX_INT
+    ---
+    severity: 'fail'
+    file: 'specs/calc-spec.raku'
+    line: 5
+    message: 'Expected 2147483648 to be -2147483648'
+    got: '2147483648'
+    expected: '-2147483648'
+    ...
+  ok 3 - Calculator addition handles negative-zero # TODO not yet implemented
+  ok 4 - Calculator subtraction subtracts a positive</code></pre>
+          </div>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" style="margin-top: 2rem;">
+        <h2><span class="hash">#</span>write your own</h2>
+        <p>
+          Every formatter is a Raku class that composes the <code>BDD::Behave::Formatter</code>
+          role. The role declares a hook for every interesting event the runner emits.
+          All default to no-ops, so a custom formatter only overrides what it cares about.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">use BDD::Behave::Formatter;
+  use BDD::Behave::Formatter::Registry;
+  
+  class DotsFormatter does BDD::Behave::Formatter {
+    method name(--> Str) { 'dots' }
+  
+    method example-pass($example)                   { print '.' }
+    method example-fail($example, :$failure-info)   { print 'F' }
+    method example-pending($example)                { print '*' }
+    method example-skipped($example)                { print 'S' }
+    method run-summary($result, *%) {
+      say "";
+      say "{$result.total} examples, {$result.failed} failed, {$result.passed} passed";
+    }
+  }
+  
+  BDD::Behave::Formatter::Registry.register('dots', DotsFormatter);</code></pre>
+        </div>
+  
+        <p>Once registered, the formatter is selectable like any built-in:</p>
+  
+        <div class="code" data-lang="shell">
+          <pre><code>behave --format dots specs/</code></pre>
+        </div>
+  
+        <div class="callout cyan">
+          <strong>Hooks worth overriding.</strong> <code>suite-start</code>, <code>group-start</code>,
+          <code>example-pass</code>/<code>fail</code>/<code>pending</code>/<code>skipped</code>,
+          <code>run-summary</code>, and <code>multi-file-overall</code> are the most common.
+          See <a href="https://docs.behave.dev/formatter/formatter/" rel="noopener">the docs</a> for the full lifecycle.
+        </div>
+      </section>
+  
+    </div>
+  

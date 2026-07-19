@@ -1,0 +1,283 @@
+:plain
+  
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// behavior</div>
+        <h1>A vocabulary for behavior.</h1>
+        <p>
+          Behave gives you the building blocks BDD has always used
+          (<code>describe</code>, <code>it</code>, <code>let</code>, <code>before-each</code>)
+          adapted to Raku's syntax. Specs are ordinary Raku files, and these
+          primitives are ordinary exported subs.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#describe">describe / context</a>
+          <a href="#it">it</a>
+          <a href="#let">let / let-bang</a>
+          <a href="#subject">subject</a>
+          <a href="#hooks">hooks</a>
+          <a href="#shared">shared</a>
+          <a href="#tags">tags &amp; focus</a>
+        </nav>
+      </div>
+    </div>
+  
+    <div class="container">
+  
+      <section class="anchor-section reveal" id="describe">
+        <h2><span class="hash">#</span>describe / context</h2>
+        <p>
+          <code>describe</code> and <code>context</code> define a group of related examples.
+          They're aliases. Pick whichever reads better in plain English. Groups can be
+          nested arbitrarily, and Raku scoping rules apply inside each block, so a
+          <code>my $foo</code> declared in a group is visible to its examples and nested groups.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">use BDD::Behave;
+  
+  describe 'User#full-name', {
+    context 'when both names are present', {
+      it 'joins them with a space', {
+        my $u = User.new(:first<Ada>, :last<Lovelace>);
+        expect($u.full-name).to.be('Ada Lovelace');
+      }
+    }
+  
+    context 'when only the first name is present', {
+      it 'returns the first name alone', {
+        my $u = User.new(:first<Ada>);
+        expect($u.full-name).to.be('Ada');
+      }
+    }
+  }</code></pre>
+        </div>
+  
+        <div class="callout cyan">
+          <strong>Tip.</strong> <code>context</code> reads naturally for branching scenarios
+          ("when X", "with Y"). Use <code>describe</code> for the thing under test
+          ("<code>User#full-name</code>", "the parser").
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="it">
+        <h2><span class="hash">#</span>it</h2>
+        <p>
+          Each <code>it</code> is an example: a single behavior the surrounding group asserts.
+          Pass a description and a block. Auto-derived descriptions are also supported:
+          omit the string and Behave infers it from the matcher.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">describe 'String#uc', {
+    it 'uppercases ASCII', {
+      expect('hi'.uc).to.be('HI');
+    }
+  
+    # auto-described, description derived from the expectation
+    it { expect('abc'.uc).to.be('ABC') }
+  
+    # pending, body is not executed, marked with a reason
+    pending 'works on accented characters', 'pending Unicode fold work', {
+      expect('café'.uc).to.be('CAFÉ');
+    }
+  }</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="let">
+        <h2><span class="hash">#</span>let / let-bang</h2>
+        <p>
+          <code>let</code> defines a value that is <strong>lazy</strong> (only computed when
+          first read) and <strong>memoized per example</strong> (reset between examples). Use
+          it for the test subject and any inputs whose construction you'd otherwise repeat.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">describe 'cart totals', {
+    let(:cart, { ShoppingCart.new });
+    let(:item, { Item.new(:price(9.99)) });
+  
+    it 'is zero when empty', {
+      expect(cart.total).to.be(0);
+    }
+
+    it 'adds the item price', {
+      cart.add(item);
+      expect(cart.total).to.be(9.99);
+    }
+
+    context 'with a coupon', {
+      # inner let shadows the outer one
+      let(:cart, { ShoppingCart.new(:coupon('10OFF')) });
+
+      it 'applies the discount', {
+        cart.add(item);
+        expect(cart.total).to.be(8.99);
+      }
+    }
+  }</code></pre>
+        </div>
+  
+        <p>
+          <code>let-bang</code> is the Raku-friendly spelling of RSpec's <code>let!</code>. It
+          defines the same memoized value, but forces it before every example body so any
+          side effects in the block run whether or not the example reads the value. Useful
+          when the <em>creation</em> is itself the setup (inserting a row, recording a fixture).
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">describe 'invoices index', {
+    let-bang(:invoice, { Invoice.create(:amount(100)) });
+  
+    it 'returns the invoice', {
+      # passes even though we never read :invoice, the row exists
+      expect(Invoice.all.elems).to.be(1);
+    }
+  }</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="subject">
+        <h2><span class="hash">#</span>subject / subject-bang</h2>
+        <p>
+          <code>subject</code> is a specialized <code>let</code>: the thing this group is
+          testing. Use the bare <code>.is</code> / <code>.is-not</code> matchers for one-liners,
+          or refer to <code>:subject</code> by name.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">describe 'Account', {
+    subject { Account.new(:balance(100)) }
+  
+    it 'starts with the configured balance', {
+      expect(subject.balance).to.be(100);
+    }
+  
+    it { is.an-instance-of(Account) }
+  }</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="hooks">
+        <h2><span class="hash">#</span>hooks</h2>
+        <p>Hooks run on a predictable schedule around every example or group.</p>
+  
+        <table class="api-table">
+          <thead>
+            <tr><th>Hook</th><th>Runs</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>before-each</td><td>Before each example in the group (and nested groups).</td></tr>
+            <tr><td>before-all</td><td>Once before the first example in the group.</td></tr>
+            <tr><td>after-each</td><td>After each example, even on failure.</td></tr>
+            <tr><td>after-all</td><td>Once after the last example in the group.</td></tr>
+            <tr><td>around-each</td><td>Wraps each example body. Must invoke the continuation to actually run it.</td></tr>
+            <tr><td>around-all</td><td>Wraps the entire group.</td></tr>
+          </tbody>
+        </table>
+  
+        <div class="code">
+          <pre><code class="raku">describe 'database fixtures', {
+    before-all  { DB.connect }
+    after-all   { DB.disconnect }
+  
+    before-each { DB.begin-transaction }
+    after-each  { DB.rollback }
+  
+    around-each -> &example {
+      my $t0 = now;
+      example();
+      note "took { now - $t0 }s";
+    }
+  
+    it 'inserts rows', { User.create(:name<Ada>); expect(User.all.elems).to.be(1) }
+    it 'cleans up between examples', { expect(User.all.elems).to.be(0) }
+  }</code></pre>
+        </div>
+  
+        <div class="callout">
+          <strong>Hook ordering.</strong> <code>before-each</code>, <code>let-bang</code>, and
+          any other registered hooks run in <strong>declaration order</strong>. No surprises.
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="shared">
+        <h2><span class="hash">#</span>shared contexts &amp; examples</h2>
+        <p>
+          Factor common setup into a <code>shared-context</code>. Share an entire example suite
+          across implementations with <code>shared-examples</code>. Both compose cleanly with
+          the surrounding group.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">shared-context 'authenticated user', {
+    let(:user, { User.create(:name<Ada>) });
+    before-each { session.login(user) }
+  }
+
+  describe 'dashboard', {
+    include-context 'authenticated user';
+
+    it 'greets the user', {
+      expect(dashboard.greeting).to.include(user.name);
+    }
+  }</code></pre>
+        </div>
+  
+        <div class="code">
+          <pre><code class="raku">shared-examples 'a Collection', -> %params {
+    let(:collection, %params<factory>);
+  
+    it 'reports its size', { expect(collection.size).to.be(0) }
+    it 'iterates', { expect(collection.iterator.list).to.be(()) }
+  }
+  
+  describe 'LinkedList', {
+    include-examples 'a Collection', :factory({ LinkedList.new });
+  }
+  
+  describe 'ArrayList', {
+    include-examples 'a Collection', :factory({ ArrayList.new });
+  }</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="tags">
+        <h2><span class="hash">#</span>tags, focus &amp; skip</h2>
+        <p>
+          Tag examples and groups for arbitrary filtering on the command line.
+          <code>fit</code> / <code>fdescribe</code> focus the run on a single example or group.
+          <code>xit</code> / <code>xdescribe</code> skip them.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">describe 'integration', :tag<slow integration>, {
+    it 'talks to the database', :tag<db>, {
+      expect(DB.ping).to.be(True);
+    }
+  
+    fit 'this one only, for now', {
+      expect(1 + 1).to.be(2);
+    }
+  
+    xit 'temporarily off', {
+      expect(...).to.be(...);
+    }
+  }</code></pre>
+        </div>
+  
+        <div class="code" data-lang="shell">
+          <pre><code># run only :slow examples
+  behave --tag slow specs/
+  
+  # exclude :integration examples
+  behave --tag '~integration' specs/
+  
+  # example filter by description regex
+  behave --example 'full-name' specs/users-spec.raku</code></pre>
+        </div>
+      </section>
+  
+    </div>
+  

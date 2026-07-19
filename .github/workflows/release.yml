@@ -1,0 +1,180 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# Each platform builds on its own architecture rather than cross-compiling or
+# emulating, so a release artifact is produced by the same toolchain CI tests
+# with. The publish job runs only after all three have passed.
+jobs:
+  # Before three binaries are built, check the tag names the version the tree
+  # declares. A mismatch here costs seconds. Caught after publishing, it costs a
+  # deleted release and a moved tag.
+  version:
+    name: Version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag against project(VERSION)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: ./scripts/check-version.sh
+
+      # A release with no changelog section is one nobody can read about, so it
+      # fails here rather than publishing empty notes.
+      - name: Check the changelog has a section for it
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: ./scripts/changelog-notes.sh > /dev/null
+
+  macos:
+    name: macOS universal
+    needs: version
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Build
+        run: ./scripts/release.sh macos
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blogin-macos-universal
+          path: dist/blogin-macos-universal*
+          if-no-files-found: error
+
+  linux:
+    name: Linux ${{ matrix.arch }}
+    needs: version
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: ./scripts/release.sh linux-${{ matrix.arch }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: blogin-linux-${{ matrix.arch }}
+          path: dist/blogin-linux-${{ matrix.arch }}*
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: [macos, linux]
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      # Every checksum is verified here rather than trusted, so a file damaged
+      # between building and publishing is caught before anybody downloads it.
+      - name: Check the checksums
+        run: |
+          cd dist
+          ls -l
+          sha256sum -c ./*.sha256
+
+      # The tag was checked against the source before the build. This checks the
+      # binary that came out of it, which is the artifact people download.
+      - name: Check the binary reports the tag's version
+        run: |
+          chmod +x dist/blogin-linux-x86_64
+          reported="$(dist/blogin-linux-x86_64 --version)"
+          wanted="blogin ${GITHUB_REF_NAME#v}"
+
+          if [[ "$reported" != "$wanted" ]]; then
+            echo "the binary reports '$reported', the tag wants '$wanted'" >&2
+            exit 1
+          fi
+
+          echo "ok: $reported"
+        shell: bash
+
+      # The notes are the changelog's own section, so what GitHub shows and what
+      # the file says are the same words.
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/changelog-notes.sh > notes.md
+
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "${GITHUB_REF_NAME}" \
+            --notes-file notes.md \
+            dist/blogin-macos-universal dist/blogin-macos-universal.sha256 \
+            dist/blogin-linux-x86_64 dist/blogin-linux-x86_64.sha256 \
+            dist/blogin-linux-arm64 dist/blogin-linux-arm64.sha256
+
+  # The formula points at the release assets by url and checksum, so it can only
+  # be written once the release exists. A tap left behind after a release is a
+  # `brew install` that fetches the previous version, which is why this runs in
+  # the same workflow rather than by hand afterwards.
+  tap:
+    name: Tap
+    needs: publish
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    # At the job level so the push step can test for the token in its `if`. A
+    # step cannot read the env it declares itself.
+    env:
+      TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+      TAP_REPOSITORY: ${{ vars.TAP_REPOSITORY || 'gdonald/homebrew-blogin' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Write the formula
+        run: ./scripts/formula.sh "${GITHUB_REPOSITORY}" "${GITHUB_REF_NAME}" > blogin.rb
+
+      # Kept on the release too, so the formula that produced a given version is
+      # recoverable even if the tap moves.
+      - name: Attach the formula to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${GITHUB_REF_NAME}" blogin.rb --clobber
+
+      # A token for the tap repository, since the built-in one reaches only this
+      # one. Without the secret the formula is still on the release and the tap
+      # is updated by hand.
+      - name: Push it to the tap
+        if: env.TAP_TOKEN != ''
+        run: |
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/${TAP_REPOSITORY}.git" tap
+          mkdir -p tap/Formula
+          cp blogin.rb tap/Formula/blogin.rb
+
+          cd tap
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+          if git diff --quiet; then
+            echo "the tap already has this formula"
+            exit 0
+          fi
+
+          git add Formula/blogin.rb
+          git commit -m "blogin ${GITHUB_REF_NAME}"
+          git push

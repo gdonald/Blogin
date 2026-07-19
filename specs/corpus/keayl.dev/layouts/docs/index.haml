@@ -1,0 +1,19 @@
+.doc-layout.container
+  %aside.doc-sidebar
+    != render(:partial<docnav>)
+  %article.doc-article
+    %nav.doc-crumbs{'aria-label' => 'Breadcrumb'}
+      %a{href: '/docs'} Docs
+      %span.doc-crumb-sep /
+      %span= heading
+    %h1.doc-title= heading
+    %p.doc-lede
+      Every page of the
+      %b= heading
+      manual, in reading order.
+    %ul.doc-index
+      - for posts -> $entry
+        %li
+          %a{href: "#{$entry<url>}"}= $entry<title>
+          - if $entry<description>
+            %span.doc-index-note= $entry<description>

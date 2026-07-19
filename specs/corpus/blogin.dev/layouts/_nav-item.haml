@@ -1,0 +1,8 @@
+%li.nav-item
+  - if nav-current($node)
+    %a.nav-link.active{href: "#{$node.url}"}= $node.label
+  - else
+    %a.nav-link{href: "#{$node.url}"}= $node.label
+  - if $node.children.elems
+    %ul.nav.flex-column.ms-3
+      != render(:partial<nav-item>, :collection($node.children), :as<node>)

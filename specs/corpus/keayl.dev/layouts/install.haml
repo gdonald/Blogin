@@ -1,0 +1,204 @@
+:plain
+
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// install</div>
+        <h1>From zef to first request.</h1>
+        <p>
+          One command to install, one <code>keayl new</code> to scaffold. The generator writes a config,
+          a routes file, a controller, and a view, and <code>keayl server</code> serves them on port 3000.
+        </p>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="anchor-section reveal" id="step-1">
+        <h2><span class="hash">#</span>1. install with zef</h2>
+        <p>
+          MVC::Keayl is distributed through Raku's package manager,
+          <a href="https://github.com/ugexe/zef" rel="noopener">zef</a>. Don't have Raku yet? Grab it from
+          <a href="https://rakudo.org/downloads" rel="noopener">rakudo.org</a>; <code>zef</code> ships with
+          every install.
+        </p>
+
+        <div class="install-block">
+          <span class="dollar">$</span>
+          <span class="cmd">zef install <b>MVC::Keayl</b></span>
+        </div>
+
+        <p style="margin-top: 1.2rem;">
+          That installs the module and puts the <code>keayl</code> CLI on your PATH. Verify:
+        </p>
+
+        <div class="code" data-lang="shell">
+          <pre><code>$ keayl version
+  MVC::Keayl 0.9.0</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="step-2">
+        <h2><span class="hash">#</span>2. scaffold an application</h2>
+        <p>
+          <code>keayl new</code> writes a runnable skeleton: the <code>config/</code> (a layered
+          <code>application.json</code>, an <code>application.raku</code> that returns the
+          <code>MVC::Keayl::Application</code>, a <code>routes.raku</code> with a <code>root</code>
+          route, and encrypted credentials), a <code>HomeController</code> with its view and layout,
+          static exception pages under <code>public/</code>, an <code>assets/</code> tree, a starter
+          spec, a <code>META6.json</code>, and <code>bin/dev</code>, <code>bin/server</code>, and
+          <code>bin/test</code> scripts.
+        </p>
+
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">keayl new blog</span>
+          </div>
+          <div class="terminal-body"><code class="keayl-out">created blog/.gitignore
+  created blog/META6.json
+  created blog/README.md
+  created blog/app/controllers/HomeController.rakumod
+  created blog/app/models/.keep
+  created blog/app/views/home/index.html.haml
+  created blog/app/views/layouts/application.html.haml
+  created blog/assets/css/style.css
+  created blog/assets/favicon.svg
+  created blog/config/application.json
+  created blog/config/application.raku
+  created blog/config/routes.raku
+  created blog/public/404.html
+  created blog/public/422.html
+  created blog/public/500.html
+  created blog/specs/home-spec.raku
+  created blog/tmp/.keep
+  created blog/bin/dev
+  created blog/bin/server
+  created blog/bin/test
+  created blog/config/master.key
+  created blog/config/credentials.yml.enc</code></div>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="step-3">
+        <h2><span class="hash">#</span>3. draw a route, write an action</h2>
+        <p>
+          A request needs three pieces: a route that names the target, a controller with the action, and a
+          view for it to render.
+        </p>
+
+        <div class="code" data-lang="raku · config/routes.raku">
+          <pre><code class="raku">use MVC::Keayl::Routing;
+
+  routes {
+    root to =&gt; 'home#index';
+    resources 'articles';
+  }</code></pre>
+        </div>
+
+        <div class="code" data-lang="raku · app/controllers/ArticlesController.rakumod">
+          <pre><code class="raku">use MVC::Keayl::Controller;
+
+  class ArticlesController is MVC::Keayl::Controller {
+    method index {
+      self.assign('articles', Article.all);
+    }
+  }</code></pre>
+        </div>
+
+        <div class="code" data-lang="haml · app/views/articles/index.html.haml">
+          <pre><code class="raku">%h1 Articles
+
+  %ul
+    != partial-each('articles/row', $articles)</code></pre>
+        </div>
+
+        <div class="code" data-lang="haml · app/views/articles/_row.html.haml">
+          <pre><code class="raku">%li= $row.title</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="step-4">
+        <h2><span class="hash">#</span>4. run it</h2>
+        <p>
+          <code>keayl server</code> loads <code>config/application.raku</code>, builds the Cro endpoint,
+          and listens. The host defaults to <code>127.0.0.1</code> and the port to <code>3000</code>.
+        </p>
+
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">keayl server</span>
+          </div>
+          <div class="terminal-body"><code class="keayl-out">listening on http://127.0.0.1:3000 (development)</code></div>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="cli">
+        <h2><span class="hash">#</span>the keayl CLI</h2>
+
+        <div class="table-scroll">
+          <table class="api-table">
+            <thead>
+              <tr><th>Command</th><th>What it does</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>keayl new NAME</td><td>Scaffold a new application skeleton in a subdirectory.</td></tr>
+              <tr><td>keayl server</td><td>Boot the app and serve over HTTP. <code>--host</code> and <code>--port</code> override the defaults. <code>keayl s</code> is the short form.</td></tr>
+              <tr><td>keayl routes</td><td>Print the route table: name, verbs, path, and target for every route.</td></tr>
+              <tr><td>keayl console</td><td>Open a REPL with the application booted and bound to <code>$*KEAYL-APP</code>. <code>keayl c</code> is the short form.</td></tr>
+              <tr><td>keayl credentials-edit</td><td>Decrypt the credentials file, open it in <code>$EDITOR</code>, and re-encrypt on save. <code>--env</code> selects a per-environment file.</td></tr>
+              <tr><td>keayl version</td><td>Print the installed version. <code>keayl help</code> lists every command.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="config">
+        <h2><span class="hash">#</span>environments and config</h2>
+        <p>
+          <code>MVC::Keayl::Config</code> reads a JSON file, the same <code>config/application.json</code>
+          shared with <code>ORM::ActiveRecord</code>, merging a <code>shared</code> section under the
+          selected environment. The environment comes from <code>KEAYL_ENV</code>, then
+          <code>RAKU_ENV</code>, defaulting to <code>development</code>.
+        </p>
+
+        <div class="code" data-lang="json · config/application.json">
+          <pre><code>{
+    "shared": { "app-name": "Blog" },
+    "development": {
+      "database": { "adapter": "sqlite" },
+      "log-level": "debug"
+    },
+    "production": { "log-level": "error" }
+  }</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="next">
+        <h2><span class="hash">#</span>where to go next</h2>
+
+        <div class="card-grid">
+          <a class="card" href="/routing">
+            <div class="card-icon">/:</div>
+            <h3>Routing</h3>
+            <p>Resourceful routes, namespaces, scopes, concerns, constraints, and URL helpers.</p>
+          </a>
+          <a class="card" href="/controllers">
+            <div class="card-icon">#</div>
+            <h3>Controllers</h3>
+            <p>Actions, filters, strong parameters, render and redirect, and rescue-from.</p>
+          </a>
+          <a class="card" href="/views">
+            <div class="card-icon">%=</div>
+            <h3>Views</h3>
+            <p>HAML resolution, layouts, partials, view helpers, and output safety.</p>
+          </a>
+          <a class="card" href="/security">
+            <div class="card-icon">&#9919;</div>
+            <h3>Security</h3>
+            <p>CSRF, sessions, signed and encrypted cookies, secrets, and credentials.</p>
+          </a>
+        </div>
+      </section>
+
+    </div>

@@ -1,0 +1,21 @@
+!!! 5
+%html{lang: 'en'}
+  %head
+    %meta{charset: 'utf-8'}
+    %meta{name: 'viewport', content: 'width=device-width, initial-scale=1'}
+    %title= meta-title
+    != head-meta
+    %link{rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg'}
+    %link{rel: 'stylesheet', href: '/assets/css/style.css'}
+  %body
+    != cache-fragment('header', { render(:partial<header>) })
+    %main
+      = yield
+    != cache-fragment('footer', { render(:partial<footer>) })
+    %button.back-to-top{type: 'button', 'aria-label' => 'Back to top', hidden: true}
+      :plain
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    %script{src: '/assets/js/highlight.js'}
+    %script{src: '/assets/js/main.js'}
+    %script{src: '/assets/js/formatters.js'}
+    %script{src: '/assets/js/search.js'}

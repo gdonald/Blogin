@@ -1,0 +1,25 @@
+{
+  "title": "Greg Donald",
+  "base-url": "https://gregdonald.com",
+  "author": "Greg Donald",
+  "home-section": "pages",
+  "clean-urls": true,
+  "css-framework": "none",
+  "highlight": false,
+  "page-size": 10,
+  "taxonomies": ["tags", "archives"],
+  "feed-formats": ["atom", "rss"],
+  "search": true,
+  "robots": true,
+  "minify": true,
+  "fingerprint": true,
+  "sections": {
+    "pages": {
+      "label": "Articles",
+      "order": 0,
+      "nav": false,
+      "index-dates": true,
+      "show-dates": true
+    }
+  }
+}

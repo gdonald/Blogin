@@ -1,0 +1,28 @@
+%header.site-header
+  .container.nav-row
+    %a.brand{href: '/', 'aria-label' => 'MVC::Keayl home'}
+      %span.brand-mark{'aria-hidden' => 'true'}
+        :plain
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 4 L7 20" stroke="#22d3ee" stroke-width="2.2"/>
+            <path d="M7 12 L16 4" stroke="#845ef7" stroke-width="2.2"/>
+            <path d="M7 12 L16 20" stroke="#845ef7" stroke-width="2.2"/>
+          </svg>
+      %span.brand-name
+        :plain
+          ke<b>ayl</b>
+    %button.nav-toggle{type: 'button', 'aria-label' => 'Toggle menu', 'aria-expanded' => 'false'}
+      :plain
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    %nav.nav{'aria-label' => 'Primary'}
+      %a{href: '/routing'}     Routing
+      %a{href: '/controllers'} Controllers
+      %a{href: '/views'}       Views
+      %a{href: '/helpers'}     Helpers
+      %a{href: '/security'}    Security
+      %a{href: '/toolkit'}     Toolkit
+      %a{href: '/install'}     Install
+      %a{href: '/docs'}        Docs
+      .nav-search{'data-blogin-search' => True}
+        %input{type: 'search', placeholder: 'Search', autocomplete: 'off', 'aria-label' => 'Search this site'}
+      %ul.nav-search-results{'data-blogin-results' => True}

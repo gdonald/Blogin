@@ -1,0 +1,28 @@
+!!! 5
+%html{lang: 'en', 'data-bs-theme' => 'dark'}
+  %head
+    %meta{charset: 'utf-8'}
+    %meta{name: 'viewport', content: 'width=device-width, initial-scale=1'}
+    %title= meta-title
+    != head-meta
+    %link{rel: 'stylesheet', href: '/assets/css/search.css'}
+    %link{rel: 'stylesheet', href: '/assets/css/styles.css'}
+    %link{rel: 'icon', type: 'image/x-icon', href: '/favicon.ico'}
+    %link{rel: 'icon', type: 'image/png', sizes: '32x32', href: '/assets/img/favicon-32x32.png'}
+    %link{rel: 'icon', type: 'image/png', sizes: '16x16', href: '/assets/img/favicon-16x16.png'}
+    %link{rel: 'apple-touch-icon', href: '/assets/img/apple-touch-icon.png'}
+  %body
+    .container
+      != cache-fragment('header', { render(:partial<header>) })
+    %main.container
+      .row
+        .col-xl-9.col-md-8
+          = yield
+        .col-xl-3.col-md-4.sidebar-padding
+          != cache-fragment('sidebar', { render(:partial<sidebar>) })
+    .container
+      != cache-fragment('footer', { render(:partial<footer>) })
+    %button.back-to-top &#8679;
+    %script{src: '/assets/js/prism.js'}
+    %script{type: 'module', src: '/assets/js/application.js'}
+    %script{src: '/assets/js/search.js'}

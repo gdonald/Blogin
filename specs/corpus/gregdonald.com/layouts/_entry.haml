@@ -1,0 +1,10 @@
+%article.post.p-3
+  %h2.post-title.mb-1
+    %a{href: "#{$entry<url>}"}= $entry<title>
+  %p.post-meta= format-date($entry<date>, "%B %e, %Y")
+  - if $entry<image>
+    %a.post-image-link{href: "#{$entry<url>}"}
+      %img.post-image{src: "#{$entry<image>}", alt: "#{$entry<title>}", loading: 'lazy'}
+  %p= $entry<description>
+  %p
+    %a{href: "#{$entry<url>}"} Read More...

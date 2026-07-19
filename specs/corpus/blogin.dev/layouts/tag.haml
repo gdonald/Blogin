@@ -1,0 +1,4 @@
+%section
+  %h1.mb-4= heading
+  %p.text-body-secondary.mb-4= "Pages tagged " ~ heading
+  != render(:partial<entry>, :collection(posts), :as<entry>)

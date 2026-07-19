@@ -1,0 +1,76 @@
+%nav.doc-nav{'aria-label' => 'WWW-Playwright documentation'}
+  %h4.doc-nav-group Introduction
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/WWW-Playwright/overview'
+        %a.current{href: '/docs/WWW-Playwright/overview'} Overview
+      - else
+        %a{href: '/docs/WWW-Playwright/overview'} Overview
+    %li
+      - if url() eq '/docs/WWW-Playwright/install'
+        %a.current{href: '/docs/WWW-Playwright/install'} Installing
+      - else
+        %a{href: '/docs/WWW-Playwright/install'} Installing
+    %li
+      - if url() eq '/docs/WWW-Playwright/getting-started'
+        %a.current{href: '/docs/WWW-Playwright/getting-started'} Getting started
+      - else
+        %a{href: '/docs/WWW-Playwright/getting-started'} Getting started
+  %h4.doc-nav-group Driving a browser
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/WWW-Playwright/actions'
+        %a.current{href: '/docs/WWW-Playwright/actions'} Actions
+      - else
+        %a{href: '/docs/WWW-Playwright/actions'} Actions
+    %li
+      - if url() eq '/docs/WWW-Playwright/queries'
+        %a.current{href: '/docs/WWW-Playwright/queries'} Queries
+      - else
+        %a{href: '/docs/WWW-Playwright/queries'} Queries
+    %li
+      - if url() eq '/docs/WWW-Playwright/diagnostics'
+        %a.current{href: '/docs/WWW-Playwright/diagnostics'} Diagnostics
+      - else
+        %a{href: '/docs/WWW-Playwright/diagnostics'} Diagnostics
+  %h4.doc-nav-group API reference
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/WWW-Playwright/browser'
+        %a.current{href: '/docs/WWW-Playwright/browser'} Browser
+      - else
+        %a{href: '/docs/WWW-Playwright/browser'} Browser
+    %li
+      - if url() eq '/docs/WWW-Playwright/context'
+        %a.current{href: '/docs/WWW-Playwright/context'} Context
+      - else
+        %a{href: '/docs/WWW-Playwright/context'} Context
+    %li
+      - if url() eq '/docs/WWW-Playwright/page'
+        %a.current{href: '/docs/WWW-Playwright/page'} Page
+      - else
+        %a{href: '/docs/WWW-Playwright/page'} Page
+    %li
+      - if url() eq '/docs/WWW-Playwright/locator'
+        %a.current{href: '/docs/WWW-Playwright/locator'} Locator
+      - else
+        %a{href: '/docs/WWW-Playwright/locator'} Locator
+  %h4.doc-nav-group Configuration
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/WWW-Playwright/configuration'
+        %a.current{href: '/docs/WWW-Playwright/configuration'} Configuration
+      - else
+        %a{href: '/docs/WWW-Playwright/configuration'} Configuration
+    %li
+      - if url() eq '/docs/WWW-Playwright/troubleshooting'
+        %a.current{href: '/docs/WWW-Playwright/troubleshooting'} Troubleshooting
+      - else
+        %a{href: '/docs/WWW-Playwright/troubleshooting'} Troubleshooting
+  %h4.doc-nav-group Internals
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/WWW-Playwright/wire-contract'
+        %a.current{href: '/docs/WWW-Playwright/wire-contract'} Wire contract
+      - else
+        %a{href: '/docs/WWW-Playwright/wire-contract'} Wire contract

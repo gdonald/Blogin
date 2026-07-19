@@ -1,0 +1,125 @@
+%nav.doc-nav{'aria-label' => 'Template-HAML documentation'}
+  %h4.doc-nav-group Introduction
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/Template-HAML/overview'
+        %a.current{href: '/docs/Template-HAML/overview'} Overview
+      - else
+        %a{href: '/docs/Template-HAML/overview'} Overview
+    %li
+      - if url() eq '/docs/Template-HAML/getting-started'
+        %a.current{href: '/docs/Template-HAML/getting-started'} Getting Started
+      - else
+        %a{href: '/docs/Template-HAML/getting-started'} Getting Started
+  %h4.doc-nav-group Syntax
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/Template-HAML/tags'
+        %a.current{href: '/docs/Template-HAML/tags'} Tags
+      - else
+        %a{href: '/docs/Template-HAML/tags'} Tags
+    %li
+      - if url() eq '/docs/Template-HAML/attributes'
+        %a.current{href: '/docs/Template-HAML/attributes'} Attributes
+      - else
+        %a{href: '/docs/Template-HAML/attributes'} Attributes
+    %li
+      - if url() eq '/docs/Template-HAML/indentation'
+        %a.current{href: '/docs/Template-HAML/indentation'} Indentation
+      - else
+        %a{href: '/docs/Template-HAML/indentation'} Indentation
+    %li
+      - if url() eq '/docs/Template-HAML/doctype'
+        %a.current{href: '/docs/Template-HAML/doctype'} Doctype
+      - else
+        %a{href: '/docs/Template-HAML/doctype'} Doctype
+    %li
+      - if url() eq '/docs/Template-HAML/comments'
+        %a.current{href: '/docs/Template-HAML/comments'} Comments
+      - else
+        %a{href: '/docs/Template-HAML/comments'} Comments
+    %li
+      - if url() eq '/docs/Template-HAML/plain-text'
+        %a.current{href: '/docs/Template-HAML/plain-text'} Plain text
+      - else
+        %a{href: '/docs/Template-HAML/plain-text'} Plain text
+    %li
+      - if url() eq '/docs/Template-HAML/whitespace'
+        %a.current{href: '/docs/Template-HAML/whitespace'} Whitespace
+      - else
+        %a{href: '/docs/Template-HAML/whitespace'} Whitespace
+  %h4.doc-nav-group Code in templates
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/Template-HAML/embedded-code'
+        %a.current{href: '/docs/Template-HAML/embedded-code'} Embedded code
+      - else
+        %a{href: '/docs/Template-HAML/embedded-code'} Embedded code
+    %li
+      - if url() eq '/docs/Template-HAML/control-flow'
+        %a.current{href: '/docs/Template-HAML/control-flow'} Control flow
+      - else
+        %a{href: '/docs/Template-HAML/control-flow'} Control flow
+    %li
+      - if url() eq '/docs/Template-HAML/filters'
+        %a.current{href: '/docs/Template-HAML/filters'} Filters
+      - else
+        %a{href: '/docs/Template-HAML/filters'} Filters
+  %h4.doc-nav-group Composition
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/Template-HAML/layouts-partials'
+        %a.current{href: '/docs/Template-HAML/layouts-partials'} Layouts and partials
+      - else
+        %a{href: '/docs/Template-HAML/layouts-partials'} Layouts and partials
+    %li
+      - if url() eq '/docs/Template-HAML/helpers'
+        %a.current{href: '/docs/Template-HAML/helpers'} Helpers
+      - else
+        %a{href: '/docs/Template-HAML/helpers'} Helpers
+    %li
+      - if url() eq '/docs/Template-HAML/context'
+        %a.current{href: '/docs/Template-HAML/context'} Render context
+      - else
+        %a{href: '/docs/Template-HAML/context'} Render context
+  %h4.doc-nav-group Extending
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/Template-HAML/config'
+        %a.current{href: '/docs/Template-HAML/config'} Configuration
+      - else
+        %a{href: '/docs/Template-HAML/config'} Configuration
+    %li
+      - if url() eq '/docs/Template-HAML/plugins'
+        %a.current{href: '/docs/Template-HAML/plugins'} Plugins
+      - else
+        %a{href: '/docs/Template-HAML/plugins'} Plugins
+  %h4.doc-nav-group Reference
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/Template-HAML/api'
+        %a.current{href: '/docs/Template-HAML/api'} API
+      - else
+        %a{href: '/docs/Template-HAML/api'} API
+    %li
+      - if url() eq '/docs/Template-HAML/cli'
+        %a.current{href: '/docs/Template-HAML/cli'} CLI
+      - else
+        %a{href: '/docs/Template-HAML/cli'} CLI
+    %li
+      - if url() eq '/docs/Template-HAML/canonical-form'
+        %a.current{href: '/docs/Template-HAML/canonical-form'} Canonical form
+      - else
+        %a{href: '/docs/Template-HAML/canonical-form'} Canonical form
+  %h4.doc-nav-group Development
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/Template-HAML/testing'
+        %a.current{href: '/docs/Template-HAML/testing'} Tests
+      - else
+        %a{href: '/docs/Template-HAML/testing'} Tests
+    %li
+      - if url() eq '/docs/Template-HAML/benchmarks'
+        %a.current{href: '/docs/Template-HAML/benchmarks'} Benchmarks
+      - else
+        %a{href: '/docs/Template-HAML/benchmarks'} Benchmarks

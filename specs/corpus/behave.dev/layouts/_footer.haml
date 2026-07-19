@@ -1,0 +1,60 @@
+%footer.site-footer
+  .container
+    .footer-grid
+      .footer-brand
+        %a.brand{href: '/'}
+          %span.brand-mark{'aria-hidden' => 'true'}
+            :plain
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M7 5 L4 5 L4 19 L7 19"/>
+                <path d="M17 5 L20 5 L20 19 L17 19"/>
+                <path d="M8 12.5 L11 15 L16 9" fill="none" stroke="#ff2d95" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+          %span.brand-name
+            :plain
+              be<b>have</b>
+        %p A behavior-driven testing framework for Raku. Open source under the Artistic License 2.0.
+      %div
+        %h4 Framework
+        %ul
+          %li
+            %a{href: '/behavior'} Behavior
+          %li
+            %a{href: '/matchers'} Matchers
+          %li
+            %a{href: '/mocks'} Mocks
+          %li
+            %a{href: '/formatters'} Formatters
+          %li
+            %a{href: '/coverage'} Coverage & tools
+      %div
+        %h4 Get started
+        %ul
+          %li
+            %a{href: '/install'} Install
+          %li
+            %a{href: '/docs'} Documentation
+          %li
+            %a{href: 'https://github.com/gdonald/BDD-Behave/tree/main/specs', rel: 'noopener', target: '_blank'} Example specs
+      %div
+        %h4 Project
+        %ul
+          %li
+            %a{href: 'https://github.com/gdonald/BDD-Behave', rel: 'noopener', target: '_blank'} GitHub
+          %li
+            %a{href: 'https://github.com/gdonald/BDD-Behave/issues', rel: 'noopener', target: '_blank'} Issue tracker
+          %li
+            %a{href: 'https://raku.land/zef:gdonald/BDD::Behave', rel: 'noopener', target: '_blank'} raku.land
+          %li
+            %a{href: 'https://raku.org/', rel: 'noopener', target: '_blank'} Raku
+    .footer-bottom
+      %span
+        :plain
+          &copy;
+        %span{data: {year: True}} 2026
+        \ behave.dev
+      %span
+        Powered by
+        %a{href: 'https://raku.land/zef:cro', rel: 'noopener', target: '_blank'} Cro
+        and
+        %a{href: 'https://raku.land/zef:gdonald/Template::HAML', rel: 'noopener', target: '_blank'} HAML

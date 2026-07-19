@@ -1,0 +1,285 @@
+:plain
+
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// security</div>
+        <h1>Hardened by default.</h1>
+        <p>
+          CSRF authenticity tokens, signed and encrypted cookies, sessions backed by a cookie or a
+          server-side store, parameter filtering for logs, transport and host security middleware, secret
+          resolution, and an encrypted credentials vault. The defaults are safe; the knobs are there when
+          you need them.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#csrf">CSRF</a>
+          <a href="#sessions">sessions</a>
+          <a href="#cookies">cookies</a>
+          <a href="#filtering">parameter filtering</a>
+          <a href="#transport">transport &amp; host</a>
+          <a href="#auth">HTTP authentication</a>
+          <a href="#secrets">secrets &amp; credentials</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="anchor-section reveal" id="csrf">
+        <h2><span class="hash">#</span>CSRF protection</h2>
+        <p>
+          <code>protect-from-forgery</code> registers a before-action that verifies a token on every
+          unsafe verb (<code>POST</code>, <code>PUT</code>, <code>PATCH</code>, <code>DELETE</code>). The
+          session holds one real token; each <code>csrf-token</code> call masks it with a fresh one-time
+          pad, so the rendered value differs every time while still validating. A request may also supply
+          the token in the <code>X-CSRF-Token</code> header.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">class ApplicationController is MVC::Keayl::Controller { }
+  ApplicationController.protect-from-forgery;
+
+  # in a form
+  form-with(
+    model =&gt; $post,
+    url =&gt; '/posts',
+    csrf-token =&gt; self.csrf-token,
+    content =&gt; -&gt; $f {
+    $f.text-field('title')
+  });</code></pre>
+        </div>
+
+        <p>
+          A failed check follows the <code>with</code> strategy: <code>exception</code> (the default)
+          raises <code>X::MVC::Keayl::InvalidAuthenticityToken</code>, which becomes a <code>422</code>;
+          <code>reset-session</code> and <code>null-session</code> clear the session and let the request
+          proceed without the prior identity. API and webhook endpoints opt out with
+          <code>skip-forgery-protection</code>.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="sessions">
+        <h2><span class="hash">#</span>sessions</h2>
+        <p>
+          <code>MVC::Keayl::Session</code> is the per-request session, loaded from a store at the start and
+          persisted after the action runs. Access is indifferent, and an untouched session persists
+          nothing. <code>reset-session</code> empties it, which you call on privilege changes such as login
+          and logout.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># write
+  self.session&lt;user-id&gt; = $user.id;
+
+  # read
+  my $id = self.session&lt;user-id&gt;;
+
+  # remove
+  self.session&lt;user-id&gt;:delete;
+
+  # on login and logout
+  self.reset-session;</code></pre>
+        </div>
+
+        <p>
+          The default cookie store serializes the session to a signed cookie (tamper-evident); set its
+          serializer to <code>encrypted</code> to keep the contents confidential too. The server-side store
+          keeps only a signed session id in the cookie and the data in a pluggable backend.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">MVC::Keayl::Session::CookieStore.new(
+    serializer =&gt; 'encrypted');
+
+  my $store =
+    MVC::Keayl::Session::ServerSideStore.new(
+    backend =&gt;
+      MVC::Keayl::Session::MemoryBackend.new,
+  );</code></pre>
+        </div>
+
+        <div class="callout cyan">
+          <strong>Flash rides the session.</strong> <code>self.flash&lt;notice&gt; = 'Saved'</code> survives
+          exactly one redirect, then is dropped. <code>flash.now</code> shows a message in the current
+          request only, and <code>add-flash-types</code> registers named types like
+          <code>flash.success(...)</code>.
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="cookies">
+        <h2><span class="hash">#</span>cookies</h2>
+        <p>
+          <code>MVC::Keayl::Cookies</code> is the cookie jar, built from the request's <code>Cookie</code>
+          header and flushed to the response as <code>Set-Cookie</code> headers after the action.
+          <code>set</code> takes the attributes: <code>path</code>, <code>domain</code>,
+          <code>expires</code>, <code>max-age</code>, <code>secure</code>, <code>http-only</code>, and
+          <code>same-site</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># read
+  self.cookies&lt;theme&gt;;
+
+  # write
+  self.cookies&lt;theme&gt; = 'dark';
+
+  # delete
+  self.cookies.delete('theme');
+
+  self.cookies.set('session', $id,
+    path =&gt; '/',
+    http-only =&gt; True,
+    same-site =&gt; 'Lax',
+    secure =&gt; True);</code></pre>
+        </div>
+
+        <p>
+          <code>cookies.signed</code> is a tamper-evident jar: a written value gets an HMAC-SHA1 signature,
+          and reading verifies it with a constant-time comparison, returning <code>Nil</code> if it does
+          not match. <code>cookies.encrypted</code> keeps the value confidential, encrypting with
+          AES-256-CBC under a key derived from the controller's <code>secret</code>, then authenticating
+          the ciphertext (encrypt-then-MAC).
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">self.cookies.signed&lt;user-id&gt; = $user.id;
+
+  # the value, or Nil if tampered
+  my $id = self.cookies.signed&lt;user-id&gt;;
+
+  self.cookies.encrypted&lt;card&gt; = $number;
+
+  # Nil if it cannot be authenticated
+  my $number = self.cookies.encrypted&lt;card&gt;;</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="filtering">
+        <h2><span class="hash">#</span>parameter filtering</h2>
+        <p>
+          <code>MVC::Keayl::ParameterFilter</code> redacts sensitive parameters so they are safe to log,
+          replacing any matching key's value with <code>[FILTERED]</code> and recursing through nested
+          hashes and arrays. The defaults cover the usual names: <code>passw</code>, <code>secret</code>,
+          <code>token</code>, <code>_key</code>, <code>crypt</code>, <code>salt</code>,
+          <code>certificate</code>, <code>otp</code>, and <code>ssn</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># { password =&gt; '[FILTERED]', name =&gt; 'Ada' }
+  MVC::Keayl::ParameterFilter.new.filter(
+    %( password =&gt; 'secret', name =&gt; 'Ada' ));
+
+  class PaymentsController is MVC::Keayl::Controller { }
+  PaymentsController.filter-parameters(
+    'pin', 'cvv');
+
+  # the request params, redacted, safe to log
+  self.filtered-params;</code></pre>
+        </div>
+
+        <p>
+          <code>also</code> adds names to the defaults and <code>filters</code> replaces them; a filter may
+          be a string or a regex. Filtering copies the parameters, so the controller's <code>params</code>
+          are untouched.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="transport">
+        <h2><span class="hash">#</span>transport and host security</h2>
+        <p>
+          Three middleware harden requests in transit. <code>SSL</code> redirects plain requests to HTTPS
+          and adds an HSTS header, taking the scheme from <code>X-Forwarded-Proto</code> behind a proxy.
+          <code>HostAuthorization</code> blocks requests whose <code>Host</code> is not on an allowlist.
+          <code>SecureHeaders</code> adds default security headers without overriding any the application
+          already set.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">MVC::Keayl::Middleware::SSL.new(
+    app =&gt; $inner,
+    hsts =&gt; True,
+    hsts-max-age =&gt; 31536000,
+    include-subdomains =&gt; True);
+
+  MVC::Keayl::Middleware::HostAuthorization.new(
+    app =&gt; $inner,
+    allowed =&gt; ['example.com', '.example.com',
+      /\.internal$/]);
+
+  MVC::Keayl::Middleware::SecureHeaders.new(
+    app =&gt; $inner);
+  # X-Frame-Options: SAMEORIGIN,
+  # X-Content-Type-Options: nosniff,
+  # Referrer-Policy:
+  #   strict-origin-when-cross-origin, ...</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="auth">
+        <h2><span class="hash">#</span>HTTP authentication</h2>
+        <p>
+          The controller provides Basic, Token, and Digest schemes. Every credential comparison uses
+          <code>secure-compare</code>, a constant-time check that never short-circuits on the first
+          differing byte. <code>authenticate-or-request-with-http-basic</code> runs a block and, when it
+          returns falsy, issues the <code>401</code> challenge.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">method show {
+    if self.authenticate-or-request-with-http-basic(
+      'Admin', &amp;check) {
+      self.render(plain =&gt; 'welcome');
+    }
+  }
+
+  DashboardController.http-basic-authenticate-with(
+    name =&gt; 'admin',
+    password =&gt; 'secret',
+    realm =&gt; 'Admin',
+    except =&gt; &lt;index&gt;,
+  );</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="secrets">
+        <h2><span class="hash">#</span>secrets and credentials</h2>
+        <p>
+          <code>MVC::Keayl::Secrets</code> resolves the application secret from config, then
+          <code>KEAYL_SECRET_KEY_BASE</code>, then <code>SECRET_KEY_BASE</code>, dying if none is set so a
+          misconfigured deployment fails loudly. <code>derive-key</code> produces a purpose-specific key
+          for a salt, deterministic for the same base and salt, so one base backs the signing and
+          encryption keys from distinct salts.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">my $secrets = MVC::Keayl::Secrets.resolve;
+
+  # 64 hex chars
+  $secrets.derive-key('signed cookie');
+
+  # from one salt
+  $secrets.signing-key;
+
+  # from another
+  $secrets.encryption-key;</code></pre>
+        </div>
+
+        <p>
+          <code>MVC::Keayl::Credentials</code> stores secrets in an encrypted YAML file checked into the
+          repository, decrypted at runtime with a master key from <code>KEAYL_MASTER_KEY</code> or
+          <code>config/master.key</code>. <code>keayl credentials-edit</code> opens the decrypted file in
+          <code>$EDITOR</code> and re-encrypts whatever you save.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">my $credentials = MVC::Keayl::Credentials.resolve;
+  $credentials&lt;secret-key-base&gt;;
+
+  # Nil if any key is missing
+  $credentials.read('aws', 'access-key-id');
+
+  my $production = MVC::Keayl::Credentials.resolve(
+    env =&gt; 'production');</code></pre>
+        </div>
+      </section>
+
+    </div>

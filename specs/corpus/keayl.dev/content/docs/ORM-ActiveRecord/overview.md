@@ -1,0 +1,55 @@
+---
+title: Overview
+slug: overview
+order: 1
+description: The latest version of this documentation lives at https://gdonald.github.io/ORM-ActiveRecord/.
+toc: true
+---
+The latest version of this documentation lives at [https://gdonald.github.io/ORM-ActiveRecord/](https://gdonald.github.io/ORM-ActiveRecord/).
+
+The homepage for ORM::ActiveRecord is [https://github.com/gdonald/ORM-ActiveRecord](https://github.com/gdonald/ORM-ActiveRecord).
+
+## Synopsis
+
+ORM::ActiveRecord is an [object-relational mapping](https://en.wikipedia.org/wiki/Object-relational_mapping) module for Raku that mostly follows the [Active Record Pattern](https://en.wikipedia.org/wiki/Active_record_pattern).
+
+It supports **PostgreSQL**, **MySQL**, and **SQLite** through a common adapter
+layer. Application code is the same regardless of the backend; pick one with
+`DATABASE_URL` or `config/application.json`. See [Adapters](/docs/ORM-ActiveRecord/adapters).
+
+## Example Usage
+
+```perl6
+use User;
+use Page;
+
+my User $user = User.create({fname => 'Greg'});
+my Page $page = Page.create({:$user, name => 'Rakuist'});
+
+say $user.pages.first.name;
+say $page.user.fname;
+
+my User $alfred = User.create({fname => 'Alfred'});
+$page.update({user => $alfred});
+
+say $page.user.fname
+```
+
+Output:
+
+```shell
+Rakuist
+Greg
+Alfred
+```
+
+## Install
+
+ORM::ActiveRecord can be installed using the zef module installation tool:
+
+```
+zef install --/test ORM::ActiveRecord
+```
+
+`--/test` skips the test suite, which requires a configured test database. To
+run the tests, [set up a test database](/docs/ORM-ActiveRecord/tests#pointing-the-tests-at-a-database).

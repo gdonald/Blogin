@@ -1,0 +1,19 @@
+---
+InheritParentConfig: true
+
+# The spec harness registers every file through a static registrar object built
+# by a macro, and expectations are written as throwing lambdas. Five checks fire
+# on that shape in every spec file, so they are off here and on everywhere else.
+Checks: >
+  -bugprone-exception-escape,
+  -bugprone-random-generator-seed,
+  -bugprone-throwing-static-initialization,
+  -bugprone-unused-return-value,
+  -misc-use-anonymous-namespace
+
+# Rationale:
+#   bugprone-exception-escape              expectations throw out of lambdas
+#   bugprone-random-generator-seed         generated specs seed a fixed value on purpose
+#   bugprone-throwing-static-initialization  the per-file registrar is static
+#   bugprone-unused-return-value           setup helpers are called for effect
+#   misc-use-anonymous-namespace           the harness macro emits static functions

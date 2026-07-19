@@ -1,0 +1,39 @@
+%section.text-center.py-5
+  %h1.display-4.fw-bold.mb-3= site-title
+  %p.lead.text-body-secondary.mb-4.mx-auto{style: 'max-width: 40rem'} A static blog generator that turns Markdown and HAML into a fast, self-contained site. No database, no runtime, just files you can host anywhere.
+  .d-flex.gap-2.justify-content-center.flex-wrap
+    %a.btn.btn-primary.btn-lg{href: '/guide/'} Read the guide
+    %a.btn.btn-secondary.btn-lg{href: '/cli/'} CLI reference
+
+%section.py-4
+  .row.row-cols-1.row-cols-md-2.row-cols-lg-3.g-4
+    .col
+      .card.h-100
+        .card-body
+          %h5.card-title Markdown and HAML
+          %p.card-text.text-body-secondary Write posts in Markdown with front matter. Shape pages with HAML layouts and reusable partials.
+    .col
+      .card.h-100
+        .card-body
+          %h5.card-title Sections and navigation
+          %p.card-text.text-body-secondary Sections come from the content tree, with clean URLs, a recursive menu, paginated listings, and tag pages.
+    .col
+      .card.h-100
+        .card-body
+          %h5.card-title Feeds and search
+          %p.card-text.text-body-secondary Atom feeds, a sitemap, and browser search against a prebuilt index, all generated at build time.
+    .col
+      .card.h-100
+        .card-body
+          %h5.card-title CSS frameworks
+          %p.card-text.text-body-secondary Framework profiles for Bootstrap 5, Pico, and Bulma add classes to the same semantic HTML, or use none.
+    .col
+      .card.h-100
+        .card-body
+          %h5.card-title Syntax highlighting
+          %p.card-text.text-body-secondary Fenced code blocks are highlighted server-side during the build, so pages need no client-side highlighter.
+    .col
+      .card.h-100
+        .card-body
+          %h5.card-title Preview and incremental builds
+          %p.card-text.text-body-secondary A preview server rebuilds on change, and content-hash incremental builds rewrite only what changed.

@@ -1,0 +1,11 @@
+%article.post.p-3
+  %h2.post-title.mb-1
+    %a{href: "#{url}"}= title
+  - if show-dates
+    %p.post-meta= format-date(date, "%B %e, %Y")
+  != body
+  - if has-tags
+    %p.tags-list.mt-1
+      - for tags -> $tag
+        %a.badge{href: "#{$tag<url>}"}= $tag<name>
+!= post-nav-html

@@ -1,0 +1,6 @@
+.blogin-search
+  %form{'data-blogin-search' => 'true', role: 'search'}
+    %input{type: 'search', name: 'q', placeholder: 'Search', 'aria-label' => 'Search'}
+  %ul{'data-blogin-results' => 'true'}
+%link{rel: 'stylesheet', href: '/assets/css/search.css'}
+%script{src: '/assets/js/search.js'}

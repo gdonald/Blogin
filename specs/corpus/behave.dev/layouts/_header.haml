@@ -1,0 +1,27 @@
+%header.site-header
+  .container.nav-row
+    %a.brand{href: '/', 'aria-label' => 'behave home'}
+      %span.brand-mark{'aria-hidden' => 'true'}
+        :plain
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 5 L4 5 L4 19 L7 19"/>
+            <path d="M17 5 L20 5 L20 19 L17 19"/>
+            <path d="M8 12.5 L11 15 L16 9" fill="none" stroke="#ff2d95" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+      %span.brand-name
+        :plain
+          be<b>have</b>
+    %button.nav-toggle{type: 'button', 'aria-label' => 'Toggle menu', 'aria-expanded' => 'false'}
+      :plain
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+    %nav.nav{'aria-label' => 'Primary'}
+      %a{href: '/behavior'}   Behavior
+      %a{href: '/matchers'}   Matchers
+      %a{href: '/mocks'}      Mocks
+      %a{href: '/formatters'} Formatters
+      %a{href: '/coverage'}   Coverage
+      %a{href: '/install'}    Install
+      %a{href: '/docs'}       Docs
+      .nav-search{'data-blogin-search' => True}
+        %input{type: 'search', placeholder: 'Search', autocomplete: 'off', 'aria-label' => 'Search this site'}
+      %ul.nav-search-results{'data-blogin-results' => True}

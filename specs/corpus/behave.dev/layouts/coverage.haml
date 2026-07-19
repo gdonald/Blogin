@@ -1,0 +1,258 @@
+:plain
+  
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// tooling</div>
+        <h1>Beyond pass/fail.</h1>
+        <p>
+          Code coverage, doc extraction, per-example timing, slow-test detection, memory
+          profiling, statistical benchmarking with regression detection. All built in,
+          all driven by the same runner, all activated with a single flag.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#coverage">coverage</a>
+          <a href="#docs">doc extraction</a>
+          <a href="#timing">timing</a>
+          <a href="#memory">memory</a>
+          <a href="#bench">benchmarks</a>
+          <a href="#diff">diff output</a>
+        </nav>
+      </div>
+    </div>
+  
+    <div class="container">
+  
+      <section class="anchor-section reveal" id="coverage">
+        <h2><span class="hash">#</span>code coverage</h2>
+        <p>
+          Line coverage for the code your specs exercise. No extra modules, no plugins.
+          Pass <code>--coverage</code>, point at your <code>lib/</code>, and Behave records
+          which lines ran during the test suite.
+        </p>
+  
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">behave --coverage --coverage-dir lib specs/</span>
+          </div>
+          <div class="terminal-body"><code class="behave-out">⮑ 'Account'
+    ⮑ 'starts with the configured balance'
+      ⮑ SUCCESS
+    ⮑ 'increases the balance on deposit'
+      ⮑ SUCCESS
+  
+  2 examples, 0 failed, 2 passed
+  
+  Coverage:</code></div>
+        </div>
+  
+        <div style="margin-top: 1rem;" class="code">
+          <div class="code-head">
+            <span>coverage report</span>
+          </div>
+          <pre><code>  lib/Account.rakumod         <span class="out-pass">100%</span>   42 / 42
+    lib/ShoppingCart.rakumod    <span class="out-pass">96%</span>    48 / 50    miss: 33, 41
+    lib/Invoice.rakumod         <span class="out-pending">78%</span>    61 / 78    miss: 22-29, 51-58, 66
+    lib/Receipt.rakumod         <span class="out-fail">12%</span>    3 / 25    miss: 4-9, 12-25
+  
+    Total                       82%   154 / 195</code></pre>
+        </div>
+  
+        <div class="callout cyan">
+          <strong>CI-ready.</strong> Pair <code>--coverage</code> with <code>--format json</code>
+          and the report ships with structured coverage data your pipeline can gate on.
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="docs">
+        <h2><span class="hash">#</span>doc extraction</h2>
+        <p>
+          Your specs already describe what the code does in English. Behave's doc extractor
+          turns them into Markdown. Descriptions become headings, examples become prose,
+          nested groups become nested sections. The cheapest documentation you'll ever ship
+          is the documentation you already wrote.
+        </p>
+  
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">behave --format documentation specs/ &gt; docs/behavior.md</span>
+          </div>
+        </div>
+  
+        <div class="code" data-lang="markdown">
+          <pre><code># Calculator
+  
+  ## addition
+  
+  - adds positive numbers
+  - overflows on MAX_INT
+  - handles negative-zero <i>(pending: not yet implemented)</i>
+  
+  ## subtraction
+  
+  - subtracts a positive from a positive
+  - subtracts a negative from a positive
+  
+  # Account
+  
+  - starts with the configured balance
+  
+  ## after a deposit
+  
+  - increases the balance
+  - records the transaction
+  - emits a deposit event</code></pre>
+        </div>
+  
+        <p>
+          The richer <code>DocExtractor</code> module lets you script your own pipeline: pull
+          the spec tree, walk it, render to any target format your team uses.
+        </p>
+      </section>
+  
+      <section class="anchor-section reveal" id="timing">
+        <h2><span class="hash">#</span>timing &amp; slow-test detection</h2>
+        <p>
+          Every example is timed. Pass <code>--profile</code> for a "top N slowest" report,
+          or <code>--slow-threshold N</code> to flag any example over <em>N</em> seconds
+          inline as it runs. No instrumentation, no separate tooling.
+        </p>
+  
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">behave --profile --slow-threshold 0.1 specs/</span>
+          </div>
+          <div class="terminal-body"><code class="behave-out">⮑ 'integration'
+    ⮑ 'talks to the database'
+      ⮑ SUCCESS  (SLOW: 0.43s)
+    ⮑ 'renders the report'
+      ⮑ SUCCESS
+  
+  12 examples, 0 failed, 12 passed
+  
+  Top 5 slowest examples:
+    0.43s  integration  talks to the database               specs/db-spec.raku:8
+    0.27s  reports      renders the report                  specs/report-spec.raku:14
+    0.11s  auth         signs and verifies a JWT            specs/auth-spec.raku:22
+    0.04s  cache        evicts the oldest entry             specs/cache-spec.raku:31
+    0.03s  parser       handles deeply nested expressions   specs/parser-spec.raku:67</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="memory">
+        <h2><span class="hash">#</span>memory profiling</h2>
+        <p>
+          <code>--memory-profile</code> records per-example RSS delta and prints a
+          "top N memory-heaviest" report. <code>--memory-threshold KB</code> flags any
+          example whose memory growth exceeds the threshold inline. Useful for catching
+          leaks in long-running fixtures.
+        </p>
+  
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">behave --memory-profile --memory-threshold 2048 specs/</span>
+          </div>
+          <div class="terminal-body"><code class="behave-out">⮑ 'image processing'
+    ⮑ 'resizes a 4k jpeg'
+      ⮑ SUCCESS  (MEMORY: +5.8 MB)
+    ⮑ 'thumbnails a batch'
+      ⮑ SUCCESS
+  
+  Top 3 memory-heaviest examples:
+    +5.8 MB  image processing  resizes a 4k jpeg     specs/img-spec.raku:8
+    +0.9 MB  reports           builds the PDF        specs/report-spec.raku:32
+    +0.3 MB  parser            parses 10k lines      specs/parser-spec.raku:54</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="bench">
+        <h2><span class="hash">#</span>benchmarks &amp; regression detection</h2>
+        <p>
+          Behave includes a benchmark harness with statistical summaries (mean, median,
+          stddev, iterations) and an optional baseline file so you can detect regressions
+          across runs. Mark a block as a benchmark. Behave records, summarizes, and (if
+          enabled) compares.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">use BDD::Behave;
+  use BDD::Behave::Benchmark;
+  
+  describe 'serialization', {
+    benchmark 'json encode a 10k-row payload', {
+      JSON::Fast::to-json(@payload);
+    }
+  
+    benchmark 'msgpack encode a 10k-row payload', {
+      MsgPack::encode(@payload);
+    }
+  }</code></pre>
+        </div>
+  
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">behave --benchmark --benchmark-baseline bench.json specs/</span>
+          </div>
+          <div class="terminal-body"><code class="behave-out">Benchmarks:
+  
+    json encode a 10k-row payload
+      mean: 4.21ms   median: 4.18ms   stddev: 0.11ms   iter: 200
+      vs baseline: <span class="out-pass">+2.4% faster</span>
+  
+    msgpack encode a 10k-row payload
+      mean: 1.83ms   median: 1.80ms   stddev: 0.06ms   iter: 200
+      vs baseline: <span class="out-fail">-11.7% regression</span>  ⚠
+  
+  Regressions detected (threshold 5%): 1</code></pre>
+        </div>
+  
+        <div class="callout">
+          <strong>Bisect support.</strong> The <code>BDD::Behave::Bisect</code> module narrows
+          down which example introduces a failure when running a test ordering. Think
+          <code>git bisect</code>, but for spec order dependencies.
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="diff">
+        <h2><span class="hash">#</span>diff output</h2>
+        <p>
+          When an <code>eq</code> or <code>be</code> matcher fails on a structural value,
+          Behave renders a colorized inline diff alongside the standard
+          <code>Expected:</code> / <code>to be:</code> block. No more eyeballing two
+          twenty-line hashes side by side.
+        </p>
+  
+        <div class="terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title prompt">behave specs/user-spec.raku</span>
+          </div>
+          <div class="terminal-body"><code class="behave-out">⮑ 'User#to-hash'
+    ⮑ 'serializes the user'
+      ⮑ FAILURE
+  
+  Failures:
+  
+    [ ✗ ] specs/user-spec.raku:18
+        Expected: { name => "Ada", role => "admin", age => 31 }
+        to be:    { name => "Ada", role => "user",  age => 30 }
+  
+        Diff:
+          {
+            name => "Ada",
+        -   role => "admin",
+        +   role => "user",
+        -   age => 31,
+        +   age => 30,
+          }
+  
+  1 example, 1 failed, 0 passed</code></pre>
+        </div>
+      </section>
+  
+    </div>
+  

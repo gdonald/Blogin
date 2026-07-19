@@ -1,0 +1,37 @@
+%nav.doc-nav{'aria-label' => 'BDD-Behave-Playwright documentation'}
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave-Playwright/overview'
+        %a.current{href: '/docs/BDD-Behave-Playwright/overview'} Overview
+      - else
+        %a{href: '/docs/BDD-Behave-Playwright/overview'} Overview
+    %li
+      - if url() eq '/docs/BDD-Behave-Playwright/installation'
+        %a.current{href: '/docs/BDD-Behave-Playwright/installation'} Installation
+      - else
+        %a{href: '/docs/BDD-Behave-Playwright/installation'} Installation
+    %li
+      - if url() eq '/docs/BDD-Behave-Playwright/lifecycle'
+        %a.current{href: '/docs/BDD-Behave-Playwright/lifecycle'} Browser lifecycle
+      - else
+        %a{href: '/docs/BDD-Behave-Playwright/lifecycle'} Browser lifecycle
+    %li
+      - if url() eq '/docs/BDD-Behave-Playwright/system-tests'
+        %a.current{href: '/docs/BDD-Behave-Playwright/system-tests'} System tests
+      - else
+        %a{href: '/docs/BDD-Behave-Playwright/system-tests'} System tests
+    %li
+      - if url() eq '/docs/BDD-Behave-Playwright/matchers'
+        %a.current{href: '/docs/BDD-Behave-Playwright/matchers'} Matchers
+      - else
+        %a{href: '/docs/BDD-Behave-Playwright/matchers'} Matchers
+    %li
+      - if url() eq '/docs/BDD-Behave-Playwright/diagnostics'
+        %a.current{href: '/docs/BDD-Behave-Playwright/diagnostics'} Failure diagnostics
+      - else
+        %a{href: '/docs/BDD-Behave-Playwright/diagnostics'} Failure diagnostics
+    %li
+      - if url() eq '/docs/BDD-Behave-Playwright/end-to-end'
+        %a.current{href: '/docs/BDD-Behave-Playwright/end-to-end'} End to end
+      - else
+        %a{href: '/docs/BDD-Behave-Playwright/end-to-end'} End to end

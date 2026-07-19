@@ -1,0 +1,41 @@
+.page-header
+  .container
+    .eyebrow // documentation
+    %h1 The manuals.
+    %p
+      Reference documentation for BDD::Behave and the modules built around it.
+
+.container
+  %ul.doc-set-grid
+    %li.doc-set
+      %h2
+        %a{href: '/docs/BDD-Behave'} BDD::Behave
+      %p
+        The testing framework itself: spec structure, let and hooks, the matcher
+        library, doubles and stubbing, parallel execution, coverage, and the
+        command-line runner.
+      %p.doc-set-meta 36 pages
+    %li.doc-set
+      %h2
+        %a{href: '/docs/BDD-Behave-Playwright'} BDD::Behave::Playwright
+      %p
+        Browser testing on top of Behave: driving a real browser from a spec,
+        the page matchers, system tests, and the screenshot and console output
+        captured when one fails.
+      %p.doc-set-meta 7 pages
+    %li.doc-set
+      %h2
+        %a{href: '/docs/WWW-Playwright'} WWW::Playwright
+      %p
+        The Raku binding to Playwright underneath it all: launching browsers,
+        actions and queries, the Browser, Context, Page and Locator API, and
+        the wire protocol it speaks.
+      %p.doc-set-meta 13 pages
+    %li.doc-set
+      %h2
+        %a{href: '/docs/ORM-Factory'} ORM::Factory
+      %p
+        Test data without the boilerplate: the factory DSL, sequences and
+        transient attributes, inheritance and variants, associations and
+        callbacks, and the ORM::ActiveRecord adapter.
+      %p.doc-set-meta 28 pages

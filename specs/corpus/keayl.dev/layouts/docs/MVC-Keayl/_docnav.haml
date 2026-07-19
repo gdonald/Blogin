@@ -1,0 +1,206 @@
+%nav.doc-nav{'aria-label' => 'MVC-Keayl documentation'}
+  %h4.doc-nav-group Introduction
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/overview'
+        %a.current{href: '/docs/MVC-Keayl/overview'} Overview
+      - else
+        %a{href: '/docs/MVC-Keayl/overview'} Overview
+    %li
+      - if url() eq '/docs/MVC-Keayl/application'
+        %a.current{href: '/docs/MVC-Keayl/application'} Application &amp; configuration
+      - else
+        %a{href: '/docs/MVC-Keayl/application'} Application &amp; configuration
+    %li
+      - if url() eq '/docs/MVC-Keayl/cli'
+        %a.current{href: '/docs/MVC-Keayl/cli'} Command-line interface
+      - else
+        %a{href: '/docs/MVC-Keayl/cli'} Command-line interface
+  %h4.doc-nav-group Handling a request
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/request'
+        %a.current{href: '/docs/MVC-Keayl/request'} Request
+      - else
+        %a{href: '/docs/MVC-Keayl/request'} Request
+    %li
+      - if url() eq '/docs/MVC-Keayl/response'
+        %a.current{href: '/docs/MVC-Keayl/response'} Response
+      - else
+        %a{href: '/docs/MVC-Keayl/response'} Response
+    %li
+      - if url() eq '/docs/MVC-Keayl/middleware'
+        %a.current{href: '/docs/MVC-Keayl/middleware'} Middleware
+      - else
+        %a{href: '/docs/MVC-Keayl/middleware'} Middleware
+    %li
+      - if url() eq '/docs/MVC-Keayl/adapters'
+        %a.current{href: '/docs/MVC-Keayl/adapters'} Server adapters
+      - else
+        %a{href: '/docs/MVC-Keayl/adapters'} Server adapters
+    %li
+      - if url() eq '/docs/MVC-Keayl/routing'
+        %a.current{href: '/docs/MVC-Keayl/routing'} Routing
+      - else
+        %a{href: '/docs/MVC-Keayl/routing'} Routing
+    %li
+      - if url() eq '/docs/MVC-Keayl/engines'
+        %a.current{href: '/docs/MVC-Keayl/engines'} Engines
+      - else
+        %a{href: '/docs/MVC-Keayl/engines'} Engines
+    %li
+      - if url() eq '/docs/MVC-Keayl/controllers'
+        %a.current{href: '/docs/MVC-Keayl/controllers'} Controllers
+      - else
+        %a{href: '/docs/MVC-Keayl/controllers'} Controllers
+  %h4.doc-nav-group Views
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/views'
+        %a.current{href: '/docs/MVC-Keayl/views'} Views
+      - else
+        %a{href: '/docs/MVC-Keayl/views'} Views
+    %li
+      - if url() eq '/docs/MVC-Keayl/helpers'
+        %a.current{href: '/docs/MVC-Keayl/helpers'} View helpers
+      - else
+        %a{href: '/docs/MVC-Keayl/helpers'} View helpers
+    %li
+      - if url() eq '/docs/MVC-Keayl/asset-pipeline'
+        %a.current{href: '/docs/MVC-Keayl/asset-pipeline'} Asset pipeline
+      - else
+        %a{href: '/docs/MVC-Keayl/asset-pipeline'} Asset pipeline
+    %li
+      - if url() eq '/docs/MVC-Keayl/i18n'
+        %a.current{href: '/docs/MVC-Keayl/i18n'} Internationalization
+      - else
+        %a{href: '/docs/MVC-Keayl/i18n'} Internationalization
+    %li
+      - if url() eq '/docs/MVC-Keayl/content-negotiation'
+        %a.current{href: '/docs/MVC-Keayl/content-negotiation'} Content negotiation
+      - else
+        %a{href: '/docs/MVC-Keayl/content-negotiation'} Content negotiation
+  %h4.doc-nav-group State
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/cookies'
+        %a.current{href: '/docs/MVC-Keayl/cookies'} Cookies
+      - else
+        %a{href: '/docs/MVC-Keayl/cookies'} Cookies
+    %li
+      - if url() eq '/docs/MVC-Keayl/sessions'
+        %a.current{href: '/docs/MVC-Keayl/sessions'} Sessions
+      - else
+        %a{href: '/docs/MVC-Keayl/sessions'} Sessions
+    %li
+      - if url() eq '/docs/MVC-Keayl/flash'
+        %a.current{href: '/docs/MVC-Keayl/flash'} Flash
+      - else
+        %a{href: '/docs/MVC-Keayl/flash'} Flash
+  %h4.doc-nav-group Security
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/csrf'
+        %a.current{href: '/docs/MVC-Keayl/csrf'} CSRF protection
+      - else
+        %a{href: '/docs/MVC-Keayl/csrf'} CSRF protection
+    %li
+      - if url() eq '/docs/MVC-Keayl/parameter-filtering'
+        %a.current{href: '/docs/MVC-Keayl/parameter-filtering'} Parameter filtering
+      - else
+        %a{href: '/docs/MVC-Keayl/parameter-filtering'} Parameter filtering
+    %li
+      - if url() eq '/docs/MVC-Keayl/transport-security'
+        %a.current{href: '/docs/MVC-Keayl/transport-security'} Transport &amp; host security
+      - else
+        %a{href: '/docs/MVC-Keayl/transport-security'} Transport &amp; host security
+    %li
+      - if url() eq '/docs/MVC-Keayl/http-authentication'
+        %a.current{href: '/docs/MVC-Keayl/http-authentication'} HTTP authentication
+      - else
+        %a{href: '/docs/MVC-Keayl/http-authentication'} HTTP authentication
+    %li
+      - if url() eq '/docs/MVC-Keayl/secrets'
+        %a.current{href: '/docs/MVC-Keayl/secrets'} Secrets
+      - else
+        %a{href: '/docs/MVC-Keayl/secrets'} Secrets
+    %li
+      - if url() eq '/docs/MVC-Keayl/credentials'
+        %a.current{href: '/docs/MVC-Keayl/credentials'} Encrypted credentials
+      - else
+        %a{href: '/docs/MVC-Keayl/credentials'} Encrypted credentials
+  %h4.doc-nav-group Performance
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/caching'
+        %a.current{href: '/docs/MVC-Keayl/caching'} Caching &amp; streaming
+      - else
+        %a{href: '/docs/MVC-Keayl/caching'} Caching &amp; streaming
+    %li
+      - if url() eq '/docs/MVC-Keayl/live-streaming'
+        %a.current{href: '/docs/MVC-Keayl/live-streaming'} Live streaming &amp; SSE
+      - else
+        %a{href: '/docs/MVC-Keayl/live-streaming'} Live streaming &amp; SSE
+  %h4.doc-nav-group Background work
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/mailer'
+        %a.current{href: '/docs/MVC-Keayl/mailer'} Mailer
+      - else
+        %a{href: '/docs/MVC-Keayl/mailer'} Mailer
+    %li
+      - if url() eq '/docs/MVC-Keayl/jobs'
+        %a.current{href: '/docs/MVC-Keayl/jobs'} Background jobs
+      - else
+        %a{href: '/docs/MVC-Keayl/jobs'} Background jobs
+    %li
+      - if url() eq '/docs/MVC-Keayl/cable'
+        %a.current{href: '/docs/MVC-Keayl/cable'} WebSockets
+      - else
+        %a{href: '/docs/MVC-Keayl/cable'} WebSockets
+    %li
+      - if url() eq '/docs/MVC-Keayl/action-mailbox'
+        %a.current{href: '/docs/MVC-Keayl/action-mailbox'} Action Mailbox
+      - else
+        %a{href: '/docs/MVC-Keayl/action-mailbox'} Action Mailbox
+  %h4.doc-nav-group Files and rich text
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/active-storage'
+        %a.current{href: '/docs/MVC-Keayl/active-storage'} Active Storage
+      - else
+        %a{href: '/docs/MVC-Keayl/active-storage'} Active Storage
+    %li
+      - if url() eq '/docs/MVC-Keayl/action-text'
+        %a.current{href: '/docs/MVC-Keayl/action-text'} Action Text
+      - else
+        %a{href: '/docs/MVC-Keayl/action-text'} Action Text
+  %h4.doc-nav-group Operations
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/logging'
+        %a.current{href: '/docs/MVC-Keayl/logging'} Logging
+      - else
+        %a{href: '/docs/MVC-Keayl/logging'} Logging
+    %li
+      - if url() eq '/docs/MVC-Keayl/instrumentation'
+        %a.current{href: '/docs/MVC-Keayl/instrumentation'} Instrumentation
+      - else
+        %a{href: '/docs/MVC-Keayl/instrumentation'} Instrumentation
+    %li
+      - if url() eq '/docs/MVC-Keayl/error-reporting'
+        %a.current{href: '/docs/MVC-Keayl/error-reporting'} Error reporting
+      - else
+        %a{href: '/docs/MVC-Keayl/error-reporting'} Error reporting
+    %li
+      - if url() eq '/docs/MVC-Keayl/health-and-pwa'
+        %a.current{href: '/docs/MVC-Keayl/health-and-pwa'} Health checks &amp; PWA
+      - else
+        %a{href: '/docs/MVC-Keayl/health-and-pwa'} Health checks &amp; PWA
+  %h4.doc-nav-group Testing
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl/test-support'
+        %a.current{href: '/docs/MVC-Keayl/test-support'} Test support
+      - else
+        %a{href: '/docs/MVC-Keayl/test-support'} Test support

@@ -1,0 +1,139 @@
+name: CI
+
+# Every job below runs one stage of scripts/test.sh, which is also what runs
+# before a commit. The stage is the single definition of what the check is, so
+# the two cannot drift: `./scripts/test.sh` locally covers everything here
+# except fuzzing.
+#
+# A stage is one build tree and every check that runs against it. Nothing is
+# compiled twice for the same instrumentation, and the stages cannot share a
+# build because the sanitizers, ThreadSanitizer, and coverage each instrument
+# the code differently.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Build and test
+        run: ./scripts/test.sh specs
+
+      # One build carrying AddressSanitizer, UndefinedBehaviorSanitizer, and the
+      # integer, bounds, and nullability checks. Both the specs and the binary
+      # itself run against it.
+      - name: Build and test under the sanitizers
+        run: ./scripts/test.sh sanitize
+
+      - name: Build and test with ThreadSanitizer
+        run: ./scripts/test.sh thread
+
+      - name: Build the distribution binary and check it runs alone
+        run: ./scripts/test.sh dist
+
+  linux:
+    name: Linux
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and test in the Debian container
+        run: ./scripts/test.sh linux
+
+  linux-static:
+    name: Linux distribution binary
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build statically and check it
+        run: ./scripts/test.sh linux-static
+
+  gcc:
+    name: GCC
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # Blogin ships built by clang. This job is a second opinion: GCC reports
+      # shadowing and conversions clang accepts, and it builds against libstdc++
+      # rather than libc++, so the same code runs on a different standard
+      # library. It found three shadowed names and a sign conversion the day it
+      # was added.
+      - name: Build and test with GCC
+        run: ./scripts/test.sh gcc
+
+  tidy:
+    name: clang-tidy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check every translation unit
+        run: ./scripts/test.sh tidy
+
+  coverage:
+    name: Coverage (macOS)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: brew install ninja
+
+      - name: Report coverage
+        run: ./scripts/test.sh coverage
+
+  coverage-linux:
+    name: Coverage (Linux)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      # The same floor on both platforms. Code reached only on one of them is
+      # covered there and not here, so a number that holds on both is a number
+      # that holds.
+      - name: Report coverage
+        run: ./scripts/test.sh coverage-linux
+
+  # The one check scripts/test.sh leaves out. Replay is the gate: every
+  # checked-in corpus and every regression input, through every target,
+  # deterministically and in about a second. Explore is a short look for
+  # something new on top of that. The long runs happen on a schedule, in
+  # fuzz-weekly.yml, where they have time to find things.
+  fuzz:
+    name: Fuzz
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Replay the corpus, then explore briefly
+        run: |
+          docker build -t blogin-dev docker
+          docker run --rm -v "$PWD:/workspace" -w /workspace blogin-dev bash -euo pipefail -c '
+            export CXX=clang++
+            BLOGIN_FUZZ_BUILD_DIR=build-linux/fuzz ./scripts/fuzz.sh replay
+            BLOGIN_FUZZ_BUILD_DIR=build-linux/fuzz ./scripts/fuzz.sh explore 30
+          '
+
+      - name: Keep whatever crashed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts/
+          if-no-files-found: ignore

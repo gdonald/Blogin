@@ -1,0 +1,305 @@
+:plain
+
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// toolkit</div>
+        <h1>Batteries, not plugins.</h1>
+        <p>
+          Background jobs, mailers, caching and conditional GET, content negotiation, live streaming,
+          WebSockets, and internationalization all ship in the box, driven by the same request cycle. No
+          extra modules to assemble, no ceremony to wire them together.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#jobs">background jobs</a>
+          <a href="#mailer">mailers</a>
+          <a href="#caching">caching</a>
+          <a href="#negotiation">content negotiation</a>
+          <a href="#live">live streaming</a>
+          <a href="#cable">websockets</a>
+          <a href="#i18n">i18n</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="anchor-section reveal" id="jobs">
+        <h2><span class="hash">#</span>background jobs</h2>
+        <p>
+          <code>MVC::Keayl::Job</code> runs work now or later. A subclass implements <code>perform</code>;
+          <code>perform-now</code> runs it immediately, and <code>perform-later</code> enqueues it on the
+          configured adapter. Positional and named arguments pass straight through. With no adapter
+          configured, <code>perform-later</code> runs inline, so a job is always runnable without setup.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">class WelcomeJob is MVC::Keayl::Job {
+    method perform($user-id) {
+      # send a welcome email, warm a cache, ...
+    }
+  }
+
+  # runs now, returns the result
+  WelcomeJob.perform-now(42);
+
+  # enqueues on the adapter
+  WelcomeJob.perform-later(42);</code></pre>
+        </div>
+
+        <p>
+          The adapter decides what "later" means. <strong>Inline</strong> runs on enqueue,
+          <strong>Test</strong> collects jobs without running them, <strong>Async</strong> runs each on its
+          own thread, and the <strong>Database</strong> adapter persists each job through a pluggable store.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">MVC::Keayl::Job.queue-adapter(
+    MVC::Keayl::Job::QueueAdapter::Async.new);
+
+  my $adapter =
+    MVC::Keayl::Job::QueueAdapter::Test.new;
+  MVC::Keayl::Job.queue-adapter($adapter);
+
+  # collected, not run
+  WelcomeJob.perform-later(42);
+
+  # now it runs
+  $adapter.perform-all;</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="mailer">
+        <h2><span class="hash">#</span>mailers</h2>
+        <p>
+          <code>MVC::Keayl::Mailer</code> builds email the way a controller builds a response: an action
+          renders HAML views into the parts of a message, and a delivery method sends it. <code>mail</code>
+          renders an <code>html</code> and a <code>text</code> part when both templates exist, making the
+          message multipart.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">class NoticeMailer is MVC::Keayl::Mailer {
+    method welcome($user) {
+      self.mail(
+        to      =&gt; $user.email,
+        from    =&gt; 'noreply@example.com',
+        subject =&gt; 'Welcome',
+        locals  =&gt; %( name =&gt; $user.name ),
+      );
+    }
+  }
+
+  NoticeMailer.default(
+    from =&gt; 'noreply@example.com');
+
+  my $mailer = NoticeMailer.new(
+    view-renderer =&gt; $view,
+    delivery =&gt; $delivery);
+  $mailer.deliver('welcome', $user);</code></pre>
+        </div>
+
+        <p>
+          Views are named for the mailer and action: <code>NoticeMailer#welcome</code> renders under
+          <code>notice_mailer/welcome.html.haml</code> and <code>notice_mailer/welcome.text.haml</code>.
+          Pair a mailer with a job to deliver in the background.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="caching">
+        <h2><span class="hash">#</span>caching and conditional GET</h2>
+        <p>
+          <code>fresh-when</code> sets validators and renders a <code>304 Not Modified</code> when the
+          request shows the client already has the current version; <code>is-stale</code> is its inverse.
+          <code>expires-in</code> sets <code>Cache-Control</code>, and a pluggable cache store offers a
+          low-level key-value API with a <code>fetch</code> that computes-and-stores on a miss.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">method show {
+    self.render('show')
+      if self.is-stale(
+        etag =&gt; $post,
+        last-modified =&gt; $post.updated-at);
+  }
+
+  # Cache-Control: public, max-age=3600, must-revalidate
+  self.expires-in(
+    3600,
+    public =&gt; True,
+    must-revalidate =&gt; True);
+
+  $store.fetch(
+    'user/1',
+    { load-user(1) },
+    expires-in =&gt; 300);
+  $store.increment('visits', 1, expires-in =&gt; 3600);
+  $store.delete-matched(/^user\//);</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="negotiation" data-tabs>
+        <h2><span class="hash">#</span>content negotiation</h2>
+        <p>
+          A controller action serves several formats with <code>respond-to</code>. The format is taken
+          from the path extension if present, otherwise negotiated from the <code>Accept</code> header; the
+          first declared format is the default, and a request that matches none gets <code>406</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">method show {
+    self.respond-to([
+      html =&gt; { self.render('show') },
+      json =&gt; { self.render(:json($post.to-hash)) },
+    ]);
+  }</code></pre>
+        </div>
+
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-target="neg-html" role="tab">/posts/7</button>
+          <button class="tab" data-target="neg-json" role="tab">/posts/7.json</button>
+        </div>
+
+        <div class="tab-panel active" id="neg-html" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            With <code>Accept: text/html</code>, the <code>html</code> block runs and renders the template.
+          </p>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span class="terminal-dots"><span></span><span></span><span></span></span>
+              <span class="terminal-title prompt">curl -H 'Accept: text/html' localhost:3000/posts/7</span>
+            </div>
+            <div class="terminal-body"><code class="keayl-out">200 OK
+  Content-Type: text/html; charset=utf-8
+
+  &lt;h1&gt;Deploying web apps with Raku&lt;/h1&gt;</code></div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="neg-json" role="tabpanel">
+          <p style="color: var(--muted); margin-bottom: 1rem;">
+            The <code>.json</code> extension forces JSON, so the <code>json</code> block runs and renders
+            the serialized post.
+          </p>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span class="terminal-dots"><span></span><span></span><span></span></span>
+              <span class="terminal-title prompt">curl localhost:3000/posts/7.json</span>
+            </div>
+            <div class="terminal-body"><code class="keayl-out">200 OK
+  Content-Type: application/json
+
+  {"id":7,"title":"Deploying web apps with Raku"}</code></div>
+          </div>
+        </div>
+
+        <div class="callout cyan" style="margin-top: 1.5rem;">
+          <strong>Device variants.</strong> A format block may be a map of variant names to blocks, so
+          <code>phone</code> renders <code>show_phone</code> while <code>any</code> falls back to
+          <code>show</code>. <code>MVC::Keayl::APIController</code> is the JSON-first base for API-only apps.
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="live">
+        <h2><span class="hash">#</span>live streaming and SSE</h2>
+        <p>
+          A live action writes the response body incrementally on its own thread, while the adapter pulls
+          the chunks through to the client. <code>live</code> runs a block, passing the controller and a
+          stream; the block writes chunks with <code>write</code>, and the framework closes the stream when
+          it returns. The action returns as soon as the block is spawned, so the dispatch loop is not
+          blocked.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">method feed {
+    self.live(-&gt; $controller, $stream {
+      CATCH {
+        when X::MVC::Keayl::Live::ClientDisconnected
+        {
+          cleanup();
+        }
+      }
+
+      loop {
+        $stream.write(next-chunk());
+      }
+    });
+  }</code></pre>
+        </div>
+
+        <p>
+          When the client goes away, the next <code>write</code> raises
+          <code>X::MVC::Keayl::Live::ClientDisconnected</code>, which the action catches to release
+          resources and stop producing.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="cable">
+        <h2><span class="hash">#</span>websockets</h2>
+        <p>
+          <code>MVC::Keayl::Cable</code> is an ActionCable-style abstraction for real-time messaging. A
+          connection holds one client, channels group its subscriptions, and a pub/sub backend fans
+          broadcasts out to everyone on a stream. Subclass a channel, stream from a named broadcasting in
+          <code>subscribed</code>, and add a method per action a client can invoke.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">class ChatChannel is MVC::Keayl::Cable::Channel {
+    method subscribed {
+      self.stream-from(
+        'room:'
+          ~ self.connection.identifiers&lt;room&gt;);
+    }
+
+    method speak(%data) {
+      self.broadcast-to(
+        'room:'
+          ~ self.connection.identifiers&lt;room&gt;,
+        %data&lt;message&gt;);
+    }
+  }</code></pre>
+        </div>
+
+        <p>
+          <code>stream-from</code> subscribes the channel to a broadcasting, <code>transmit</code> sends
+          straight to this client, and <code>broadcast-to</code> publishes to a stream, reaching every
+          subscribed connection. <code>perform</code> dispatches a client message to an action method, and
+          only methods defined on the channel are callable, so framework methods cannot be invoked from the
+          wire. A connection declares its identifiers with <code>identified-by</code> and verifies them in
+          <code>connect</code>, rejecting with <code>reject-unauthorized-connection</code>.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="i18n">
+        <h2><span class="hash">#</span>internationalization</h2>
+        <p>
+          <code>MVC::Keayl::I18n</code> loads locale files into one store, looks up translations by dotted
+          key, interpolates and pluralizes them, and localizes dates, times, and numbers.
+          <code>load-locales</code> reads every <code>.yml</code>, <code>.yaml</code>, and <code>.json</code>
+          file in a directory and merges them by top-level locale.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">my $i18n = MVC::Keayl::I18n.new(
+    default-locale    =&gt; 'en',
+    available-locales =&gt; &lt;en fr ru&gt;,
+    use-fallbacks     =&gt; True,
+  );
+
+  $i18n.load-locales('config/locales'.IO);
+
+  # "Hello Ada"
+  $i18n.translate('greeting', name =&gt; 'Ada');
+
+  # "3 apples"
+  $i18n.t('apples', count =&gt; 3);</code></pre>
+        </div>
+
+        <div class="callout">
+          <strong>More in the box.</strong> Logging, instrumentation and notifications, error reporting
+          with a developer exception page, an asset pipeline, WebSockets, Active Storage, Action Text, and
+          Action Mailbox round out the stack. See the
+          <a href="https://docs.keayl.dev/" rel="noopener">documentation</a> for the rest.
+        </div>
+      </section>
+
+    </div>

@@ -1,0 +1,7 @@
+.card.mb-3
+  .card-body
+    %h5.card-title.mb-1
+      %a.text-decoration-none{href: "#{$entry<url>}"}= $entry<title>
+    %p.card-text.text-body-secondary.mb-2= $entry<description>
+    - if index-dates
+      %small.text-body-secondary= $entry<date>

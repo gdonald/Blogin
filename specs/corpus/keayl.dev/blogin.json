@@ -1,0 +1,21 @@
+{
+  "title": "MVC::Keayl",
+  "base-url": "https://keayl.dev",
+  "author": "Greg Donald",
+  "clean-urls": true,
+  "css-framework": "none",
+  "highlight": false,
+  "search": true,
+  "sections": {
+    "docs": { "label": "Docs" },
+    "docs/MVC-Keayl": { "label": "MVC::Keayl", "page-size": 100, "index-dates": false, "show-dates": false },
+    "docs/MVC-Keayl-Admin": { "label": "MVC::Keayl::Admin", "page-size": 100, "index-dates": false, "show-dates": false },
+    "docs/ORM-ActiveRecord": { "label": "ORM::ActiveRecord", "page-size": 100, "index-dates": false, "show-dates": false },
+    "docs/Template-HAML": { "label": "Template::HAML", "page-size": 100, "index-dates": false, "show-dates": false }
+  },
+  "taxonomies": [],
+  "feed-formats": [],
+  "robots": true,
+  "minify": true,
+  "fingerprint": true
+}

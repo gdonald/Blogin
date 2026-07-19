@@ -1,0 +1,261 @@
+:plain
+  
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// doubles &amp; stubbing</div>
+        <h1>Test doubles that don't leak.</h1>
+        <p>
+          Two ways to stand in for collaborators: <code>double(...)</code> creates a new
+          stand-in from scratch; <code>allow(obj).to.receive('method')</code> stubs a
+          method on an existing object or class. Every stub installed in an example is
+          auto-uninstalled when the example ends, so they never bleed across specs.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#double">double()</a>
+          <a href="#verifying">verifying</a>
+          <a href="#allow">allow()</a>
+          <a href="#partial">partial mocks</a>
+          <a href="#any">any instance</a>
+          <a href="#spy">spy()</a>
+          <a href="#have-received">have-received</a>
+          <a href="#argmatchers">arg matchers</a>
+        </nav>
+      </div>
+    </div>
+  
+    <div class="container">
+  
+      <section class="anchor-section reveal" id="double">
+        <h2><span class="hash">#</span>double(), ad-hoc test doubles</h2>
+        <p>
+          The simplest form takes a name (cosmetic, for error messages) and a list of
+          <code>method =&gt; value</code> pairs. Unstubbed methods return <code>Any</code> and
+          record the call, so doubles are permissive by design.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">describe 'order summary', {
+    it 'reads name and total from a user double', {
+      my $user = double('User', name => 'alice', total => 99);
+  
+      expect($user.name).to.be('alice');
+      expect($user.total).to.be(99);
+    }
+  }</code></pre>
+        </div>
+  
+        <p>If the stub value is a <code>Callable</code>, the double invokes it with the call's arguments:</p>
+  
+        <div class="code">
+          <pre><code class="raku">my $upper = double('Upper', shout => -> $s { $s.uc });
+  
+  expect($upper.shout('hi')).to.be('HI');</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="verifying">
+        <h2><span class="hash">#</span>verifying class-based doubles</h2>
+        <p>
+          Pass a class as the first argument and the double becomes <strong>verifying</strong>:
+          every stubbed method must exist on the class, and dispatching a method the class
+          doesn't have dies. This catches typos and stubs that drift out of sync with the
+          real implementation.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">class Greeter {
+    method hello($name) { "hello, $name" }
+  }
+  
+  it 'stubs only methods that exist on the class', {
+    my $g = double(Greeter, hello => 'mocked');
+  
+    expect($g.hello('world')).to.be('mocked');
+    expect($g.double-class === Greeter).to.be(True);
+  }
+  
+  # stubbing a method the class doesn't define dies at creation:
+  #   double(Greeter, missing => 1);   # → dies
+  # calling a method the class doesn't define dies at dispatch:
+  #   $g.bogus;                        # → dies</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="allow">
+        <h2><span class="hash">#</span>allow().to.receive(), stub real objects</h2>
+        <p>
+          <code>allow($target).to.receive('method')</code> installs a temporary stub on a
+          method of an existing class or instance. The stub is uninstalled when the example
+          ends, restoring the original implementation.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">it 'stubs hello on this one instance only', {
+    my $g = Greeter.new;
+  
+    allow($g).to.receive('hello').and-return('STUB');
+  
+    expect($g.hello('alice')).to.be('STUB');                # stubbed
+    expect(Greeter.new.hello('bob')).to.be('hello, bob');   # untouched
+  }</code></pre>
+        </div>
+  
+        <p>The full chain:</p>
+  
+        <table class="api-table">
+          <tbody>
+            <tr><td>.and-return(v)</td><td>Stub returns <code>v</code>. Omit the chain for <code>Any</code>.</td></tr>
+            <tr><td>.and-raise(ex)</td><td>Stub throws the supplied exception.</td></tr>
+            <tr><td>.and-call-original</td><td>Delegate back to the real implementation.</td></tr>
+            <tr><td>.and-do(&amp;cb)</td><td>Invoke <code>&amp;cb</code> with the call's positional args; its return is the result.</td></tr>
+          </tbody>
+        </table>
+      </section>
+  
+      <section class="anchor-section reveal" id="partial">
+        <h2><span class="hash">#</span>partial mocks</h2>
+        <p>
+          <code>allow($obj).to.receive('m')</code> only replaces <code>m</code>. Every other
+          method on the same instance keeps its real behavior, including methods that read
+          or mutate state. Stub the collaborator boundaries, leave the rest of the object
+          alone.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">class Account {
+    has Int $.balance is rw = 0;
+    method deposit($n) { $!balance += $n; $!balance }
+    method label       { "Account($!balance)" }
+  }
+  
+  describe 'partial mock', {
+    it 'stubs label but lets deposit run for real', {
+      my $a = Account.new(balance => 100);
+  
+      allow($a).to.receive('label').and-return('STUB');
+  
+      expect($a.label).to.be('STUB');         # stubbed
+      expect($a.deposit(50)).to.be(150);      # real implementation
+      expect($a.balance).to.be(150);          # real state mutation
+    }
+  }</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="any">
+        <h2><span class="hash">#</span>allow-any-instance-of</h2>
+        <p>
+          Stubs an instance method at the class's method-table level, so every instance,
+          existing or future, dispatches into the stub for the rest of the example.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">class Repo { method find($id) { "real:$id" } }
+  
+  it 'affects every instance for the duration of the example', {
+    allow-any-instance-of(Repo).to.receive('find').and-return('stub');
+  
+    expect(Repo.new.find(1)).to.be('stub');
+    expect(Repo.new.find(2)).to.be('stub');
+  }</code></pre>
+        </div>
+  
+        <div class="callout">
+          <strong>Precedence.</strong> A per-instance <code>allow($obj).to.receive('m')</code>
+          for the same method takes precedence over <code>allow-any-instance-of(Class)</code>.
+          Only that one instance sees the instance-specific stub.
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="spy">
+        <h2><span class="hash">#</span>spy(), pass-through recorder</h2>
+        <p>
+          <code>spy($real-instance)</code> wraps each user-defined method on the instance
+          with a recording stub that delegates to the real implementation. Returns the
+          same instance. Use it when you want to verify a call without changing behavior.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">describe 'spying on a real object', {
+    it 'records calls without changing behavior', {
+      my $g = Greeter.new;
+      spy($g);
+  
+      expect($g.hello('alice')).to.be('hello, alice');   # real method ran
+      expect($g).to.have-received('hello');              # call recorded
+    }
+  }</code></pre>
+        </div>
+      </section>
+  
+      <section class="anchor-section reveal" id="have-received">
+        <h2><span class="hash">#</span>expect(obj).to.have-received()</h2>
+        <p>
+          Verify call records on a double, on a <code>spy(...)</code>-wrapped instance, or on
+          any object whose method has been stubbed via <code>allow(...)</code>. Chain
+          count modifiers and argument matchers for precise expectations.
+        </p>
+  
+        <div class="code">
+          <pre><code class="raku">my $log = double('Logger');
+  $log.info('starting');
+  $log.info('done');
+  
+  expect($log).to.have-received('info');                # at least one call
+  expect($log).to.have-received('info').twice;          # exactly two
+  expect($log).to.have-received('info').at-least(2);
+  expect($log).to.have-received('info').with('starting');
+  expect($log).to.have-received('info').with('starting').once;</code></pre>
+        </div>
+  
+        <table class="api-table">
+          <thead><tr><th>Modifier</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td>.once / .twice / .thrice</td><td>Exactly 1 / 2 / 3 calls.</td></tr>
+            <tr><td>.times(n) / .exactly(n)</td><td>Exactly <em>n</em> calls.</td></tr>
+            <tr><td>.at-least(n)</td><td><em>n</em> or more calls.</td></tr>
+            <tr><td>.at-most(n)</td><td><em>n</em> or fewer calls.</td></tr>
+            <tr><td>.with(args, :named)</td><td>Filter recorded calls. Combine with count modifiers.</td></tr>
+          </tbody>
+        </table>
+      </section>
+  
+      <section class="anchor-section reveal" id="argmatchers">
+        <h2><span class="hash">#</span>argument matchers</h2>
+        <p>For each positional or named arg, supply a matcher object instead of a literal value.</p>
+  
+        <table class="api-table">
+          <thead><tr><th>Matcher</th><th>Matches</th></tr></thead>
+          <tbody>
+            <tr><td>anything</td><td>Any value, including undefined.</td></tr>
+            <tr><td>instance-of(Type)</td><td>Anything for which <code>$arg ~~ Type</code> is true.</td></tr>
+            <tr><td>hash-including(:k&lt;v&gt;)</td><td>Any <code>Associative</code> containing the listed key/value pairs.</td></tr>
+            <tr><td>array-including(item, ...)</td><td>Any <code>Positional</code> containing all the listed items.</td></tr>
+          </tbody>
+        </table>
+  
+        <div class="code">
+          <pre><code class="raku">$log.info('hello', 42);
+  expect($log).to.have-received('info')
+    .with(instance-of(Str), instance-of(Int));
+  
+  $log.info({ user => 'alice', region => 'us', extra => 1 });
+  expect($log).to.have-received('info')
+    .with(hash-including(user => 'alice'));
+  
+  # matchers nest:
+  expect($log).to.have-received('info').with(
+    hash-including(user => instance-of(Str), count => anything)
+  );</code></pre>
+        </div>
+  
+        <div class="callout cyan">
+          <strong>Auto-cleanup is per-example.</strong> A stub installed inside an <code>it</code>
+          (or in <code>before-each</code>) is removed before the next example. A stub
+          installed in <code>before-all</code> lives for the entire <code>describe</code> it
+          sits in.
+        </div>
+      </section>
+  
+    </div>
+  

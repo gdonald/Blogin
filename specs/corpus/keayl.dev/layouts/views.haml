@@ -1,0 +1,221 @@
+:plain
+
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// views</div>
+        <h1>Templates that compose.</h1>
+        <p>
+          <code>MVC::Keayl::View</code> resolves a template by name, format, and handler, compiles it
+          through a pluggable handler, and caches the result. HAML is the default, backed by
+          <a href="https://github.com/gdonald/Template-HAML" rel="noopener">Template::HAML</a>.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#resolution">resolution</a>
+          <a href="#layouts">layouts</a>
+          <a href="#partials">partials</a>
+          <a href="#collection">collection &amp; object</a>
+          <a href="#helpers">view helpers</a>
+          <a href="#safety">output safety</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="anchor-section reveal" id="resolution">
+        <h2><span class="hash">#</span>template resolution</h2>
+        <p>
+          <code>render-template</code> resolves a name against each search path in turn, then by handler
+          extension, preferring a format-qualified file. The default format is <code>html</code>, and a
+          <code>:variant</code> prefers a variant-qualified file before the plain one. A name with no
+          <code>/</code> resolves relative to the controller's path.
+        </p>
+
+        <div class="code" data-lang="lookup order">
+          <pre><code># users/show, format html, variant phone
+  app/views/users/show.html+phone.haml
+  # users/show, format html
+  app/views/users/show.html.haml
+  # format-less fallback
+  app/views/users/show.haml</code></pre>
+        </div>
+
+        <div class="code">
+          <pre><code class="raku">use MVC::Keayl::View;
+
+  my $view = MVC::Keayl::View.new(
+    :paths(['app/views']));
+
+  $view.render-template('users/show',
+    { user =&gt; $user });
+  $view.render-template('users/show',
+    { user =&gt; $user },
+    format =&gt; 'html',
+    variant =&gt; 'phone');</code></pre>
+        </div>
+
+        <p>
+          Compiled templates are cached by file. <code>reload</code> (on by default) re-checks the file's
+          modification time and recompiles when it changes, which suits development;
+          <code>:!reload</code> trusts the cache and <code>cache =&gt; False</code> recompiles every render.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="layouts">
+        <h2><span class="hash">#</span>layouts, content-for, and yield</h2>
+        <p>
+          When an action renders a template, the rendered body is wrapped in a layout from
+          <code>layouts/</code>. With no layout chosen, the <code>application</code> layout is used if it
+          exists. Inside the layout, the wrapped body is available through <code>yield</code>, and a
+          template captures named content with <code>content-for</code> that the layout places with
+          <code>yield(name)</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">-# app/views/layouts/application.html.haml
+  %html
+    %head
+      %title= yield('title')
+    %body
+      != yield()
+
+  -# app/views/articles/show.html.haml
+  = content-for('title', 'Dashboard')
+  %h1= $article.title</code></pre>
+        </div>
+
+        <p>
+          Choose a layout per action with <code>:layout</code>, or for every action with the class-level
+          <code>layout</code> declaration. An action-level <code>:layout</code> overrides the controller
+          declaration, which overrides the <code>application</code> default.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="partials">
+        <h2><span class="hash">#</span>partials</h2>
+        <p>
+          A partial is a template whose file name begins with an underscore, referred to without it. A name
+          with no path segment resolves under the controller's view path; a name with a <code>/</code>
+          resolves from the views root, so <code>shared/menu</code> renders <code>shared/_menu</code> from
+          any controller. Inside a template the <code>partial</code> helper embeds one; use
+          <code>!=</code> so its HTML is not escaped.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">-# render users/_form from any controller
+  $view.render-partial('users/form',
+    { user =&gt; $user });
+
+  -# inside a template
+  %ul
+    != partial('users/row', %( user =&gt; $user ))</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="collection">
+        <h2><span class="hash">#</span>collection and object partials</h2>
+        <p>
+          <code>render-collection</code> renders a partial once per item, each render receiving the item
+          under the partial's local name and a zero-based <code>{local}_counter</code>.
+          <code>render-object</code> derives the partial from an object's class name, overridable with a
+          <code>to-partial-path</code> method. A controller renders these directly with <code>render</code>.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">-# greetings/_line.html.haml
+  %p= $line ~ ' #' ~ $line_counter
+
+  -# in a template
+  != partial-each('greetings/line', $lines)
+
+  -# with a spacer partial between items
+  $view.render-collection('greetings/line', @lines,
+    spacer =&gt; 'greetings/divider');
+
+  -# a controller, directly
+  self.render(:partial('line'),
+    :collection(@lines));</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="helpers">
+        <h2><span class="hash">#</span>view helpers</h2>
+        <p>
+          View helpers build HTML and return <code>SafeString</code> values, so their markup is not
+          re-escaped when emitted with <code>!=</code>. <code>content-tag</code> builds an element with
+          content and <code>tag</code> a self-closing one; a <code>class</code> attribute accepts an array
+          of tokens or a hash of conditional ones, and nested <code>data</code> / <code>aria</code> hashes
+          expand to dasherized attributes.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># &lt;p class="lead"&gt;hi&lt;/p&gt;
+  content-tag('p', 'hi', %( class =&gt; 'lead' ));
+
+  # &lt;input disabled type="text" /&gt;
+  tag('input', %(
+    type =&gt; 'text',
+    disabled =&gt; True ));
+
+  # &lt;div data-toggle="modal" data-user-id="5"&gt;x&lt;/div&gt;
+  content-tag('div', 'x', %( data =&gt; %(
+    user_id =&gt; 5,
+    toggle =&gt; 'modal' ) ));
+
+  # class="active" when $on
+  content-tag('div', 'x',
+    %( class =&gt; %( active =&gt; $on ) ));
+
+  # "btn active"
+  class-names('btn', %(
+    active =&gt; True,
+    disabled =&gt; False ));
+
+  # &lt;time datetime="2020-01-01"&gt;New Year&lt;/time&gt;
+  time-tag(Date.new(2020, 1, 1), 'New Year');</code></pre>
+        </div>
+
+        <p>
+          In templates the helpers are bare calls routed through the view context: <code>link-to</code>,
+          <code>image-tag</code>, <code>content-tag</code>, and so on, with no sigil. Locals keep their
+          sigil (<code>$user</code>), so a helper reads as a plain function call. URL, asset, date and time,
+          form, number, options, tag, and text helpers ship built in, and an application adds its own. See
+          the <a href="/helpers">helpers</a> page for the full set.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="safety">
+        <h2><span class="hash">#</span>output safety</h2>
+        <p>
+          HAML escapes interpolated values by default, so <code>= $value</code> is safe and
+          <code>!= $value</code> emits raw HTML. <code>MVC::Keayl::SafeString</code> adds a safe-buffer
+          type and helpers for composing and cleaning HTML. Concatenation escapes anything not already
+          safe, and <code>sanitize</code> keeps an allowlist while stripping scripts and event handlers.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># &lt;b&gt;a&lt;/b&gt;&lt;unsafe&gt;
+  html-safe('&lt;b&gt;a&lt;/b&gt;').concat('&lt;unsafe&gt;');
+
+  # &lt;b&gt;a&lt;/b&gt;&lt;x&gt;
+  safe-join([html-safe('&lt;b&gt;a&lt;/b&gt;'), '&lt;x&gt;']);
+
+  # &lt;a&gt;hi&lt;/a&gt;
+  sanitize(
+    '&lt;a href="javascript:x()" onclick="y()"&gt;hi&lt;/a&gt;');
+
+  # custom allowlist
+  sanitize('&lt;b&gt;ok&lt;/b&gt;', tags =&gt; &lt;b i em&gt;);
+
+  # \uXXXX-encode characters that could end a &lt;script&gt;
+  json-escape($payload);</code></pre>
+        </div>
+
+        <p>
+          In templates these are the <code>escape</code>, <code>raw</code>, <code>sanitize</code>, and
+          <code>json</code> helpers. Pair <code>sanitize</code> or <code>raw</code> with <code>!=</code> so
+          the cleaned HTML is not escaped again.
+        </p>
+      </section>
+
+    </div>

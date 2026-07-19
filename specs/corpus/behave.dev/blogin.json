@@ -1,0 +1,21 @@
+{
+  "title": "behave",
+  "base-url": "https://behave.dev",
+  "author": "Greg Donald",
+  "clean-urls": true,
+  "css-framework": "none",
+  "highlight": false,
+  "search": true,
+  "sections": {
+    "docs": { "label": "Docs" },
+    "docs/BDD-Behave": { "label": "BDD::Behave", "page-size": 100, "index-dates": false, "show-dates": false },
+    "docs/BDD-Behave-Playwright": { "label": "BDD::Behave::Playwright", "page-size": 100, "index-dates": false, "show-dates": false },
+    "docs/WWW-Playwright": { "label": "WWW::Playwright", "page-size": 100, "index-dates": false, "show-dates": false },
+    "docs/ORM-Factory": { "label": "ORM::Factory", "page-size": 100, "index-dates": false, "show-dates": false }
+  },
+  "taxonomies": [],
+  "feed-formats": [],
+  "robots": true,
+  "minify": true,
+  "fingerprint": true
+}

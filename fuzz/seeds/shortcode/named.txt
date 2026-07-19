@@ -1,0 +1,1 @@
+src="/img.png" alt="An image" width="600"

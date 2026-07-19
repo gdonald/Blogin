@@ -1,0 +1,42 @@
+.page-header
+  .container
+    .eyebrow // documentation
+    %h1 The manuals.
+    %p
+      Reference documentation for MVC::Keayl and the modules built around it.
+
+.container
+  %ul.doc-set-grid
+    %li.doc-set
+      %h2
+        %a{href: '/docs/MVC-Keayl'} MVC::Keayl
+      %p
+        The framework itself: the request and response objects, middleware and
+        server adapters, routing, controllers and views, sessions and security,
+        caching and streaming, background jobs and mail, and the command-line
+        tool that generates it all.
+      %p.doc-set-meta 37 pages
+    %li.doc-set
+      %h2
+        %a{href: '/docs/MVC-Keayl-Admin'} MVC::Keayl::Admin
+      %p
+        An administration interface generated from your models: registering
+        resources, index pages with filters and scopes, show pages and forms,
+        custom actions, navigation, and authorization.
+      %p.doc-set-meta 21 pages
+    %li.doc-set
+      %h2
+        %a{href: '/docs/ORM-ActiveRecord'} ORM::ActiveRecord
+      %p
+        The object-relational mapper: migrations and generators, finders and
+        relations, joins and aggregation, persistence and callbacks,
+        validations, transactions, and encryption.
+      %p.doc-set-meta 44 pages
+    %li.doc-set
+      %h2
+        %a{href: '/docs/Template-HAML'} Template::HAML
+      %p
+        The template language the views are written in: tags and attributes,
+        indentation and whitespace, embedded code and control flow, filters,
+        layouts and partials, helpers, and the plugin API.
+      %p.doc-set-meta 22 pages

@@ -1,0 +1,247 @@
+:plain
+
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <h1><span class="accent">Model-View-Controller</span><br>for <span class="accent-2">Raku</span>.</h1>
+          <p class="hero-lede">
+            <a href="https://docs.keayl.dev/" rel="noopener" target="_blank"><code>MVC::Keayl</code></a> is a Model-View-Controller web framework for Raku. Resourceful routing, controllers
+            with filters and strong parameters, HAML views, sessions, signed and encrypted cookies,
+            CSRF protection, background jobs, mailers, and caching. Conventional MVC patterns,
+            expressed in Raku idioms.
+          </p>
+          <p class="hero-lede">
+            It is the web layer only. Models are delegated to <a href="https://gdonald.github.io/ORM-ActiveRecord/" rel="noopener" target="_blank"><code>ORM::ActiveRecord</code></a> and view
+            rendering to <a href="https://gdonald.github.io/Template-HAML/" rel="noopener" target="_blank"><code>Template::HAML</code></a>, both pluggable. The HTTP server is reached through
+            an abstract adapter, with a <a href="https://raku.land/zef:cro" rel="noopener">Cro</a>-based
+            default. Bring your own pieces, or take the stack whole.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="/install">
+              Get started
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+            <a class="btn btn-ghost" href="/routing">Tour the routes DSL</a>
+          </div>
+        </div>
+
+        <div class="terminal" data-hero-terminal>
+          <div class="terminal-bar">
+            <span class="terminal-dots"><span></span><span></span><span></span></span>
+            <span class="terminal-title">config/routes.<span class="accent">raku</span></span>
+          </div>
+          <div class="terminal-body"><code class="raku" data-hero-code></code></div>
+          <div class="terminal-bar" style="border-top: 1px solid var(--border); border-bottom: 0;">
+            <span class="terminal-title prompt"><span data-hero-cmd></span></span>
+          </div>
+          <div class="terminal-body" style="padding-top: .8rem;"><code class="keayl-out" data-hero-out></code></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-head reveal">
+          <div class="eyebrow">// the stack</div>
+          <h2>Every layer of the request, in one framework.</h2>
+          <p>From the routes file to the rendered response, from the cookie jar to the job queue, Keayl ships the whole web tier so you can skip the wiring and write features.</p>
+        </div>
+
+        <div class="card-grid">
+          <a class="card reveal" href="/routing">
+            <div class="card-icon">/:</div>
+            <h3>Resourceful routing</h3>
+            <p><code>resources</code>, <code>namespace</code>, <code>scope</code>, <code>concern</code>, constraints, redirects, mounts, and named URL helpers. One file maps every request.</p>
+            <span class="card-link">Tour the routes DSL →</span>
+          </a>
+
+          <a class="card reveal" href="/controllers">
+            <div class="card-icon">#</div>
+            <h3>Controllers &amp; actions</h3>
+            <p>One instance per request. Filters with <code>before-action</code>, strong parameters with <code>permit</code>, implicit render, and <code>rescue-from</code> for exceptions.</p>
+            <span class="card-link">Write an action →</span>
+          </a>
+
+          <a class="card reveal" href="/views">
+            <div class="card-icon">%=</div>
+            <h3>HAML views</h3>
+            <p>Format and variant resolution, layouts, partials, collection and object partials, <code>content-for</code> / <code>yield</code>, and escape-by-default output safety.</p>
+            <span class="card-link">Render a template →</span>
+          </a>
+
+          <a class="card reveal" href="/helpers">
+            <div class="card-icon">&lt;&gt;</div>
+            <h3>View helpers</h3>
+            <p><code>content-tag</code> and <code>link-to</code>, asset and URL helpers, <code>form-with</code> and simple_form inputs, select builders, and text, number, and date formatting.</p>
+            <span class="card-link">Build some HTML →</span>
+          </a>
+
+          <a class="card reveal" href="/security">
+            <div class="card-icon">&#9919;</div>
+            <h3>Security built in</h3>
+            <p>CSRF tokens, signed and encrypted cookies, sessions, parameter filtering, SSL enforcement, host authorization, and secure headers.</p>
+            <span class="card-link">Lock it down →</span>
+          </a>
+
+          <a class="card reveal" href="/toolkit#jobs">
+            <div class="card-icon">⇲</div>
+            <h3>Background jobs</h3>
+            <p><code>perform-later</code> with inline, async, test, and database queue adapters. GlobalID serialization, named queues, runnable without setup.</p>
+            <span class="card-link">Queue some work →</span>
+          </a>
+
+          <a class="card reveal" href="/toolkit#mailer">
+            <div class="card-icon">@</div>
+            <h3>Mailers</h3>
+            <p>Email built like a response: an action renders HAML into the parts of a multipart message, a delivery method sends it. Class-level defaults included.</p>
+            <span class="card-link">Send a message →</span>
+          </a>
+
+          <a class="card reveal" href="/toolkit#caching">
+            <div class="card-icon">%</div>
+            <h3>Caching &amp; conditional GET</h3>
+            <p><code>fresh-when</code> and ETags, <code>expires-in</code> cache headers, a pluggable cache store with <code>fetch</code>, and fragment caching.</p>
+            <span class="card-link">Cache responses →</span>
+          </a>
+
+          <a class="card reveal" href="/toolkit#negotiation">
+            <div class="card-icon">↹</div>
+            <h3>Content negotiation</h3>
+            <p><code>respond-to</code> serves HTML, JSON, and your own formats from one action, with device variants and an API controller base.</p>
+            <span class="card-link">Negotiate formats →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="feature reverse">
+          <div class="feature-copy reveal">
+            <div class="eyebrow">// routing</div>
+            <h2>One routes file, the whole URL map.</h2>
+            <p>
+              Declare the seven REST routes with <code>resources</code>, nest them, scope them under a
+              <code>namespace</code>, and constrain them. Every named route generates a path and URL helper,
+              and recognition tells you whether a path was found, answered the wrong verb, or was unknown.
+            </p>
+            <ul>
+              <li><strong>Resourceful by default.</strong> <code>resources 'users'</code> draws index, show, new, create, edit, update, destroy.</li>
+              <li><strong>Composable scopes.</strong> <code>namespace</code> and <code>scope</code> prefix the path, module, and helper name together or apart.</li>
+              <li><strong>Dynamic segments.</strong> <code>:id</code>, <code>*glob</code>, optional <code>(.:format)</code>, and per-segment constraints.</li>
+              <li><strong>URL helpers.</strong> <code>path-for</code>, <code>url-for</code>, and polymorphic dispatch by record class and state.</li>
+            </ul>
+          </div>
+          <div class="feature-code reveal">
+            <div class="code">
+              <pre><code class="raku">use MVC::Keayl::Routing;
+
+  routes {
+    root to =&gt; 'home#index';
+
+    resources 'articles', {
+      resources 'comments';
+    }
+
+    namespace 'admin', {
+      resources 'users', :except&lt;destroy&gt;;
+    }
+
+    get '/search', to =&gt; 'search#run',
+      constraints =&gt; { q =&gt; /\w+/ };
+  }</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature">
+          <div class="feature-copy reveal">
+            <div class="eyebrow">// controllers</div>
+            <h2>Actions that read like the request.</h2>
+            <p>
+              A controller is a class, each public method an action. The framework builds one instance
+              per request, runs the before callbacks, dispatches the action, and renders. Strong
+              parameters whitelist input before it reaches the model, and <code>rescue-from</code> turns
+              exceptions into responses.
+            </p>
+            <ul>
+              <li><strong>Per-request state.</strong> <code>self.request</code>, <code>self.response</code>, and merged <code>self.params</code>.</li>
+              <li><strong>Filters.</strong> <code>before-action</code>, <code>after-action</code>, <code>around-action</code>, with <code>only</code> / <code>except</code> scoping.</li>
+              <li><strong>Strong parameters.</strong> <code>require</code>, <code>permit</code>, and the strict <code>expect</code>.</li>
+              <li><strong>Implicit render.</strong> Return a string, or render JSON, plain, HTML, or a template.</li>
+            </ul>
+          </div>
+          <div class="feature-code reveal">
+            <div class="code">
+              <pre><code class="raku">use MVC::Keayl::Controller;
+
+  class ArticlesController is MVC::Keayl::Controller {
+    method authenticate
+      is before-action(except =&gt; &lt;index show&gt;) {
+        ...
+      }
+
+    method index {
+      self.assign('articles', Article.all);
+    }
+
+    method create {
+      my $attrs = self.params
+        .require('article').permit('title', 'body');
+
+      my $article = Article.create($attrs);
+      self.redirect-to("/articles/{$article.id}");
+    }
+  }</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature reverse">
+          <div class="feature-copy reveal">
+            <div class="eyebrow">// views</div>
+            <h2>Templates that compose.</h2>
+            <p>
+              Views resolve by name, format, and variant, render through a pluggable handler (HAML by
+              default), and cache the compiled result. Wrap a body in a layout, capture named content with
+              <code>content-for</code>, and break pages into partials rendered one-off, per object, or per
+              collection. Interpolated values are escaped by default.
+            </p>
+          </div>
+          <div class="feature-code reveal">
+            <div class="code">
+              <pre><code class="raku">-# app/views/articles/index.html.haml
+  %h1= $title
+
+  %ul.articles
+    != partial-each('articles/row', $articles)
+
+  -# app/views/articles/_row.html.haml
+  %li
+    %a{href: "/articles/\#{$row.id}"}= $row.title
+    %span.meta= $row.published-at</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <div class="section-head reveal" style="margin-bottom: 1.5rem;">
+          <div class="eyebrow">// install</div>
+          <h2>One command to install.</h2>
+          <p>Pull MVC::Keayl from zef and draw your first route. The web layer is ready; add a controller and a view and you have a request cycle.</p>
+        </div>
+
+        <div class="install-block reveal">
+          <span class="dollar">$</span>
+          <span class="cmd">zef install <b>MVC::Keayl</b></span>
+        </div>
+
+        <div style="margin-top: 1.4rem;">
+          <a class="btn btn-ghost" href="/install">Full install guide →</a>
+          <a class="btn btn-ghost" href="https://docs.keayl.dev/" rel="noopener">Browse the docs →</a>
+        </div>
+      </div>
+    </section>

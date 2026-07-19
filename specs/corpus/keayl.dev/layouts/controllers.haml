@@ -1,0 +1,360 @@
+:plain
+
+    <div class="page-header">
+      <div class="container">
+        <div class="eyebrow">// controllers</div>
+        <h1>Actions that read like the request.</h1>
+        <p>
+          A controller is a subclass of <code>MVC::Keayl::Controller</code>, and each public method is an
+          action. The framework builds one instance per request, runs the callbacks, dispatches the named
+          action, and returns the response. Actions never share state across requests.
+        </p>
+        <nav class="subnav" aria-label="On this page">
+          <a href="#actions">actions</a>
+          <a href="#params">params</a>
+          <a href="#render">render</a>
+          <a href="#redirect">redirect &amp; head</a>
+          <a href="#callbacks">callbacks</a>
+          <a href="#strong">strong parameters</a>
+          <a href="#rescue">rescue-from</a>
+          <a href="#flash">flash</a>
+          <a href="#base">ApplicationController</a>
+        </nav>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <section class="anchor-section reveal" id="actions">
+        <h2><span class="hash">#</span>actions and per-request state</h2>
+        <p>
+          Each instance carries the request, a fresh response, and the merged params for that request.
+          When an action does not write to the response, its string return value is rendered implicitly.
+          Only methods defined on the controller are dispatchable.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">use MVC::Keayl::Controller;
+
+  class UsersController is MVC::Keayl::Controller {
+    method index {
+      # becomes the response body
+      'all users';
+    }
+
+    method show {
+      'user ' ~ self.params&lt;id&gt;;
+    }
+
+    method create {
+      self.response.status = 201;
+      self.response.body('created');
+    }
+  }</code></pre>
+        </div>
+
+        <p>
+          <code>self.request</code> is the incoming <code>Request</code>, <code>self.response</code> the
+          outgoing <code>Response</code>, and <code>self.params</code> the merged collection.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="params">
+        <h2><span class="hash">#</span>params</h2>
+        <p>
+          <code>self.params</code> merges the path params from routing, the query string, and the request
+          body into one <code>MVC::Keayl::Parameters</code> collection. Path params win over the body,
+          which wins over the query. Access is indifferent: <code>params&lt;id&gt;</code> and
+          <code>params{5}</code> reach the same value. Bracketed names build nested structures, the way
+          Rack does.
+        </p>
+
+        <div class="code" data-lang="form body → params">
+          <pre><code># params&lt;user&gt;&lt;name&gt;, params&lt;user&gt;&lt;email&gt;
+  user[name]=Ada&amp;user[email]=a@b.com
+
+  # params&lt;ids&gt; is ['1', '2']
+  ids[]=1&amp;ids[]=2
+
+  # params&lt;user&gt;&lt;roles&gt; is ['admin']
+  user[roles][]=admin
+
+  # params&lt;users&gt;[0] is { name =&gt; 'A', age =&gt; '1' }
+  users[][name]=A&amp;users[][age]=1</code></pre>
+        </div>
+
+        <p>
+          The body is parsed by its <code>Content-Type</code>: form-urlencoded parses like a query string,
+          JSON parses the object into params, and multipart parses text fields plus file fields into a
+          <code>{ filename, content, type }</code> hash.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="render">
+        <h2><span class="hash">#</span>render</h2>
+        <p>
+          <code>render</code> writes the response explicitly. The content modes set a default content type
+          and the body; <code>status</code> and <code>content-type</code> override. A template is rendered
+          by name, by another action, or inline, with locals and a layout passed as options.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku"># application/json
+  self.render(json =&gt; { ok =&gt; True });
+
+  # text/plain
+  self.render(plain =&gt; 'hello');
+
+  # text/html
+  self.render(html  =&gt; '&lt;b&gt;hi&lt;/b&gt;');
+
+  # custom content type
+  self.render(body  =&gt; 'id,name',
+              content-type =&gt; 'text/csv');
+
+  # text/plain, status 201
+  self.render(plain =&gt; 'created', status =&gt; 201);
+
+  # no body
+  self.render(status =&gt; 204);
+
+  # the show template
+  self.render('show');
+
+  # with locals
+  self.render('show', locals =&gt; { user =&gt; $user });
+
+  # a named layout
+  self.render('show', layout =&gt; 'admin');
+
+  # no layout
+  self.render('show', layout =&gt; False);</code></pre>
+        </div>
+
+        <p>
+          When a renderer is configured, an action that does not render explicitly implicitly renders the
+          template named after the action. Rendering twice raises a double-render error.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="redirect">
+        <h2><span class="hash">#</span>redirects, head, and files</h2>
+        <p>
+          <code>redirect-to</code> sends a redirect with an empty body, taking a path or URL and an
+          optional status (numeric or named). <code>:back</code> redirects to the <code>Referer</code>
+          with a fallback. <code>head</code> sends a status and headers with no body.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">self.redirect-to('/dashboard');
+  self.redirect-to('/new', status =&gt; 301);
+
+  # named status, 303 See Other
+  self.redirect-to('/x', status =&gt; 'see-other');
+  self.redirect-to(:back, fallback =&gt; '/home');
+
+  self.head(204);
+  self.head('created', location =&gt; '/users/5');
+
+  self.send-data($csv,
+                 type =&gt; 'text/csv',
+                 filename =&gt; 'report.csv');
+  self.send-file('public/logo.png',
+                 disposition =&gt; 'inline');</code></pre>
+        </div>
+
+        <p>
+          <code>send-file</code> advertises <code>Accept-Ranges: bytes</code> and honours a
+          <code>Range</code> header, replying with <code>206 Partial Content</code>, a
+          <code>Content-Range</code> header, and the requested slice.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="callbacks">
+        <h2><span class="hash">#</span>callbacks</h2>
+        <p>
+          <code>before-action</code>, <code>after-action</code>, and <code>around-action</code> register
+          callbacks on the controller. A callback is a method name or a block. Around callbacks
+          receive a continuation they invoke to run the rest of the chain. <code>only</code> /
+          <code>except</code> scope a callback to specific actions, and <code>if</code> / <code>unless</code>
+          gate it.
+        </p>
+        <p>
+          Attach a callback inline with the <code>is before-action</code>, <code>is around-action</code>, and
+          <code>is after-action</code> traits. The method is the callback, and the trait takes the same
+          <code>only</code> / <code>except</code> / <code>if</code> / <code>unless</code> options.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">class UsersController is MVC::Keayl::Controller {
+    method authenticate
+      is before-action(except =&gt; &lt;index show&gt;) {
+        ...
+      }
+    method timer($next)
+      is around-action { ...; $next(); ... }
+    method audit is after-action { ... }
+    method show { ... }
+  }</code></pre>
+        </div>
+
+        <p>
+          Registering on the class is equivalent, and reads better when a callback is gated or shared across
+          a hierarchy.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">UsersController.before-action('authenticate',
+    except =&gt; &lt;index show&gt;);
+
+  UsersController.around-action('timer');
+
+  UsersController.before-action('require-admin',
+    if =&gt; 'is-admin');</code></pre>
+        </div>
+
+        <p>
+          A request runs the before callbacks in order, then the around callbacks wrapping the action, then
+          the after callbacks in reverse. A before or around callback that renders or redirects halts the
+          chain. A subclass inherits its parents' callbacks and can drop one with
+          <code>skip-before-action</code>.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="strong">
+        <h2><span class="hash">#</span>strong parameters</h2>
+        <p>
+          <code>require</code> and <code>permit</code> whitelist params before they reach the model.
+          <code>require</code> returns the value at a key, raising when it is missing or empty.
+          <code>permit</code> returns a new <code>Parameters</code> containing only the listed keys, with
+          nested shapes spelled out. <code>expect</code> combines the two into one strict call.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">my $attrs = self.params
+    .require('user')
+    .permit('name', 'email');
+
+  self.params.require('user').permit(
+    'name', 'email',
+    # an array of scalars
+    roles =&gt; [],
+    # a nested hash with these keys
+    address =&gt; &lt;street city&gt;,
+    # an array of hashes with these keys
+    tags =&gt; &lt;id name&gt;,
+  );
+
+  my $user = self.params.expect(
+    user =&gt; &lt;name email&gt;);
+
+  # an array of scalars
+  self.params.expect(ids =&gt; []);
+
+  # a required scalar
+  self.params.expect('id');</code></pre>
+        </div>
+
+        <div class="callout cyan">
+          <strong>Unpermitted keys are dropped.</strong> A malformed payload, a scalar where a hash is
+          expected, makes <code>expect</code> raise <code>X::MVC::Keayl::ParameterMissing</code>, which the
+          default rescue turns into a <code>400</code> before it reaches the model.
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="rescue">
+        <h2><span class="hash">#</span>rescuing exceptions</h2>
+        <p>
+          <code>rescue-from</code> maps an exception type to a handler that turns it into a response.
+          The <code>is rescue-from</code> trait attaches the mapping to the handler method and takes the
+          exception type, or several. Lookup is inheritance-aware: the most specific registered handler
+          wins, and a subclass inherits and can override its parents' mappings.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">class ArticlesController is MVC::Keayl::Controller {
+    method not-found($error)
+      is rescue-from(X::MVC::Keayl::NotFound) {
+        self.head(404);
+      }
+  }</code></pre>
+        </div>
+
+        <p>
+          The base controller ships default mappings: <code>NotFound</code> becomes a 404, and
+          <code>ParameterMissing</code> and <code>UnpermittedParameters</code> become a 400. An exception
+          with no matching handler propagates.
+        </p>
+      </section>
+
+      <section class="anchor-section reveal" id="flash">
+        <h2><span class="hash">#</span>flash</h2>
+        <p>
+          The flash carries a short message across a redirect. It is stored in the session and exposed as
+          <code>flash</code>. A value written to it survives exactly one request, then is dropped, so a
+          message shown after a redirect does not linger. When it has entries it is exposed to views as the
+          <code>flash</code> local.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">method create {
+    self.flash&lt;notice&gt; = 'Saved';
+    self.redirect-to('/posts');
+  }</code></pre>
+        </div>
+
+        <div class="code">
+          <pre><code class="raku">-# app/views/posts/index.html.haml
+  - with $flash&lt;notice&gt;
+    %p.notice= $flash&lt;notice&gt;</code></pre>
+        </div>
+
+        <p>
+          <code>flash.now</code> makes a message available in the current request only, for a page rendered
+          without a redirect. <code>keep</code> carries the flash one more request and <code>discard</code>
+          drops an entry early. <code>add-flash-types</code> registers named types that read and write
+          through a method, with an <code>is add-flash-types</code> trait form for the class header.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">class ApplicationController is MVC::Keayl::Controller
+    is add-flash-types('success', 'error') { }
+
+  # this request only
+  self.flash.now&lt;alert&gt; = 'Could not save';
+
+  # writes flash&lt;success&gt;
+  self.flash.success('Saved');</code></pre>
+        </div>
+      </section>
+
+      <section class="anchor-section reveal" id="base">
+        <h2><span class="hash">#</span>the ApplicationController pattern</h2>
+        <p>
+          Put shared callbacks, rescue handlers, and helpers on a base controller, and subclasses inherit
+          them. <code>helper-method</code> exposes a controller method to the template, and
+          <code>assign</code> records a value for it.
+        </p>
+
+        <div class="code">
+          <pre><code class="raku">class ApplicationController is MVC::Keayl::Controller {
+    method authenticate is before-action { ... }
+    method current-user is helper-method { ... }
+    method site-name
+      is helper-method { 'keayl.dev' }
+  }
+
+  class UsersController is ApplicationController {
+    method show {
+      self.assign('title', 'Profile');
+    }
+  }</code></pre>
+        </div>
+
+        <p>
+          Callbacks, <code>rescue-from</code> mappings, and <code>helper-method</code> declarations all
+          collect across the inheritance chain, and a subclass can add to or override what it inherits.
+        </p>
+      </section>
+
+    </div>

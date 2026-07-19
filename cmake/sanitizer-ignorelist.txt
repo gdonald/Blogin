@@ -1,0 +1,17 @@
+# What the integer checks do not apply to.
+#
+# The checks added by BLOGIN_SANITIZE_INTEGER flag defined behaviour that is
+# almost always a mistake: unsigned wraparound, a shift that drops bits, a
+# conversion that truncates or changes sign. Almost always is not always, and a
+# hash function is the standard exception. Both standard libraries implement
+# std::hash by multiplying and shifting until the bits mix, which is the
+# behaviour these checks report.
+#
+# Excluding the headers rather than dropping the check keeps it pointed at
+# everything this project compiles, which is the code the check was turned on
+# for. A wraparound in blogin's own offset arithmetic still reports.
+
+[integer]
+src:*/include/c++/*
+src:*/lib/gcc/*
+src:*/usr/include/*

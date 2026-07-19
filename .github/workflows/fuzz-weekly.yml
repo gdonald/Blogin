@@ -1,0 +1,88 @@
+name: Fuzz weekly
+
+# Thirty seconds per target on a pull request finds the input that breaks
+# immediately. A minute per target on a schedule reaches a little further, and
+# the cached corpus is what carries coverage forward rather than the length of
+# any one run. Each target gets its own runner so the whole set finishes in the
+# time one takes.
+#
+# The corpus a run grows is cached and handed to the next one, so coverage
+# accumulates across weeks instead of restarting from the checked-in seeds.
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Seconds to spend on each target
+        required: false
+        default: '60'
+
+concurrency:
+  group: fuzz-weekly
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: ${{ matrix.target }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - markdown
+          - template
+          - haml
+          - json
+          - yaml
+          - config
+          - expression
+          - shortcode
+          - http
+          - path
+          - websocket
+          - text
+    steps:
+      - uses: actions/checkout@v4
+
+      # restore-keys means a run starts from the most recent cache for this
+      # target even when today's key does not exist yet.
+      - name: Restore the accumulated corpus
+        uses: actions/cache@v4
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target }}-
+
+      - name: Build the image
+        run: docker build -t blogin-dev docker
+
+      - name: Fuzz
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace blogin-dev bash -euo pipefail -c "
+            export CXX=clang++
+            export BLOGIN_FUZZ_BUILD_DIR=build-linux/fuzz
+            ./scripts/fuzz.sh explore ${{ github.event.inputs.seconds || 60 }} ${{ matrix.target }}
+            ./scripts/fuzz.sh minimize ${{ matrix.target }}
+          "
+
+      - name: Keep whatever crashed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-artifacts-${{ matrix.target }}
+          path: fuzz/artifacts/
+          if-no-files-found: ignore
+
+      # The corpus a run grew is what the next run starts from. It is not
+      # committed: what belongs in the repository is the seed set and the
+      # regression inputs, both of which a person put there on purpose.
+      - name: Keep the corpus it grew
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-corpus-${{ matrix.target }}
+          path: fuzz/corpus/${{ matrix.target }}
+          retention-days: 30

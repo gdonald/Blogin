@@ -1,0 +1,63 @@
+---
+# The check set is chosen so that a clean run means something: every finding is
+# a defect or a mechanical cleanup, never a style opinion. Checks disabled
+# below are switched off deliberately, each for the reason given.
+Checks: >
+  bugprone-*,
+  clang-analyzer-*,
+  misc-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-prefer-member-initializer,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-virtual-class-destructor,
+  -bugprone-easily-swappable-parameters,
+  -misc-const-correctness,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -modernize-avoid-c-arrays,
+  -modernize-concat-nested-namespaces,
+  -modernize-return-braced-init-list,
+  -modernize-use-designated-initializers,
+  -modernize-use-nodiscard,
+  -modernize-use-ranges,
+  -modernize-use-trailing-return-type,
+  -performance-enum-size,
+  -portability-avoid-pragma-once,
+  -readability-avoid-nested-conditional-operator,
+  -readability-function-cognitive-complexity,
+  -readability-identifier-length,
+  -readability-magic-numbers,
+  -readability-redundant-member-init
+
+# Rationale for the disabled checks:
+#   bugprone-easily-swappable-parameters   fires on every (text, offset) pair
+#   misc-const-correctness                 churn on locals, no defect behind it
+#   misc-include-cleaner                   wants every transitive include named
+#   misc-no-recursion                      the markdown and HAML parsers recurse
+#   misc-non-private-member-variables      plain data structs are intentional
+#   modernize-avoid-c-arrays               string literal tables stay C arrays
+#   modernize-concat-nested-namespaces     the namespaces carry doc comments
+#   modernize-return-braced-init-list      named returns read better here
+#   modernize-use-designated-initializers  style, not a defect
+#   modernize-use-nodiscard                would mark most of the public API
+#   modernize-use-ranges                   large rewrite for no behavior change
+#   modernize-use-trailing-return-type     the codebase uses leading returns
+#   performance-enum-size                  the enums are not stored in bulk
+#   portability-avoid-pragma-once          every header uses pragma once
+#   readability-avoid-nested-conditional-operator  the parsers nest them on purpose
+#   readability-function-cognitive-complexity  threshold noise on parsers
+#   readability-identifier-length          short loop names are fine
+#   readability-magic-numbers              parsers are full of literal offsets
+#   readability-redundant-member-init      explicit member init is clearer
+
+WarningsAsErrors: '*'
+
+HeaderFilterRegex: '(src/blogin|specs)/.*\.h$'
+
+FormatStyle: none

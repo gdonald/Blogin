@@ -1,0 +1,196 @@
+%nav.doc-nav{'aria-label' => 'BDD-Behave documentation'}
+  %h4.doc-nav-group Introduction
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/overview'
+        %a.current{href: '/docs/BDD-Behave/overview'} Overview
+      - else
+        %a{href: '/docs/BDD-Behave/overview'} Overview
+    %li
+      - if url() eq '/docs/BDD-Behave/getting-started'
+        %a.current{href: '/docs/BDD-Behave/getting-started'} Getting Started
+      - else
+        %a{href: '/docs/BDD-Behave/getting-started'} Getting Started
+    %li
+      - if url() eq '/docs/BDD-Behave/running'
+        %a.current{href: '/docs/BDD-Behave/running'} Running Specs
+      - else
+        %a{href: '/docs/BDD-Behave/running'} Running Specs
+  %h4.doc-nav-group Core
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/describe'
+        %a.current{href: '/docs/BDD-Behave/describe'} describe / context
+      - else
+        %a{href: '/docs/BDD-Behave/describe'} describe / context
+    %li
+      - if url() eq '/docs/BDD-Behave/it'
+        %a.current{href: '/docs/BDD-Behave/it'} it
+      - else
+        %a{href: '/docs/BDD-Behave/it'} it
+    %li
+      - if url() eq '/docs/BDD-Behave/pending'
+        %a.current{href: '/docs/BDD-Behave/pending'} pending
+      - else
+        %a{href: '/docs/BDD-Behave/pending'} pending
+  %h4.doc-nav-group Values and setup
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/let'
+        %a.current{href: '/docs/BDD-Behave/let'} let / let-bang
+      - else
+        %a{href: '/docs/BDD-Behave/let'} let / let-bang
+    %li
+      - if url() eq '/docs/BDD-Behave/subject'
+        %a.current{href: '/docs/BDD-Behave/subject'} subject / subject-bang
+      - else
+        %a{href: '/docs/BDD-Behave/subject'} subject / subject-bang
+    %li
+      - if url() eq '/docs/BDD-Behave/hooks'
+        %a.current{href: '/docs/BDD-Behave/hooks'} Hooks
+      - else
+        %a{href: '/docs/BDD-Behave/hooks'} Hooks
+    %li
+      - if url() eq '/docs/BDD-Behave/shared-contexts'
+        %a.current{href: '/docs/BDD-Behave/shared-contexts'} Shared Contexts
+      - else
+        %a{href: '/docs/BDD-Behave/shared-contexts'} Shared Contexts
+    %li
+      - if url() eq '/docs/BDD-Behave/shared-examples'
+        %a.current{href: '/docs/BDD-Behave/shared-examples'} Shared Examples
+      - else
+        %a{href: '/docs/BDD-Behave/shared-examples'} Shared Examples
+    %li
+      - if url() eq '/docs/BDD-Behave/variables'
+        %a.current{href: '/docs/BDD-Behave/variables'} Variables in specs
+      - else
+        %a{href: '/docs/BDD-Behave/variables'} Variables in specs
+    %li
+      - if url() eq '/docs/BDD-Behave/classes'
+        %a.current{href: '/docs/BDD-Behave/classes'} Classes in specs
+      - else
+        %a{href: '/docs/BDD-Behave/classes'} Classes in specs
+  %h4.doc-nav-group Expectations
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/expect'
+        %a.current{href: '/docs/BDD-Behave/expect'} expect
+      - else
+        %a{href: '/docs/BDD-Behave/expect'} expect
+    %li
+      - if url() eq '/docs/BDD-Behave/matchers'
+        %a.current{href: '/docs/BDD-Behave/matchers'} Matchers
+      - else
+        %a{href: '/docs/BDD-Behave/matchers'} Matchers
+    %li
+      - if url() eq '/docs/BDD-Behave/custom-matchers'
+        %a.current{href: '/docs/BDD-Behave/custom-matchers'} Custom Matchers
+      - else
+        %a{href: '/docs/BDD-Behave/custom-matchers'} Custom Matchers
+    %li
+      - if url() eq '/docs/BDD-Behave/composable-matchers'
+        %a.current{href: '/docs/BDD-Behave/composable-matchers'} Composable Matchers
+      - else
+        %a{href: '/docs/BDD-Behave/composable-matchers'} Composable Matchers
+    %li
+      - if url() eq '/docs/BDD-Behave/junctions'
+        %a.current{href: '/docs/BDD-Behave/junctions'} Junctions
+      - else
+        %a{href: '/docs/BDD-Behave/junctions'} Junctions
+    %li
+      - if url() eq '/docs/BDD-Behave/aggregate-failures'
+        %a.current{href: '/docs/BDD-Behave/aggregate-failures'} aggregate-failures
+      - else
+        %a{href: '/docs/BDD-Behave/aggregate-failures'} aggregate-failures
+  %h4.doc-nav-group Doubles
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/mocks'
+        %a.current{href: '/docs/BDD-Behave/mocks'} Mocks
+      - else
+        %a{href: '/docs/BDD-Behave/mocks'} Mocks
+    %li
+      - if url() eq '/docs/BDD-Behave/time-mocking'
+        %a.current{href: '/docs/BDD-Behave/time-mocking'} Time Mocking
+      - else
+        %a{href: '/docs/BDD-Behave/time-mocking'} Time Mocking
+  %h4.doc-nav-group Selecting examples
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/tags'
+        %a.current{href: '/docs/BDD-Behave/tags'} Tags
+      - else
+        %a{href: '/docs/BDD-Behave/tags'} Tags
+    %li
+      - if url() eq '/docs/BDD-Behave/focus-skip'
+        %a.current{href: '/docs/BDD-Behave/focus-skip'} Focus and Skip
+      - else
+        %a{href: '/docs/BDD-Behave/focus-skip'} Focus and Skip
+    %li
+      - if url() eq '/docs/BDD-Behave/example-filter'
+        %a.current{href: '/docs/BDD-Behave/example-filter'} Example Filter
+      - else
+        %a{href: '/docs/BDD-Behave/example-filter'} Example Filter
+  %h4.doc-nav-group Running
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/parallel'
+        %a.current{href: '/docs/BDD-Behave/parallel'} Parallel Execution
+      - else
+        %a{href: '/docs/BDD-Behave/parallel'} Parallel Execution
+    %li
+      - if url() eq '/docs/BDD-Behave/watch'
+        %a.current{href: '/docs/BDD-Behave/watch'} Watch Mode
+      - else
+        %a{href: '/docs/BDD-Behave/watch'} Watch Mode
+    %li
+      - if url() eq '/docs/BDD-Behave/dry-run'
+        %a.current{href: '/docs/BDD-Behave/dry-run'} Dry Run and Listing
+      - else
+        %a{href: '/docs/BDD-Behave/dry-run'} Dry Run and Listing
+    %li
+      - if url() eq '/docs/BDD-Behave/retry'
+        %a.current{href: '/docs/BDD-Behave/retry'} Retry and Only-Failures
+      - else
+        %a{href: '/docs/BDD-Behave/retry'} Retry and Only-Failures
+    %li
+      - if url() eq '/docs/BDD-Behave/configuration'
+        %a.current{href: '/docs/BDD-Behave/configuration'} Configuration
+      - else
+        %a{href: '/docs/BDD-Behave/configuration'} Configuration
+  %h4.doc-nav-group Output
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/formatter'
+        %a.current{href: '/docs/BDD-Behave/formatter'} Formatters
+      - else
+        %a{href: '/docs/BDD-Behave/formatter'} Formatters
+    %li
+      - if url() eq '/docs/BDD-Behave/diff'
+        %a.current{href: '/docs/BDD-Behave/diff'} Diff Output
+      - else
+        %a{href: '/docs/BDD-Behave/diff'} Diff Output
+  %h4.doc-nav-group Analysis
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/coverage'
+        %a.current{href: '/docs/BDD-Behave/coverage'} Code Coverage
+      - else
+        %a{href: '/docs/BDD-Behave/coverage'} Code Coverage
+    %li
+      - if url() eq '/docs/BDD-Behave/timing'
+        %a.current{href: '/docs/BDD-Behave/timing'} Timing
+      - else
+        %a{href: '/docs/BDD-Behave/timing'} Timing
+    %li
+      - if url() eq '/docs/BDD-Behave/doc-extraction'
+        %a.current{href: '/docs/BDD-Behave/doc-extraction'} Doc Extraction
+      - else
+        %a{href: '/docs/BDD-Behave/doc-extraction'} Doc Extraction
+  %h4.doc-nav-group Project
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/BDD-Behave/contributing'
+        %a.current{href: '/docs/BDD-Behave/contributing'} Contributing
+      - else
+        %a{href: '/docs/BDD-Behave/contributing'} Contributing

@@ -1,0 +1,120 @@
+%nav.doc-nav{'aria-label' => 'MVC-Keayl-Admin documentation'}
+  %h4.doc-nav-group Introduction
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/overview'
+        %a.current{href: '/docs/MVC-Keayl-Admin/overview'} Overview
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/overview'} Overview
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/installation'
+        %a.current{href: '/docs/MVC-Keayl-Admin/installation'} Installation
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/installation'} Installation
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/mounting'
+        %a.current{href: '/docs/MVC-Keayl-Admin/mounting'} Mounting
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/mounting'} Mounting
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/registration'
+        %a.current{href: '/docs/MVC-Keayl-Admin/registration'} Registering resources
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/registration'} Registering resources
+  %h4.doc-nav-group Index pages
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/index-pages'
+        %a.current{href: '/docs/MVC-Keayl-Admin/index-pages'} Index pages
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/index-pages'} Index pages
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/presentations'
+        %a.current{href: '/docs/MVC-Keayl-Admin/presentations'} Index presentations and panels
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/presentations'} Index presentations and panels
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/filters'
+        %a.current{href: '/docs/MVC-Keayl-Admin/filters'} Filters
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/filters'} Filters
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/scopes'
+        %a.current{href: '/docs/MVC-Keayl-Admin/scopes'} Scopes
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/scopes'} Scopes
+  %h4.doc-nav-group Records
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/show-pages'
+        %a.current{href: '/docs/MVC-Keayl-Admin/show-pages'} Show pages
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/show-pages'} Show pages
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/nested-resources'
+        %a.current{href: '/docs/MVC-Keayl-Admin/nested-resources'} Nested resources
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/nested-resources'} Nested resources
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/forms'
+        %a.current{href: '/docs/MVC-Keayl-Admin/forms'} Forms
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/forms'} Forms
+  %h4.doc-nav-group Actions
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/actions'
+        %a.current{href: '/docs/MVC-Keayl-Admin/actions'} Actions
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/actions'} Actions
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/actions-availability'
+        %a.current{href: '/docs/MVC-Keayl-Admin/actions-availability'} Action availability and toolbar
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/actions-availability'} Action availability and toolbar
+  %h4.doc-nav-group Access control
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/authentication'
+        %a.current{href: '/docs/MVC-Keayl-Admin/authentication'} Authentication
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/authentication'} Authentication
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/authorization'
+        %a.current{href: '/docs/MVC-Keayl-Admin/authorization'} Authorization
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/authorization'} Authorization
+  %h4.doc-nav-group Appearance
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/layout'
+        %a.current{href: '/docs/MVC-Keayl-Admin/layout'} Layout and chrome
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/layout'} Layout and chrome
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/navigation'
+        %a.current{href: '/docs/MVC-Keayl-Admin/navigation'} Navigation
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/navigation'} Navigation
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/customization'
+        %a.current{href: '/docs/MVC-Keayl-Admin/customization'} Customization
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/customization'} Customization
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/assets'
+        %a.current{href: '/docs/MVC-Keayl-Admin/assets'} Assets
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/assets'} Assets
+  %h4.doc-nav-group Reference
+  %ul.doc-nav-list
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/example'
+        %a.current{href: '/docs/MVC-Keayl-Admin/example'} Worked example
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/example'} Worked example
+    %li
+      - if url() eq '/docs/MVC-Keayl-Admin/reference'
+        %a.current{href: '/docs/MVC-Keayl-Admin/reference'} Configuration reference
+      - else
+        %a{href: '/docs/MVC-Keayl-Admin/reference'} Configuration reference

@@ -1,0 +1,26 @@
+# Build trees. Anchored to the repository root, because an unanchored `build/`
+# also matches specs/golden/build/, which holds committed golden files.
+/build/
+/build-*/
+/dist/
+
+# CMake, per developer rather than per project.
+CMakeUserPresets.json
+compile_commands.json
+
+# Coverage instrumentation, written beside whatever binary ran.
+*.profraw
+*.profdata
+
+# libFuzzer writes a crashing input here. The corpus, seeds, dict, and
+# regressions beside it are committed.
+fuzz/artifacts/
+
+# Editor and tooling caches.
+.cache/
+.vscode/
+.idea/
+*.dSYM/
+
+__pycache__/
+.DS_Store

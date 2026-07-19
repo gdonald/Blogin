@@ -1,0 +1,4 @@
+quoted: "with: colon"
+single: 'text'
+empty:
+number: 42

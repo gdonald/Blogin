@@ -1,0 +1,40 @@
+!!! 5
+%html{lang: 'en'}
+  %head
+    %meta{charset: 'utf-8'}
+    %meta{name: 'viewport', content: 'width=device-width, initial-scale=1'}
+    %title= site-title
+    != head-meta
+    %link{rel: 'icon', type: 'image/svg+xml', href: '/assets/img/logo.svg'}
+    %link{rel: 'icon', href: '/favicon.ico', sizes: 'any'}
+    %link{rel: 'apple-touch-icon', sizes: '180x180', href: '/assets/img/apple-touch-icon.png'}
+    != framework-stylesheet-tag
+    %link{rel: 'stylesheet', href: '/assets/css/blogin.css'}
+    != theme-script
+  %body
+    %nav.navbar.navbar-expand-lg.bg-body-tertiary.border-bottom
+      .container
+        %a.navbar-brand.d-flex.align-items-center{href: '/'}
+          %img.me-2{src: '/assets/img/logo.svg', alt: '', width: '28', height: '28'}
+          = site-title
+        %button.navbar-toggler{type: 'button', 'data-bs-toggle' => 'collapse', 'data-bs-target' => '#topbar', 'aria-controls' => 'topbar', 'aria-expanded' => 'false', 'aria-label' => 'Toggle navigation'}
+          %span.navbar-toggler-icon
+        #topbar.collapse.navbar-collapse
+          != render(:partial<nav>)
+          .navbar-tools
+            .navbar-search
+              != render(:partial<search>)
+            .navbar-toggle-slot
+              != theme-toggle
+    %main.container.my-4
+      = yield
+    %footer.border-top.mt-5.py-4
+      .container.d-flex.flex-wrap.justify-content-between.gap-2
+        %p.text-body-secondary.mb-0
+          Built with
+          %a.link-secondary{href: 'https://blogin.dev'} Blogin
+        %nav.d-flex.gap-3
+          %a.link-secondary{href: '/tags/'} Browse by tag
+          %a.link-secondary{href: '/feed.xml'} Atom
+          %a.link-secondary{href: '/rss.xml'} RSS
+    != framework-script-tag
