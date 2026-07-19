@@ -1,0 +1,79 @@
+#!/usr/bin/env raku
+
+use v6.d;
+
+use Blogin;
+use Blogin::Log;
+
+my %*SUB-MAIN-OPTS = :named-anywhere;
+
+sub make-log(Bool :$verbose, Bool :$quiet --> Blogin::Log) {
+  my $level = do {
+    if    $verbose { 'verbose' }
+    elsif $quiet   { 'quiet' }
+    else           { 'normal' }
+  };
+
+  Blogin::Log.new(:$level);
+}
+
+sub not-implemented(Str $name, Bool :$verbose, Bool :$quiet) {
+  my $log = make-log(:$verbose, :$quiet);
+
+  $log.error("$name is not implemented yet");
+
+  exit 1;
+}
+
+multi sub MAIN(
+  'build',
+  Str  :$src = 'content',
+  Str  :$out = 'public',
+  Bool :$drafts = False,
+  Bool :$verbose = False,
+  Bool :$quiet = False,
+) {
+  my $log = make-log(:$verbose, :$quiet);
+
+  Blogin::build(:src($src.IO), :out($out.IO), :$drafts, :$log);
+
+  $log.info("built $out");
+}
+
+multi sub MAIN(
+  'init',
+  Str  $dir = '.',
+  Bool :$force = False,
+  Bool :$verbose = False,
+  Bool :$quiet = False,
+) {
+  not-implemented('init', :$verbose, :$quiet);
+}
+
+multi sub MAIN(
+  'new',
+  Str  $title,
+  Str  :$section,
+  Bool :$verbose = False,
+  Bool :$quiet = False,
+) {
+  not-implemented('new', :$verbose, :$quiet);
+}
+
+multi sub MAIN(
+  'serve',
+  Int  :$port = 3000,
+  Bool :$verbose = False,
+  Bool :$quiet = False,
+) {
+  not-implemented('serve', :$verbose, :$quiet);
+}
+
+multi sub MAIN(
+  'clean',
+  Str  :$out = 'public',
+  Bool :$verbose = False,
+  Bool :$quiet = False,
+) {
+  not-implemented('clean', :$verbose, :$quiet);
+}

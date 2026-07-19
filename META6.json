@@ -1,0 +1,24 @@
+{
+  "name": "Blogin",
+  "description": "A static blog generator written in Raku",
+  "version": "0.0.1",
+  "api": "1",
+  "perl": "6.d",
+  "authors": ["Greg Donald"],
+  "auth": "zef:gdonald",
+  "depends": [],
+  "build-depends": [],
+  "test-depends": ["BDD::Behave:auth<zef:gdonald>", "META6", "URI"],
+  "provides": {
+    "Blogin": "lib/Blogin.rakumod",
+    "Blogin::Log": "lib/Blogin/Log.rakumod"
+  },
+  "resources": [],
+  "support": {
+    "source": "https://github.com/gdonald/Blogin.git",
+    "bugtracker": "https://github.com/gdonald/Blogin/issues"
+  },
+  "license": "Artistic-2.0",
+  "tags": ["blog", "static-site", "generator", "markdown", "haml"],
+  "source-url": "git://github.com/gdonald/Blogin.git"
+}

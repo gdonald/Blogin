@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Raku
+        uses: Raku/setup-raku@v1
+        with:
+          raku-version: 'latest'
+
+      - name: Raku version
+        run: raku --version
+
+      - name: Install BDD::Behave (git)
+        run: zef install --/test --force-install https://github.com/gdonald/BDD-Behave.git
+
+      # Add git installs here for any dependency not yet on zef
+      # (Template::HAML, RJST) as they are wired into META6.json.
+
+      - name: Install dependencies
+        run: zef install --/test --test-depends --deps-only .
+
+      - name: Run behave specs
+        run: raku test.raku
