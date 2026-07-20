@@ -5,6 +5,7 @@ use v6.d;
 use Blogin;
 use Blogin::Log;
 use Blogin::Config;
+use Blogin::Scaffold;
 
 my %*SUB-MAIN-OPTS = :named-anywhere;
 
@@ -58,11 +59,16 @@ multi sub MAIN(
 multi sub MAIN(
   'init',
   Str  $dir = '.',
+  Str  :$framework = 'none',
   Bool :$force = False,
   Bool :$verbose = False,
   Bool :$quiet = False,
 ) {
-  not-implemented('init', :$verbose, :$quiet);
+  my $log = make-log(:$verbose, :$quiet);
+
+  Blogin::Scaffold::init($dir.IO, :$framework, :$force);
+
+  $log.info("scaffolded a Blogin site in $dir");
 }
 
 multi sub MAIN(
