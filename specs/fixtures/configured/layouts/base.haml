@@ -1,0 +1,9 @@
+!!! 5
+%html
+  %head
+    %title= site-title
+  %body
+    %main
+      != debug-open(template-label)
+      = yield
+      != debug-close(template-label)

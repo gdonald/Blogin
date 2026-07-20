@@ -123,10 +123,14 @@ sub write-section-listing(
 }
 
 sub build-listings(
-  :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site,
+  :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%sections,
   Bool :$clean-urls!, Bool :$debug!, Int :$page-size!, Str :$home-section!,
   --> Array
 ) {
+  my sub page-size-for(Str $section) {
+    (%sections{$section}<page-size> // $page-size).Int;
+  }
+
   my %by-section;
   %by-section{ .<section> }.push($_) for @pages;
 
@@ -141,14 +145,16 @@ sub build-listings(
   for %by-section.keys.grep(*.chars).sort -> $section {
     @written.append: write-section-listing(
       $section, sorted-of($section),
-      :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$page-size,
+      :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug,
+      page-size => page-size-for($section),
     );
   }
 
   if $home-section.chars && (%by-section{$home-section}:exists) {
     @written.append: write-section-listing(
       $home-section, sorted-of($home-section),
-      :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$page-size,
+      :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug,
+      page-size => page-size-for($home-section),
     );
   }
 
@@ -293,7 +299,7 @@ our sub build(
   }).List;
 
   my @listings = build-listings(
-    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug,
+    :@pages, :@nav, :$out, :$layouts, :%site, :%sections, :$clean-urls, :$debug,
     :$page-size, :$home-section,
   );
 

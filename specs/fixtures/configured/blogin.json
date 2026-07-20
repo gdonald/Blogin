@@ -1,0 +1,11 @@
+{
+  "title": "Configured Site",
+  "page-size": 2,
+  "home-section": "posts",
+  "clean-urls": true,
+  "css-framework": "none",
+  "debug": true,
+  "sections": {
+    "essays": { "page-size": 1, "label": "Essays", "order": 1 }
+  }
+}

@@ -4,6 +4,7 @@ use v6.d;
 
 use Blogin;
 use Blogin::Log;
+use Blogin::Config;
 
 my %*SUB-MAIN-OPTS = :named-anywhere;
 
@@ -28,25 +29,30 @@ sub not-implemented(Str $name, Bool :$verbose, Bool :$quiet) {
 multi sub MAIN(
   'build',
   Str  :$src = 'content',
-  Str  :$out = 'public',
+  Str  :$out,
   Bool :$drafts = False,
   Int  :$jobs,
-  Bool :$debug = False,
+  Bool :$debug,
   Bool :$verbose = False,
   Bool :$quiet = False,
 ) {
-  my $log = make-log(:$verbose, :$quiet);
+  my $log    = make-log(:$verbose, :$quiet);
+  my $config = Blogin::Config.load($src.IO.parent.add('blogin.json'));
+
+  my %overrides;
+  %overrides<out>   = $out.IO if $out.defined;
+  %overrides<debug> = $debug  if $debug.defined;
 
   Blogin::build(
     :src($src.IO),
-    :out($out.IO),
+    :$config,
     :$drafts,
     jobs => ($jobs // ($*KERNEL.cpu-cores // 1)),
-    :$debug,
     :$log,
+    |%overrides,
   );
 
-  $log.info("built $out");
+  $log.info('build complete');
 }
 
 multi sub MAIN(
