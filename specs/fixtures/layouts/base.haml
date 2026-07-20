@@ -11,9 +11,9 @@
       %aside
         != render(:partial<sidebar>)
     %main
-      != debug-open('template: show')
+      != debug-open(template-label)
       = yield
-      != debug-close('template: show')
+      != debug-close(template-label)
     - if has-footer
       != debug-open('partial: footer')
       != render(:partial<footer>)
