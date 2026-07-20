@@ -77,11 +77,23 @@ multi sub MAIN(
 
 multi sub MAIN(
   'serve',
+  Str  :$src = 'content',
   Int  :$port = 3000,
   Bool :$verbose = False,
   Bool :$quiet = False,
 ) {
-  not-implemented('serve', :$verbose, :$quiet);
+  require Blogin::Server <&serve>;
+
+  my $log    = make-log(:$verbose, :$quiet);
+  my $config = Blogin::Config.load($src.IO.parent.add('blogin.json'));
+
+  serve(
+    content => $src.IO,
+    out     => $config.output-dir.IO,
+    :$config,
+    :$port,
+    :$log,
+  );
 }
 
 multi sub MAIN(
