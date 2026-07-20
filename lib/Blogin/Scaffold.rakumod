@@ -43,7 +43,8 @@ sub base-haml(--> Str) {
       %meta{name: 'viewport', content: 'width=device-width, initial-scale=1'}
       %title= site-title
       != framework-stylesheet-tag
-      %link{rel: 'stylesheet', href: '/static/style.css'}
+      %link{rel: 'stylesheet', href: '/blogin.css'}
+      %link{rel: 'stylesheet', href: '/style.css'}
     %body
       - if has-header
         != debug-open('partial: header')
@@ -69,7 +70,8 @@ sub show-haml(--> Str) {
   q:to/HAML/;
   %article
     %h1= title
-    %p.meta= date
+    - if show-dates
+      %p.meta= date
     != body
   HAML
 }
@@ -77,7 +79,7 @@ sub show-haml(--> Str) {
 sub index-haml(--> Str) {
   q:to/HAML/;
   %section.listing
-    %h1= section
+    %h1= section-label
     %ul
       != render(:partial<entry>, :collection(posts), :as<entry>)
     != pagination-html
@@ -88,7 +90,8 @@ sub entry-haml(--> Str) {
   q:to/HAML/;
   %li
     %a{href: "#{$entry<url>}"}= $entry<title>
-    %span.date= $entry<date>
+    - if index-dates
+      %span.date= $entry<date>
   HAML
 }
 
@@ -137,27 +140,113 @@ sub footer-haml(--> Str) {
 
 sub search-haml(--> Str) {
   q:to/HAML/;
-  %form{'data-blogin-search' => 'true'}
-    %input{type: 'search', name: 'q', placeholder: 'Search'}
-  %ul{'data-blogin-results' => 'true'}
+  .blogin-search
+    %form{'data-blogin-search' => 'true'}
+      %input{type: 'search', name: 'q', placeholder: 'Search'}
+    %ul{'data-blogin-results' => 'true'}
+  %link{rel: 'stylesheet', href: '/search.css'}
   %script{src: '/search.js'}
   HAML
 }
 
+sub bootstrap-base-haml(--> Str) {
+  q:to/HAML/;
+  !!! 5
+  %html{lang: 'en'}
+    %head
+      %meta{charset: 'utf-8'}
+      %meta{name: 'viewport', content: 'width=device-width, initial-scale=1'}
+      %title= site-title
+      != framework-stylesheet-tag
+      %link{rel: 'stylesheet', href: '/blogin.css'}
+      %link{rel: 'stylesheet', href: '/style.css'}
+    %body.d-flex.flex-column.min-vh-100
+      - if has-header
+        != debug-open('partial: header')
+        != render(:partial<header>, :locals(%( brand => site-title )))
+        != debug-close('partial: header')
+      .container.my-4.flex-grow-1
+        .row.g-4
+          %main.col-lg-8
+            != debug-open(template-label)
+            = yield
+            != debug-close(template-label)
+          - if has-sidebar
+            %aside.col-lg-4
+              != render(:partial<sidebar>)
+      - if has-footer
+        != debug-open('partial: footer')
+        != render(:partial<footer>)
+        != debug-close('partial: footer')
+      != framework-script-tag
+  HAML
+}
+
+sub bootstrap-header-haml(--> Str) {
+  q:to/HAML/;
+  %nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
+    .container
+      %a.navbar-brand{href: '/'}= $brand
+      %button.navbar-toggler{type: 'button', 'data-bs-toggle' => 'collapse', 'data-bs-target' => '#topnav', 'aria-controls' => 'topnav', 'aria-expanded' => 'false', 'aria-label' => 'Toggle navigation'}
+        %span.navbar-toggler-icon
+      #topnav.collapse.navbar-collapse
+        != render(:partial<nav>)
+  HAML
+}
+
+sub bootstrap-nav-haml(--> Str) {
+  q:to/HAML/;
+  %ul.navbar-nav.me-auto.mb-2.mb-lg-0
+    != render(:partial<nav-item>, :collection(nav-nodes), :as<node>)
+  HAML
+}
+
+sub bootstrap-nav-item-haml(--> Str) {
+  q:to/HAML/;
+  %li.nav-item
+    - if nav-current($node)
+      %a.nav-link.active{href: "#{$node.url}"}= $node.label
+    - else
+      %a.nav-link{href: "#{$node.url}"}= $node.label
+  HAML
+}
+
+sub bootstrap-sidebar-haml(--> Str) {
+  q:to/HAML/;
+  %section
+    != render(:partial<search>)
+  HAML
+}
+
+sub bootstrap-footer-haml(--> Str) {
+  q:to/HAML/;
+  %footer.border-top.py-3.mt-auto
+    .container
+      %p.text-body-secondary.mb-0 Built with Blogin.
+  HAML
+}
+
+sub bootstrap-index-haml(--> Str) {
+  q:to/HAML/;
+  %section
+    %h1.mb-4= section-label
+    .list-group
+      != render(:partial<entry>, :collection(posts), :as<entry>)
+    != pagination-html
+  HAML
+}
+
+sub bootstrap-entry-haml(--> Str) {
+  q:to/HAML/;
+  %a.list-group-item.list-group-item-action{href: "#{$entry<url>}"}
+    %span= $entry<title>
+    - if index-dates
+      %span.text-body-secondary.ms-2= $entry<date>
+  HAML
+}
+
 sub style-css(--> Str) {
-  q:to/CSS/;
-  body { font-family: system-ui, sans-serif; margin: 0; line-height: 1.5; }
-  .layout { display: flex; gap: 2rem; max-width: 60rem; margin: 0 auto; padding: 1rem; }
-  main { flex: 1; }
-  aside { width: 14rem; }
-  nav ul { list-style: none; padding: 0; display: flex; gap: 1rem; }
-  .current { font-weight: bold; }
-  pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; }
-  .hl-keyword { color: #d73a49; }
-  .hl-string { color: #032f62; }
-  .hl-number { color: #005cc5; }
-  .hl-comment { color: #6a737d; font-style: italic; }
-  CSS
+  '';
 }
 
 sub post-stub(Str $title, Str $date --> Str) {
@@ -208,6 +297,17 @@ sub scaffold-files(Str $framework, Str $date) {
     'layouts/_search.haml'                 => search-haml(),
     'static/style.css'                     => style-css(),
     ;
+
+  if $framework eq 'bootstrap5' {
+    %files{'layouts/base.haml'}      = bootstrap-base-haml();
+    %files{'layouts/index.haml'}     = bootstrap-index-haml();
+    %files{'layouts/_entry.haml'}    = bootstrap-entry-haml();
+    %files{'layouts/_header.haml'}   = bootstrap-header-haml();
+    %files{'layouts/_nav.haml'}      = bootstrap-nav-haml();
+    %files{'layouts/_nav-item.haml'} = bootstrap-nav-item-haml();
+    %files{'layouts/_sidebar.haml'}  = bootstrap-sidebar-haml();
+    %files{'layouts/_footer.haml'}   = bootstrap-footer-haml();
+  }
 
   %files;
 }

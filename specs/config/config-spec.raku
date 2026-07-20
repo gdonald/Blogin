@@ -71,6 +71,11 @@ describe 'malformed config', {
     try Blogin::Config.from-data(%( sections => %( essays => %( order => 'high' ) ) ));
     expect($!.message.contains('sections.essays.order')).to.be-truthy;
   }
+
+  it 'rejects a non-boolean date visibility flag', {
+    try Blogin::Config.from-data(%( sections => %( essays => %( index-dates => 'nope' ) ) ));
+    expect($!.message.contains('sections.essays.index-dates')).to.be-truthy;
+  }
 }
 
 describe 'config driving the build', {

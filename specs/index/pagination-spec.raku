@@ -43,6 +43,11 @@ describe 'per-section paginated listings', {
     expect(out().add('posts.html').slurp.contains("href='/posts/charlie'")).to.be-falsy;
   }
 
+  it 'includes each post description in the listing', {
+    build-paginated(out());
+    expect(out().add('posts.html').slurp.contains('The alpha summary.')).to.be-truthy;
+  }
+
   it 'puts the overflow post on page two', {
     build-paginated(out());
     expect(out().add('posts/page/2.html').slurp.contains("href='/posts/charlie'")).to.be-truthy;
@@ -82,6 +87,16 @@ describe 'the home section at the site root', {
   it 'lists the newest posts on the root index', {
     build-paginated(out(), home-section => 'posts');
     expect(out().add('index.html').slurp.contains("href='/posts/alpha'")).to.be-truthy;
+  }
+
+  it 'renders the root through the home template when one exists', {
+    build-paginated(out(), home-section => 'posts');
+    expect(out().add('index.html').slurp.contains('Welcome')).to.be-truthy;
+  }
+
+  it 'leaves the section listing on the plain index template', {
+    build-paginated(out(), home-section => 'posts');
+    expect(out().add('posts.html').slurp.contains('Welcome')).to.be-falsy;
   }
 
   it 'links the root index forward to its second page', {

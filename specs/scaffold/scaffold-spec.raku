@@ -66,6 +66,21 @@ describe 'the scaffold builds', {
     );
     expect(out().add('posts/hello-world.html').e).to.be-truthy;
   }
+
+  it 'links a stylesheet that resolves to an emitted file', {
+    build(
+      src => dir().add('content'),
+      config => Blogin::Config.load(dir().add('blogin.json')),
+      out => out(),
+      log => Blogin::Log.new(:level('quiet')),
+    );
+
+    my $page = out().add('index.html').slurp;
+    $page ~~ /'href=' <["']> $<href>=[ '/' <-["']>+ '.css' ] <["']>/;
+    my $linked = out().add($<href>.Str.subst(/^ '/' /, ''));
+
+    expect($linked.e).to.be-truthy;
+  }
 }
 
 describe 'a non-empty target', {
@@ -127,8 +142,73 @@ describe 'framework selection', {
     expect(out().add('index.html').slurp.contains('cdn.jsdelivr.net')).to.be-falsy;
   }
 
+  context 'the bootstrap5 scaffold layout', {
+    before-each {
+      Blogin::Scaffold::init(dir(), framework => 'bootstrap5', date => '2026-07-20');
+      build-scaffold;
+    }
+
+    it 'renders a responsive navbar with the toggler', {
+      expect(out().add('index.html').slurp.contains('navbar-toggler')).to.be-truthy;
+    }
+
+    it 'wraps the page in a bootstrap container', {
+      expect(out().add('index.html').slurp.contains("class='container")).to.be-truthy;
+    }
+
+    it 'renders the listing as a list-group', {
+      expect(out().add('index.html').slurp.contains("class='list-group'")).to.be-truthy;
+    }
+
+    it 'links the emitted search stylesheet from the widget', {
+      expect(out().add('index.html').slurp.contains('/search.css')).to.be-truthy;
+    }
+  }
+
   it 'rejects an unknown framework', {
     try Blogin::Scaffold::init(dir(), framework => 'nope');
     expect($!.message.contains('nope')).to.be-truthy;
+  }
+}
+
+describe 'per-section date visibility', {
+  let(:dir, { temp-made('dates') });
+  let(:out, { temp-made('dates-out') });
+
+  before-each { Blogin::Scaffold::init(dir(), date => '2026-07-20') }
+
+  after-each {
+    nuke(dir());
+    nuke(out());
+  }
+
+  sub build-with($config) {
+    build(
+      src    => dir().add('content'),
+      config => $config,
+      out    => out(),
+      log    => Blogin::Log.new(:level('quiet')),
+    );
+  }
+
+  it 'shows dates by default', {
+    build-with(Blogin::Config.load(dir().add('blogin.json')));
+    expect(out().add('index.html').slurp.contains('2026-07-20')).to.be-truthy;
+  }
+
+  it 'hides listing dates when the section disables them', {
+    build-with(Blogin::Config.from-data(%(
+      home-section => 'posts',
+      sections     => %( posts => %( index-dates => False ) ),
+    )));
+    expect(out().add('index.html').slurp.contains('2026-07-20')).to.be-falsy;
+  }
+
+  it 'hides post dates when the section disables them', {
+    build-with(Blogin::Config.from-data(%(
+      home-section => 'posts',
+      sections     => %( posts => %( show-dates => False ) ),
+    )));
+    expect(out().add('posts/hello-world.html').slurp.contains('2026-07-20')).to.be-falsy;
   }
 }

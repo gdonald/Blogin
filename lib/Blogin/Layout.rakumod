@@ -6,6 +6,7 @@ use Blogin::Markdown;
 use Blogin::Markdown::Html;
 use Blogin::Framework;
 use Blogin::Nav;
+use Blogin::Slug;
 
 unit module Blogin::Layout;
 
@@ -16,6 +17,18 @@ sub sanitize-comment(Str $text --> Str) {
 
 sub attr-escape(Str $text --> Str) {
   $text.trans([ '&', '<', '>', '"' ] => [ '&amp;', '&lt;', '&gt;', '&quot;' ]);
+}
+
+sub nav-node-for(@nodes, Str $path) {
+  for @nodes -> $node {
+    return $node if $node.path eq $path;
+
+    with nav-node-for($node.children, $path) -> $found {
+      return $found;
+    }
+  }
+
+  Nil;
 }
 
 class ChromeView does Template::HAML::HelpersRole {
@@ -47,6 +60,14 @@ class ChromeView does Template::HAML::HelpersRole {
 
   method site-title  { %!site<title> // '' }
   method section     { $!section }
+
+  method section-label(--> Str) {
+    with nav-node-for(@!nav, $!section) -> $node {
+      return $node.label;
+    }
+
+    Blogin::Slug::humanize($!section.split('/').grep(*.chars).tail // '');
+  }
   method url         { $!url }
   method has-header  { $!has-header }
   method has-sidebar { $!has-sidebar }
@@ -69,12 +90,14 @@ class ChromeView does Template::HAML::HelpersRole {
 }
 
 class View is ChromeView is export {
-  has     $.post;
-  has Str $.body-html = '';
+  has      $.post;
+  has Str  $.body-html = '';
+  has Bool $.show-dates = True;
 
   method title       { $!post.title }
   method date        { $!post.date-str }
   method description  { $!post.description }
+  method show-dates  { $!show-dates }
 
   method body {
     return $!body-html unless self.debug;
@@ -90,16 +113,18 @@ class View is ChromeView is export {
 }
 
 class ListView is ChromeView is export {
-  has     @.entries;
-  has Int $.page-number = 1;
-  has Int $.total-pages = 1;
-  has Str $.prev-url = '';
-  has Str $.next-url = '';
+  has      @.entries;
+  has Int  $.page-number = 1;
+  has Int  $.total-pages = 1;
+  has Str  $.prev-url = '';
+  has Str  $.next-url = '';
+  has Bool $.index-dates = True;
 
   method template-label { 'template: index' }
   method posts       { @!entries }
   method page-number { $!page-number }
   method total-pages { $!total-pages }
+  method index-dates { $!index-dates }
 
   method pagination-html {
     return '' unless $!prev-url.chars || $!next-url.chars;
@@ -172,6 +197,7 @@ our sub render-with-layout(
         :@nav = [],
   Bool  :$debug = False,
   Str   :$framework = 'none',
+  Bool  :$show-dates = True,
   --> Str
 ) is export {
   my @paths = layout-search-paths($layouts, $section);
@@ -190,6 +216,7 @@ our sub render-with-layout(
     :@nav,
     :$body-html,
     :$debug,
+    :$show-dates,
     framework => Blogin::Framework::profile($framework),
     has-header  => partial-exists(@paths, 'header'),
     has-sidebar => partial-exists(@paths, 'sidebar'),
@@ -210,11 +237,12 @@ our sub render-post(
         :@nav = [],
   Str   :$framework = 'none',
   Bool  :$debug = False,
+  Bool  :$show-dates = True,
   --> Str
 ) is export {
   my $body-html = render-body(:$post, :$framework);
 
-  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug, :$framework);
+  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug, :$framework, :$show-dates);
 }
 
 our sub render-listing(
@@ -230,6 +258,7 @@ our sub render-listing(
   Bool  :$debug = False,
   Str   :$framework = 'none',
         :@templates = ['index'],
+  Bool  :$index-dates = True,
   --> Str
 ) is export {
   my @paths = layout-search-paths($layouts, $section);
@@ -252,6 +281,7 @@ our sub render-listing(
     :$prev-url,
     :$next-url,
     :$debug,
+    :$index-dates,
     framework => Blogin::Framework::profile($framework),
     has-header  => partial-exists(@paths, 'header'),
     has-sidebar => partial-exists(@paths, 'sidebar'),

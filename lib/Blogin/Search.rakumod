@@ -14,7 +14,7 @@ our sub tokenize(Str $text --> List) is export {
 }
 
 sub word-count(Str $text, Str $token --> Int) {
-  tokenize($text).grep(* eq $token).elems;
+  tokenize($text).grep(*.starts-with($token)).elems;
 }
 
 our sub rank(@records, Str $query, Int :$cap = 10 --> Array) is export {
@@ -28,7 +28,7 @@ our sub rank(@records, Str $query, Int :$cap = 10 --> Array) is export {
 
     for @tokens -> $token {
       $score += TITLE-WEIGHT * word-count(%record<title> // '', $token);
-      $score += TAG-WEIGHT   * ((%record<tags> // []).map(*.lc).grep(* eq $token).elems);
+      $score += TAG-WEIGHT   * ((%record<tags> // []).map(*.lc).grep(*.starts-with($token)).elems);
       $score += BODY-WEIGHT  * word-count(%record<text> // '', $token);
     }
 
@@ -83,7 +83,7 @@ my constant SEARCH-JS = q:to/JS/;
   }
 
   function wordCount(text, token) {
-    return tokenize(text).filter(function (w) { return w === token; }).length;
+    return tokenize(text).filter(function (w) { return w.indexOf(token) === 0; }).length;
   }
 
   function rank(query) {
@@ -96,7 +96,7 @@ my constant SEARCH-JS = q:to/JS/;
       for (const t of tokens) {
         score += WEIGHT.title * wordCount(rec.title || '', t);
         score += WEIGHT.tag * (rec.tags || []).map(function (x) { return x.toLowerCase(); })
-          .filter(function (x) { return x === t; }).length;
+          .filter(function (x) { return x.indexOf(t) === 0; }).length;
         score += WEIGHT.body * wordCount(rec.text || '', t);
       }
       if (score > 0) scored.push({ rec: rec, score: score });
@@ -146,4 +146,82 @@ JS
 
 our sub search-js(Int :$cap = 10 --> Str) is export {
   "const BLOGIN_SEARCH_CAP = $cap;\n" ~ SEARCH-JS;
+}
+
+my constant SEARCH-CSS = q:to/CSS/;
+[data-blogin-search] {
+  margin: 0;
+}
+
+[data-blogin-search] input {
+  width: 100%;
+  min-width: 12rem;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #212529;
+  background: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 0.5rem;
+}
+
+[data-blogin-search] input:focus {
+  outline: none;
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.blogin-search {
+  position: relative;
+}
+
+[data-blogin-results]:empty {
+  display: none;
+}
+
+[data-blogin-results] {
+  position: absolute;
+  z-index: 1050;
+  left: 0;
+  right: 0;
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+[data-blogin-results] li {
+  padding: 0.5rem 0.75rem;
+}
+
+[data-blogin-results] li + li {
+  border-top: 1px solid #f0f0f0;
+}
+
+[data-blogin-results] li:hover {
+  background: #f6f8fa;
+}
+
+[data-blogin-results] a {
+  display: block;
+  font-weight: 600;
+  text-decoration: none;
+  color: inherit;
+}
+
+[data-blogin-results] p {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  color: #6c757d;
+}
+CSS
+
+our sub search-css(--> Str) is export {
+  SEARCH-CSS;
 }

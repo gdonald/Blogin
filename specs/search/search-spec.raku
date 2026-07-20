@@ -48,6 +48,22 @@ describe 'the ranking logic', {
   it 'returns nothing for an empty query', {
     expect(Blogin::Search::rank(@FIXTURE-INDEX, '').elems).to.eq(0);
   }
+
+  it 'matches a word by a partial prefix as the query is typed', {
+    my @ranked = Blogin::Search::rank(@FIXTURE-INDEX, 'gram');
+    expect(@ranked[0]<title>).to.eq('Raku Grammars');
+  }
+
+  it 'matches a tag by a partial prefix', {
+    my @ranked = Blogin::Search::rank(@FIXTURE-INDEX, 'foo');
+    expect(@ranked[0]<title>).to.eq('Cooking');
+  }
+
+  it 'still matches when the prefix grows to the full word', {
+    my @short = Blogin::Search::rank(@FIXTURE-INDEX, 'gram');
+    my @full  = Blogin::Search::rank(@FIXTURE-INDEX, 'grammars');
+    expect(@short[0]<title>).to.eq(@full[0]<title>);
+  }
 }
 
 describe 'the search index', {
@@ -89,9 +105,39 @@ describe 'the search index', {
     expect(out().add('search.js').slurp.contains('BLOGIN_SEARCH_CAP = 7')).to.be-truthy;
   }
 
+  it 'hides the results list until there are matches', {
+    build(out());
+    expect(out().add('search.css').slurp.contains('[data-blogin-results]:empty')).to.be-truthy;
+  }
+
   it 'omits search output when search is disabled', {
     build(out(), search => False);
     expect(out().add('search-index.json').e).to.be-falsy;
+  }
+
+  it 'emits a search stylesheet', {
+    build(out());
+    expect(out().add('search.css').e).to.be-truthy;
+  }
+
+  it 'styles the results as a dropdown in the stylesheet', {
+    build(out());
+    expect(out().add('search.css').slurp.contains('[data-blogin-results]')).to.be-truthy;
+  }
+
+  it 'omits the search stylesheet when search is disabled', {
+    build(out(), search => False);
+    expect(out().add('search.css').e).to.be-falsy;
+  }
+}
+
+describe 'the search stylesheet', {
+  it 'positions the results relative to the search container', {
+    expect(Blogin::Search::search-css().contains('.blogin-search')).to.be-truthy;
+  }
+
+  it 'styles the widget without depending on a css framework', {
+    expect(Blogin::Search::search-css().contains('list-group')).to.be-falsy;
   }
 }
 

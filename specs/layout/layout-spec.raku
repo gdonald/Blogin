@@ -2,6 +2,7 @@ use lib 'lib';
 use BDD::Behave;
 use Blogin::Post;
 use Blogin::Layout;
+use Blogin::Nav;
 
 my $LAYOUTS = 'specs/fixtures/layouts'.IO;
 
@@ -52,6 +53,22 @@ describe 'chrome partials', {
 
   it 'omits an absent sidebar without erroring', {
     expect(html().contains('<aside>')).to.be-falsy;
+  }
+}
+
+describe 'the section heading', {
+  it 'title-cases a single-segment section', {
+    expect(Blogin::Layout::ListView.new(section => 'guide').section-label).to.eq('Guide');
+  }
+
+  it 'humanizes the last segment of a nested section', {
+    expect(Blogin::Layout::ListView.new(section => 'guide/getting-started').section-label).to.eq('Getting Started');
+  }
+
+  it 'prefers the configured nav label over humanizing', {
+    my $node = Blogin::Nav::NavNode.new(name => 'cli', label => 'CLI', path => 'cli', url => '/cli');
+    my $view = Blogin::Layout::ListView.new(section => 'cli', nav => [$node]);
+    expect($view.section-label).to.eq('CLI');
   }
 }
 

@@ -6,6 +6,7 @@ use Blogin::Slug;
 use Blogin::Nav;
 use Blogin::Feed;
 use Blogin::Search;
+use Blogin::Style;
 
 unit module Blogin::Site;
 
@@ -120,7 +121,12 @@ sub by-section(@pages --> Hash) {
 }
 
 sub entry-of(%page, Str :$base = '') {
-  %( title => %page<post>.title, url => $base ~ %page<url>, date => %page<post>.date-str );
+  %(
+    title       => %page<post>.title,
+    url         => $base ~ %page<url>,
+    date        => %page<post>.date-str,
+    description => %page<post>.description,
+  );
 }
 
 sub listing-url(Str $section, Int $page-num, Bool :$at-root, Bool :$clean-urls) {
@@ -153,6 +159,8 @@ sub write-section-listing(
   Bool :$at-root = False,
   IO::Path:D :$out!, IO() :$layouts!, :%site, :@nav, Bool :$clean-urls!,
   Bool :$debug!, Int :$page-size!, Writer :$writer!, Str :$framework!,
+  :@templates = ['index'],
+  Bool :$index-dates = True,
 ) {
   my @written;
 
@@ -170,9 +178,9 @@ sub write-section-listing(
     my @entries = @chunk.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :$section, :%site, :@nav, :@entries,
+      :$layouts, :$section, :%site, :@nav, :@entries, :@templates,
       page-number => $page-num, total-pages => $total,
-      :$prev-url, :$next-url, :$debug, :$framework,
+      :$prev-url, :$next-url, :$debug, :$framework, :$index-dates,
     );
 
     $writer.write($out-file, $html);
@@ -192,6 +200,10 @@ sub build-listings(
     (%sections{$section}<page-size> // $page-size).Int;
   }
 
+  my sub index-dates-for(Str $section) {
+    (%sections{$section}<index-dates> // True).Bool;
+  }
+
   my %by-section = by-section(@pages);
   my @written;
 
@@ -200,6 +212,7 @@ sub build-listings(
       $section, newest-first(%by-section{$section}),
       :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer, :$framework,
       page-size => page-size-for($section),
+      index-dates => index-dates-for($section),
     );
   }
 
@@ -208,6 +221,8 @@ sub build-listings(
       $home-section, newest-first(%by-section{$home-section}),
       :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer, :$framework,
       page-size => page-size-for($home-section),
+      index-dates => index-dates-for($home-section),
+      templates => ['home', 'index'],
     );
   }
 
@@ -403,6 +418,8 @@ our sub build(
 
     $page<text> = $parts<text>;
 
+    my $show-dates = (%sections{$page<section>}<show-dates> // True).Bool;
+
     my $html = $haml-lock.protect({
       Blogin::Layout::render-with-layout(
         post      => $page<post>,
@@ -414,6 +431,7 @@ our sub build(
         nav       => @nav,
         debug     => $debug,
         framework => $framework,
+        show-dates => $show-dates,
       );
     });
 
@@ -445,7 +463,15 @@ our sub build(
       my $js-file = $out.add('search.js');
       $writer.write($js-file, Blogin::Search::search-js(cap => $search-cap));
       @listings.push: $js-file;
+
+      my $css-file = $out.add('search.css');
+      $writer.write($css-file, Blogin::Search::search-css());
+      @listings.push: $css-file;
     }
+
+    my $style-file = $out.add('blogin.css');
+    $writer.write($style-file, Blogin::Style::content-css());
+    @listings.push: $style-file;
   }
 
   copy-static($static, $out, $writer) if $static.d;

@@ -53,6 +53,21 @@ describe 'building the basic fixture site', {
     expect(out().add('style.css').slurp.contains('font-family')).to.be-truthy;
   }
 
+  it 'emits the content stylesheet', {
+    build-basic(out());
+    expect(out().add('blogin.css').e).to.be-truthy;
+  }
+
+  it 'includes the syntax highlight colors in the content stylesheet', {
+    build-basic(out());
+    expect(out().add('blogin.css').slurp.contains('.hl-keyword')).to.be-truthy;
+  }
+
+  it 'styles the heading anchor in the content stylesheet', {
+    build-basic(out());
+    expect(out().add('blogin.css').slurp.contains('.anchor')).to.be-truthy;
+  }
+
   it 'reports the rendered non-draft pages', {
     my $result = build-basic(out());
     expect($result.written.elems).to.eq(3);

@@ -38,11 +38,13 @@ my sub validate-sections(%sections) {
   for %sections.kv -> $name, $entry {
     die "config section '$name' must be a map" unless $entry ~~ Associative;
 
-    want-int($_,  "sections.$name.page-size") with $entry<page-size>;
-    want-str($_,  "sections.$name.label")     with $entry<label>;
-    want-int($_,  "sections.$name.order")     with $entry<order>;
-    want-bool($_, "sections.$name.nav")       with $entry<nav>;
-    want-str($_,  "sections.$name.layout")    with $entry<layout>;
+    want-int($_,  "sections.$name.page-size")   with $entry<page-size>;
+    want-str($_,  "sections.$name.label")       with $entry<label>;
+    want-int($_,  "sections.$name.order")       with $entry<order>;
+    want-bool($_, "sections.$name.nav")         with $entry<nav>;
+    want-str($_,  "sections.$name.layout")      with $entry<layout>;
+    want-bool($_, "sections.$name.index-dates") with $entry<index-dates>;
+    want-bool($_, "sections.$name.show-dates")  with $entry<show-dates>;
   }
 
   %sections;
