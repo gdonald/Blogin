@@ -34,6 +34,7 @@ multi sub MAIN(
   Bool :$drafts = False,
   Int  :$jobs,
   Bool :$debug,
+  Bool :$force = False,
   Bool :$verbose = False,
   Bool :$quiet = False,
 ) {
@@ -48,6 +49,7 @@ multi sub MAIN(
     :src($src.IO),
     :$config,
     :$drafts,
+    :$force,
     jobs => ($jobs // ($*KERNEL.cpu-cores // 1)),
     :$log,
     |%overrides,

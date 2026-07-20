@@ -15,6 +15,7 @@ our sub build(
   Bool           :$drafts = False,
   Int            :$jobs = ($*KERNEL.cpu-cores // 1),
   Bool           :$debug,
+  Bool           :$force = False,
   Blogin::Log    :$log = Blogin::Log.new,
   --> Bool
 ) is export {
@@ -37,6 +38,7 @@ our sub build(
     highlight          => $config.highlight,
     :$drafts,
     :$jobs,
+    :$force,
   );
 
   $log.verbose("wrote { $result.written.elems } pages to { $out-dir }");

@@ -13,29 +13,77 @@ class BuildResult {
   has @.written;
   has @.rendered;
   has @.listings;
+  has @.write-log;
 }
 
-sub remove-tree(IO::Path:D $dir) {
-  return unless $dir.e;
+sub all-files(IO::Path:D $dir) {
+  return () unless $dir.d;
 
-  for $dir.dir -> $entry {
-    $entry.d ?? remove-tree($entry) !! $entry.unlink;
+  gather for $dir.dir -> $entry {
+    $entry.d ?? (.take for all-files($entry)) !! $entry.take;
+  }
+}
+
+sub prune-empty-dirs(IO::Path:D $dir) {
+  return unless $dir.d;
+
+  for $dir.dir.grep(*.d) -> $sub {
+    prune-empty-dirs($sub);
+    $sub.rmdir if $sub.d && !$sub.dir.elems;
+  }
+}
+
+# Writes only files whose content changed, records the write log, and tracks
+# every produced path so stale output can be pruned. Thread-safe for the
+# parallel post writes.
+class Writer {
+  has Bool  $.force = False;
+  has       @.written;
+  has       %!expected;
+  has Lock  $!lock .= new;
+
+  method write(IO::Path:D $file, Str $content) {
+    $!lock.protect({
+      %!expected{ $file.absolute } = True;
+
+      if $!force || !$file.e || $file.slurp ne $content {
+        $file.parent.mkdir;
+        $file.spurt($content);
+        @!written.push($file);
+      }
+    });
   }
 
-  $dir.rmdir;
+  method copy(IO::Path:D $src, IO::Path:D $dest) {
+    $!lock.protect({
+      %!expected{ $dest.absolute } = True;
+
+      my $content = $src.slurp(:bin);
+
+      if $!force || !$dest.e || !($dest.slurp(:bin) eqv $content) {
+        $dest.parent.mkdir;
+        $dest.spurt($content);
+        @!written.push($dest);
+      }
+    });
+  }
+
+  method prune(IO::Path:D $out) {
+    return unless $out.d;
+
+    for all-files($out) -> $file {
+      $file.unlink unless %!expected{ $file.absolute };
+    }
+
+    prune-empty-dirs($out);
+  }
 }
 
-sub copy-tree(IO::Path:D $from, IO::Path:D $to) {
+sub copy-static(IO::Path:D $from, IO::Path:D $to, Writer $writer) {
   for $from.dir.sort(*.basename) -> $entry {
     my $dest = $to.add($entry.basename);
 
-    if $entry.d {
-      $dest.mkdir;
-      copy-tree($entry, $dest);
-    }
-    else {
-      $entry.copy($dest);
-    }
+    $entry.d ?? copy-static($entry, $dest, $writer) !! $writer.copy($entry, $dest);
   }
 }
 
@@ -91,7 +139,7 @@ sub write-section-listing(
   Str $section, @sorted,
   Bool :$at-root = False,
   IO::Path:D :$out!, IO() :$layouts!, :%site, :@nav, Bool :$clean-urls!,
-  Bool :$debug!, Int :$page-size!,
+  Bool :$debug!, Int :$page-size!, Writer :$writer!,
 ) {
   my @written;
 
@@ -116,8 +164,7 @@ sub write-section-listing(
       :$prev-url, :$next-url, :$debug,
     );
 
-    $out-file.parent.mkdir;
-    $out-file.spurt($html);
+    $writer.write($out-file, $html);
     @written.push($out-file);
   }
 
@@ -127,6 +174,7 @@ sub write-section-listing(
 sub build-listings(
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%sections,
   Bool :$clean-urls!, Bool :$debug!, Int :$page-size!, Str :$home-section!,
+  Writer :$writer!,
   --> Array
 ) {
   my sub page-size-for(Str $section) {
@@ -147,7 +195,7 @@ sub build-listings(
   for %by-section.keys.grep(*.chars).sort -> $section {
     @written.append: write-section-listing(
       $section, sorted-of($section),
-      :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug,
+      :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer,
       page-size => page-size-for($section),
     );
   }
@@ -155,7 +203,7 @@ sub build-listings(
   if $home-section.chars && (%by-section{$home-section}:exists) {
     @written.append: write-section-listing(
       $home-section, sorted-of($home-section),
-      :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug,
+      :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer,
       page-size => page-size-for($home-section),
     );
   }
@@ -165,7 +213,7 @@ sub build-listings(
 
 sub build-tags(
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site,
-  Bool :$clean-urls!, Bool :$debug!,
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!,
   --> Array
 ) {
   my %tag-posts;
@@ -192,8 +240,7 @@ sub build-tags(
       :$layouts, :%site, :@nav, :@entries, templates => ['tag', 'index'], :$debug,
     );
 
-    $out-file.parent.mkdir;
-    $out-file.spurt($html);
+    $writer.write($out-file, $html);
     @written.push($out-file);
   }
 
@@ -212,8 +259,7 @@ sub build-tags(
     :$layouts, :%site, :@nav, entries => @tag-entries, templates => ['index'], :$debug,
   );
 
-  $index-file.parent.mkdir;
-  $index-file.spurt($html);
+  $writer.write($index-file, $html);
   @written.push($index-file);
 
   @written;
@@ -249,7 +295,7 @@ sub newest-date(@sorted) {
 }
 
 sub build-feeds(
-  :@pages, :@page-files, IO::Path:D :$out!, :%site, Bool :$clean-urls!,
+  :@pages, :@page-files, IO::Path:D :$out!, :%site, Bool :$clean-urls!, Writer :$writer!,
   --> Array
 ) {
   my @written;
@@ -271,7 +317,7 @@ sub build-feeds(
     entries  => feed-entries(@all, $base),
   );
 
-  $out.add('feed.xml').spurt($site-feed);
+  $writer.write($out.add('feed.xml'), $site-feed);
   @written.push($out.add('feed.xml'));
 
   my %by-section;
@@ -289,15 +335,14 @@ sub build-feeds(
     );
 
     my $file = $out.add($section).add('feed.xml');
-    $file.parent.mkdir;
-    $file.spurt($feed);
+    $writer.write($file, $feed);
     @written.push($file);
   }
 
   my @locs = @page-files.map({ $base ~ file-to-url($_, $out, $clean-urls) }).sort;
   my $sitemap = Blogin::Feed::sitemap(locs => @locs);
 
-  $out.add('sitemap.xml').spurt($sitemap);
+  $writer.write($out.add('sitemap.xml'), $sitemap);
   @written.push($out.add('sitemap.xml'));
 
   @written;
@@ -321,11 +366,14 @@ our sub build(
   Int   :$search-text-length = 2000,
   Int   :$search-cap = 10,
   Bool  :$highlight = False,
+  Bool  :$force = False,
   --> BuildResult
 ) {
   my @nav = Blogin::Nav::build-tree($content, :%sections, :$clean-urls);
-  remove-tree($out);
-  $out.mkdir;
+
+  $out.mkdir unless $out.d;
+
+  my $writer = Writer.new(:$force);
 
   my @pages;
   my %seen;
@@ -359,8 +407,6 @@ our sub build(
     ));
   }
 
-  .<out-file>.parent.mkdir for @pages;
-
   my @ordered = @pages.sort({ -.<post>.body.chars });
 
   my $haml-lock = Lock.new;
@@ -387,33 +433,45 @@ our sub build(
       );
     });
 
-    $page<out-file>.spurt($html);
+    $writer.write($page<out-file>, $html);
     $page<out-file>;
   }).List;
 
   my @listings = build-listings(
     :@pages, :@nav, :$out, :$layouts, :%site, :%sections, :$clean-urls, :$debug,
-    :$page-size, :$home-section,
+    :$page-size, :$home-section, :$writer,
   );
 
   @listings.append: build-tags(
-    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug,
+    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer,
   );
 
   if @pages.elems {
     my @page-files = [ |@written, |@listings ];
 
     @listings.append: build-feeds(
-      :@pages, :@page-files, :$out, :%site, :$clean-urls,
+      :@pages, :@page-files, :$out, :%site, :$clean-urls, :$writer,
     );
 
     if $search {
-      @listings.push: Blogin::Search::write-index(@pages, :$out, text-length => $search-text-length);
-      @listings.push: Blogin::Search::write-js(:$out, cap => $search-cap);
+      my $index-file = $out.add('search-index.json');
+      $writer.write($index-file, Blogin::Search::index-json(@pages, text-length => $search-text-length));
+      @listings.push: $index-file;
+
+      my $js-file = $out.add('search.js');
+      $writer.write($js-file, Blogin::Search::search-js(cap => $search-cap));
+      @listings.push: $js-file;
     }
   }
 
-  copy-tree($static, $out) if $static.d;
+  copy-static($static, $out, $writer) if $static.d;
 
-  BuildResult.new(written => @written, rendered => @pages, listings => @listings);
+  $writer.prune($out);
+
+  BuildResult.new(
+    written   => @written,
+    rendered  => @pages,
+    listings  => @listings,
+    write-log => $writer.written,
+  );
 }
