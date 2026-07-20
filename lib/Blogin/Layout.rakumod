@@ -1,13 +1,19 @@
 use v6.d;
 
 use Template::HAML;
+use Template::HAML::HelpersRole;
 use Blogin::Markdown;
 use Blogin::Markdown::Html;
 use Blogin::Framework;
 
 unit module Blogin::Layout;
 
-class View is export {
+# Neutralize any '--' run so interpolated text cannot terminate an HTML comment.
+sub sanitize-comment(Str $text --> Str) {
+  $text.subst('--', '- -', :g);
+}
+
+class View does Template::HAML::HelpersRole is export {
   has      $.post;
   has      %.site;
   has Str  $.section   = '';
@@ -16,10 +22,10 @@ class View is export {
   has Bool $.has-header  = False;
   has Bool $.has-sidebar = False;
   has Bool $.has-footer  = False;
+  has Bool $.debug       = False;
 
   method site-title  { %!site<title> // '' }
   method title       { $!post.title }
-  method body        { $!body-html }
   method date        { $!post.date.defined ?? $!post.date.Str !! '' }
   method description  { $!post.description }
   method section     { $!section }
@@ -27,6 +33,26 @@ class View is export {
   method has-header  { $!has-header }
   method has-sidebar { $!has-sidebar }
   method has-footer  { $!has-footer }
+
+  method body {
+    return $!body-html unless $!debug;
+
+    my $provenance = '<!-- source: '
+      ~ sanitize-comment($!post.filename)
+      ~ ' slug=' ~ sanitize-comment($!post.slug)
+      ~ ' title=' ~ sanitize-comment($!post.title)
+      ~ " -->\n";
+
+    $provenance ~ $!body-html;
+  }
+
+  method debug-open(Str $label --> Str) {
+    $!debug ?? "<!-- begin { sanitize-comment($label) } -->\n" !! '';
+  }
+
+  method debug-close(Str $label --> Str) {
+    $!debug ?? "<!-- end { sanitize-comment($label) } -->\n" !! '';
+  }
 }
 
 sub template-exists(@paths, Str $name --> Bool) {
@@ -75,6 +101,7 @@ our sub render-with-layout(
         :%site = %(),
   Str   :$section = '',
   Str   :$url = '',
+  Bool  :$debug = False,
   --> Str
 ) is export {
   my @paths = layout-search-paths($layouts, $section);
@@ -91,6 +118,7 @@ our sub render-with-layout(
     :$section,
     :$url,
     :$body-html,
+    :$debug,
     has-header  => partial-exists(@paths, 'header'),
     has-sidebar => partial-exists(@paths, 'sidebar'),
     has-footer  => partial-exists(@paths, 'footer'),
@@ -108,9 +136,10 @@ our sub render-post(
   Str   :$section = '',
   Str   :$url = '',
   Str   :$framework = 'none',
+  Bool  :$debug = False,
   --> Str
 ) is export {
   my $body-html = render-body(:$post, :$framework);
 
-  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url);
+  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url, :$debug);
 }

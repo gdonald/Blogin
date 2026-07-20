@@ -4,11 +4,17 @@
     %title= site-title
   %body
     - if has-header
+      != debug-open('partial: header')
       != render(:partial<header>, :locals(%( brand => site-title )))
+      != debug-close('partial: header')
     - if has-sidebar
       %aside
         != render(:partial<sidebar>)
     %main
+      != debug-open('template: show')
       = yield
+      != debug-close('template: show')
     - if has-footer
+      != debug-open('partial: footer')
       != render(:partial<footer>)
+      != debug-close('partial: footer')

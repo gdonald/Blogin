@@ -12,6 +12,7 @@ our sub build(
   IO()        :$out!,
   Bool        :$drafts = False,
   Int         :$jobs = ($*KERNEL.cpu-cores // 1),
+  Bool        :$debug = False,
   Blogin::Log :$log = Blogin::Log.new,
   --> Bool
 ) is export {
@@ -20,6 +21,7 @@ our sub build(
     out     => $out,
     :$drafts,
     :$jobs,
+    :$debug,
   );
 
   $log.verbose("wrote { $result.written.elems } pages to { $out }");

@@ -63,6 +63,7 @@ our sub build(
   Int   :$jobs = ($*KERNEL.cpu-cores // 1),
   Bool  :$clean-urls = True,
   Str   :$framework = 'none',
+  Bool  :$debug = False,
   --> BuildResult
 ) {
   remove-tree($out);
@@ -120,6 +121,7 @@ our sub build(
         site      => %site,
         section   => $page<section>,
         url       => $page<url>,
+        debug     => $debug,
       );
     });
 

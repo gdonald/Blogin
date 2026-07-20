@@ -31,6 +31,7 @@ multi sub MAIN(
   Str  :$out = 'public',
   Bool :$drafts = False,
   Int  :$jobs,
+  Bool :$debug = False,
   Bool :$verbose = False,
   Bool :$quiet = False,
 ) {
@@ -41,6 +42,7 @@ multi sub MAIN(
     :out($out.IO),
     :$drafts,
     jobs => ($jobs // ($*KERNEL.cpu-cores // 1)),
+    :$debug,
     :$log,
   );
 
