@@ -17,11 +17,8 @@ jobs:
       - name: Raku version
         run: raku --version
 
-      - name: Install BDD::Behave (git)
+      - name: Install BDD::Behave
         run: zef install --/test --force-install https://github.com/gdonald/BDD-Behave.git
-
-      # Add git installs here for any dependency not yet on zef
-      # (e.g. Template::HAML) as they are wired into META6.json.
 
       - name: Install dependencies
         run: zef install --/test --test-depends --deps-only .

@@ -1,0 +1,265 @@
+use v6.d;
+
+use Blogin::Markdown::Node;
+use Blogin::Framework;
+use Blogin::Slug;
+
+sub html-escape(Str $text --> Str) {
+  $text.trans([ '&', '<', '>' ] => [ '&amp;', '&lt;', '&gt;' ]);
+}
+
+sub attr-escape(Str $text --> Str) {
+  $text.trans([ '&', '<', '>', '"' ] => [ '&amp;', '&lt;', '&gt;', '&quot;' ]);
+}
+
+class Blogin::Markdown::Html::Result {
+  has Str $.html;
+  has Str $.text;
+}
+
+class Blogin::Markdown::Html {
+  has Profile $.framework = Blogin::Framework::profile('none');
+  has Str $!html = '';
+  has Str $!text = '';
+
+  method render(Document $doc --> Blogin::Markdown::Html::Result) {
+    $!html = '';
+    $!text = '';
+
+    self!blocks($doc.children);
+
+    Blogin::Markdown::Html::Result.new(html => $!html, text => $!text.trim);
+  }
+
+  method !class-attr(Str $class --> Str) {
+    $class.chars ?? " class=\"{ attr-escape($class) }\"" !! '';
+  }
+
+  method !align-style($align --> Str) {
+    $align.defined ?? " style=\"text-align:{ $align }\"" !! '';
+  }
+
+  method !attrs-str(%attrs, Str :$extra-class = '' --> Str) {
+    my @classes;
+    @classes.push($extra-class) if $extra-class.chars;
+    @classes.push(%attrs<class>) if %attrs<class>:exists && %attrs<class>.chars;
+
+    my $out = '';
+    $out ~= " class=\"{ attr-escape(@classes.join(' ')) }\"" if @classes;
+
+    for %attrs.sort(*.key) -> $pair {
+      next if $pair.key eq 'class';
+      $out ~= " { $pair.key }=\"{ attr-escape($pair.value.Str) }\"";
+    }
+
+    $out;
+  }
+
+  method !node-text(@nodes --> Str) {
+    my $out = '';
+
+    for @nodes -> $node {
+      given $node {
+        when Text     { $out ~= $node.text; }
+        when CodeSpan { $out ~= $node.text; }
+        when Image    { $out ~= $node.alt; }
+        when Emphasis | Strong | Strikethrough | Link {
+          $out ~= self!node-text($node.children);
+        }
+        default {}
+      }
+    }
+
+    $out;
+  }
+
+  method !blocks(@blocks) {
+    self!block($_) for @blocks;
+  }
+
+  method !block($node) {
+    given $node {
+      when Paragraph {
+        $!html ~= '<p>';
+        self!inline($node.children);
+        $!html ~= "</p>\n";
+        $!text ~= "\n";
+      }
+
+      when Heading {
+        my $slug  = Blogin::Slug::slugify(self!node-text($node.children));
+        my $class = $.framework.class-for('heading');
+
+        $!html ~= "<h{ $node.level } id=\"{ attr-escape($slug) }\"{ self!class-attr($class) }>";
+        self!inline($node.children);
+        $!html ~= "<a class=\"anchor\" href=\"#{ attr-escape($slug) }\">#</a>";
+        $!html ~= "</h{ $node.level }>\n";
+        $!text ~= "\n";
+      }
+
+      when ThematicBreak {
+        $!html ~= "<hr />\n";
+      }
+
+      when CodeBlock {
+        my $language = $node.info.chars ?? "language-{ $node.info }" !! '';
+        my $extra    = $.framework.class-for('code-block');
+        my $class    = ($language, $extra).grep(*.chars).join(' ');
+
+        $!html ~= '<pre><code' ~ self!class-attr($class) ~ '>';
+        $!html ~= html-escape($node.text);
+        $!html ~= "</code></pre>\n";
+        $!text ~= $node.text ~ "\n";
+      }
+
+      when BlockQuote {
+        my $class = $.framework.class-for('blockquote');
+
+        $!html ~= '<blockquote' ~ self!class-attr($class) ~ ">\n";
+        self!blocks($node.children);
+        $!html ~= "</blockquote>\n";
+      }
+
+      when List {
+        self!list($node);
+      }
+
+      when Table {
+        self!table($node);
+      }
+
+      default {}
+    }
+  }
+
+  method !list(List $node) {
+    my $class = $.framework.class-for('list');
+
+    if $node.ordered {
+      my $start = $node.start != 1 ?? " start=\"{ $node.start }\"" !! '';
+      $!html ~= '<ol' ~ $start ~ self!class-attr($class) ~ ">\n";
+    }
+    else {
+      $!html ~= '<ul' ~ self!class-attr($class) ~ ">\n";
+    }
+
+    self!list-item($_) for $node.items;
+
+    $!html ~= $node.ordered ?? "</ol>\n" !! "</ul>\n";
+  }
+
+  method !list-item(ListItem $item) {
+    $!html ~= '<li>';
+
+    if $item.task {
+      my $checked = $item.checked ?? ' checked' !! '';
+      $!html ~= "<input type=\"checkbox\" disabled$checked /> ";
+    }
+
+    if $item.children.elems == 1 && $item.children[0] ~~ Paragraph {
+      self!inline($item.children[0].children);
+      $!text ~= "\n";
+    }
+    else {
+      self!blocks($item.children);
+    }
+
+    $!html ~= "</li>\n";
+  }
+
+  method !table(Table $node) {
+    my $class = $.framework.class-for('table');
+
+    $!html ~= '<table' ~ self!class-attr($class) ~ ">\n<thead>\n<tr>\n";
+
+    for $node.header.kv -> $index, $cell {
+      $!html ~= '<th' ~ self!align-style($node.aligns[$index]) ~ '>';
+      self!inline($cell);
+      $!html ~= "</th>\n";
+    }
+
+    $!html ~= "</tr>\n</thead>\n<tbody>\n";
+
+    for $node.rows -> $row {
+      $!html ~= "<tr>\n";
+
+      for $row.kv -> $index, $cell {
+        $!html ~= '<td' ~ self!align-style($node.aligns[$index]) ~ '>';
+        self!inline($cell);
+        $!html ~= "</td>\n";
+      }
+
+      $!html ~= "</tr>\n";
+    }
+
+    $!html ~= "</tbody>\n</table>\n";
+    $!text ~= "\n";
+  }
+
+  method !inline(@nodes) {
+    self!inline-node($_) for @nodes;
+  }
+
+  method !inline-node($node) {
+    given $node {
+      when Text {
+        $!html ~= html-escape($node.text);
+        $!text ~= $node.text;
+      }
+
+      when Emphasis {
+        $!html ~= '<em>';
+        self!inline($node.children);
+        $!html ~= '</em>';
+      }
+
+      when Strong {
+        $!html ~= '<strong>';
+        self!inline($node.children);
+        $!html ~= '</strong>';
+      }
+
+      when Strikethrough {
+        $!html ~= '<del>';
+        self!inline($node.children);
+        $!html ~= '</del>';
+      }
+
+      when CodeSpan {
+        $!html ~= '<code>' ~ html-escape($node.text) ~ '</code>';
+        $!text ~= $node.text;
+      }
+
+      when Link {
+        $!html ~= '<a href="' ~ attr-escape($node.url) ~ '"';
+        $!html ~= ' title="' ~ attr-escape($node.title) ~ '"' if $node.title.chars;
+        $!html ~= self!attrs-str($node.attrs);
+        $!html ~= '>';
+        self!inline($node.children);
+        $!html ~= '</a>';
+      }
+
+      when Image {
+        my $extra = $.framework.class-for('image');
+
+        $!html ~= '<img src="' ~ attr-escape($node.url) ~ '" alt="' ~ attr-escape($node.alt) ~ '"';
+        $!html ~= ' title="' ~ attr-escape($node.title) ~ '"' if $node.title.chars;
+        $!html ~= self!attrs-str($node.attrs, :extra-class($extra));
+        $!html ~= ' />';
+        $!text ~= $node.alt;
+      }
+
+      when SoftBreak {
+        $!html ~= "\n";
+        $!text ~= ' ';
+      }
+
+      when LineBreak {
+        $!html ~= "<br />\n";
+        $!text ~= ' ';
+      }
+
+      default {}
+    }
+  }
+}

@@ -15,7 +15,10 @@
     "Blogin::Markdown": "lib/Blogin/Markdown.rakumod",
     "Blogin::Markdown::Node": "lib/Blogin/Markdown/Node.rakumod",
     "Blogin::Markdown::Grammar": "lib/Blogin/Markdown/Grammar.rakumod",
-    "Blogin::Markdown::Actions": "lib/Blogin/Markdown/Actions.rakumod"
+    "Blogin::Markdown::Actions": "lib/Blogin/Markdown/Actions.rakumod",
+    "Blogin::Markdown::Html": "lib/Blogin/Markdown/Html.rakumod",
+    "Blogin::Slug": "lib/Blogin/Slug.rakumod",
+    "Blogin::Framework": "lib/Blogin/Framework.rakumod"
   },
   "resources": [],
   "support": {
