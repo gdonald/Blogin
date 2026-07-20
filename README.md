@@ -39,8 +39,8 @@ blogin build           # write public/ for deployment
 
 ## Documentation
 
-The documentation site is itself a Blogin instance under `docs-src/`. Build it
-with `blogin build` from that directory.
+The documentation site is itself a Blogin instance, kept in its own repository at
+[blogin.dev](https://github.com/gdonald/blogin.dev) and built with `blogin build`.
 
 ## Development
 
