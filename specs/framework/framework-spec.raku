@@ -7,6 +7,9 @@ use Blogin::Markdown;
 use Blogin::Markdown::Html;
 use Blogin::Site;
 use Blogin::Scaffold;
+use Blogin;
+use Blogin::Config;
+use Blogin::Log;
 
 my $PAGINATED = 'specs/fixtures/paginated'.IO;
 
@@ -40,6 +43,22 @@ describe 'framework profiles', {
   it 'rejects an unknown profile', {
     try Blogin::Framework::profile('tailwind');
     expect($!.message.contains('tailwind')).to.be-truthy;
+  }
+
+  it 'exposes the bootstrap5 stylesheet url', {
+    expect(Blogin::Framework::profile('bootstrap5').stylesheet.contains('bootstrap')).to.be-truthy;
+  }
+
+  it 'exposes the pico stylesheet url', {
+    expect(Blogin::Framework::profile('pico').stylesheet.contains('pico')).to.be-truthy;
+  }
+
+  it 'exposes the bulma stylesheet url', {
+    expect(Blogin::Framework::profile('bulma').stylesheet.contains('bulma')).to.be-truthy;
+  }
+
+  it 'exposes no stylesheet for none', {
+    expect(Blogin::Framework::profile('none').stylesheet).to.eq('');
   }
 }
 
@@ -93,18 +112,33 @@ describe 'chrome reads from the profile', {
   }
 }
 
-describe 'init wires the framework stylesheet', {
+describe 'the built layout links the configured framework stylesheet', {
   let(:dir, { temp-made('fwinit') });
+  let(:out, { temp-made('fwinit-out') });
 
-  after-each { nuke(dir()) }
+  after-each {
+    nuke(dir());
+    nuke(out());
+  }
+
+  sub build-init {
+    build(
+      src    => dir().add('content'),
+      config => Blogin::Config.load(dir().add('blogin.json')),
+      out    => out(),
+      log    => Blogin::Log.new(:level('quiet')),
+    );
+  }
 
   it 'links pico for the pico framework', {
     Blogin::Scaffold::init(dir(), framework => 'pico', date => '2026-07-20');
-    expect(dir().add('layouts/base.haml').slurp.contains('pico')).to.be-truthy;
+    build-init;
+    expect(out().add('index.html').slurp.contains('pico')).to.be-truthy;
   }
 
   it 'links bulma for the bulma framework', {
     Blogin::Scaffold::init(dir(), framework => 'bulma', date => '2026-07-20');
-    expect(dir().add('layouts/base.haml').slurp.contains('bulma')).to.be-truthy;
+    build-init;
+    expect(out().add('index.html').slurp.contains('bulma')).to.be-truthy;
   }
 }

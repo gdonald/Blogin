@@ -4,11 +4,6 @@ use Blogin::Slug;
 
 unit module Blogin::Scaffold;
 
-my %STYLESHEETS =
-  bootstrap5 => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
-  pico       => 'https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css',
-  bulma      => 'https://cdn.jsdelivr.net/npm/bulma@1/css/bulma.min.css';
-
 my @KNOWN-FRAMEWORKS = <none bootstrap5 pico bulma>;
 
 sub blogin-json(Str $framework --> Str) {
@@ -39,17 +34,16 @@ sub starter-post(Str $date --> Str) {
   POST
 }
 
-sub base-haml(Str $framework --> Str) {
-  my $stylesheet = %STYLESHEETS{$framework} // '/static/style.css';
-
-  my $template = q:to/HAML/;
+sub base-haml(--> Str) {
+  q:to/HAML/;
   !!! 5
   %html{lang: 'en'}
     %head
       %meta{charset: 'utf-8'}
       %meta{name: 'viewport', content: 'width=device-width, initial-scale=1'}
       %title= site-title
-      %link{rel: 'stylesheet', href: 'STYLESHEET_HREF'}
+      != framework-stylesheet-tag
+      %link{rel: 'stylesheet', href: '/static/style.css'}
     %body
       - if has-header
         != debug-open('partial: header')
@@ -68,8 +62,6 @@ sub base-haml(Str $framework --> Str) {
         != render(:partial<footer>)
         != debug-close('partial: footer')
   HAML
-
-  $template.subst('STYLESHEET_HREF', $stylesheet);
 }
 
 sub show-haml(--> Str) {
@@ -203,7 +195,7 @@ sub scaffold-files(Str $framework, Str $date) {
   my %files =
     'blogin.json'                          => blogin-json($framework),
     "content/posts/{ $date }-hello-world.md" => starter-post($date),
-    'layouts/base.haml'                    => base-haml($framework),
+    'layouts/base.haml'                    => base-haml(),
     'layouts/show.haml'                    => show-haml(),
     'layouts/index.haml'                   => index-haml(),
     'layouts/_entry.haml'                  => entry-haml(),
@@ -213,9 +205,8 @@ sub scaffold-files(Str $framework, Str $date) {
     'layouts/_sidebar.haml'                => sidebar-haml(),
     'layouts/_footer.haml'                 => footer-haml(),
     'layouts/_search.haml'                 => search-haml(),
+    'static/style.css'                     => style-css(),
     ;
-
-  %files{'static/style.css'} = style-css() if $framework eq 'none';
 
   %files;
 }

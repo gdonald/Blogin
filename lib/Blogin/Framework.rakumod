@@ -25,11 +25,17 @@ my %PROFILES =
     container   => 'container',
   );
 
+my %STYLESHEETS =
+  bootstrap5 => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+  pico       => 'https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css',
+  bulma      => 'https://cdn.jsdelivr.net/npm/bulma@1/css/bulma.min.css';
+
 my @KNOWN = %PROFILES.keys.sort;
 
 class Profile is export {
   has Str $.name;
   has %.classes;
+  has Str $.stylesheet = '';
 
   method class-for(Str $slot --> Str) {
     %!classes{$slot} // '';
@@ -44,5 +50,5 @@ our sub profile(Str $name = 'none' --> Profile) is export {
   die "unknown css-framework '$name' (known: { @KNOWN.join(', ') })"
     unless %PROFILES{$name}:exists;
 
-  Profile.new(:$name, classes => %PROFILES{$name});
+  Profile.new(:$name, classes => %PROFILES{$name}, stylesheet => %STYLESHEETS{$name} // '');
 }

@@ -4,6 +4,7 @@ use BDD::Behave;
 use BloginTest;
 use Blogin::Server;
 use Blogin::Site;
+use Blogin::Config;
 
 my $BASIC = 'specs/fixtures/basic'.IO;
 
@@ -96,5 +97,40 @@ describe 'the rebuild-and-serve seam', {
     Blogin::Site::build(content => src(), out => out(), layouts => $BASIC.add('layouts'));
 
     expect(Blogin::Server::serve-content('/posts/note', out())<file>.slurp.contains('changed body')).to.be-truthy;
+  }
+}
+
+describe 'a config change is applied on the next build', {
+  let(:proj, { temp-made('cfgproj') });
+
+  before-each {
+    proj().add('content/posts').mkdir;
+    proj().add('content/posts/2026-07-19-note.md').spurt("---\ntitle: Note\ndate: 2026-07-19\n---\nbody\n");
+  }
+
+  after-each { nuke(proj()) }
+
+  sub build-with(Str $framework) {
+    proj().add('blogin.json').spurt(qq/\{ "css-framework": "$framework" \}/);
+
+    my $config = Blogin::Config.load(proj().add('blogin.json'));
+
+    Blogin::Site::build(
+      content => proj().add('content'),
+      out     => proj().add('public'),
+      layouts => $BASIC.add('layouts'),
+      |$config.build-options,
+    );
+  }
+
+  it 'links no framework stylesheet under the none framework', {
+    build-with('none');
+    expect(proj().add('public/posts/note.html').slurp.contains('cdn.jsdelivr.net')).to.be-falsy;
+  }
+
+  it 'adds the framework stylesheet after the config switches', {
+    build-with('none');
+    build-with('bootstrap5');
+    expect(proj().add('public/posts/note.html').slurp.contains('bootstrap@5.3.3')).to.be-truthy;
   }
 }

@@ -90,6 +90,18 @@ sub watch-recursive(IO::Path:D $dir, &on-change) {
   }
 }
 
+# Watch a single file by watching its directory and filtering to the file's
+# basename, so an editor's write-and-rename save still fires.
+sub watch-file(IO::Path:D $file, &on-change) {
+  return unless $file.parent.d;
+
+  start react {
+    whenever IO::Notification.watch-path($file.parent.absolute) -> $change {
+      on-change() if $change.path.IO.basename eq $file.basename;
+    }
+  }
+}
+
 our sub serve(
   IO()  :$content!,
   IO()  :$out!,
@@ -120,6 +132,12 @@ our sub serve(
       CATCH { default { $log.error("rebuild failed: { .message }") } }
     });
   }
+
+  watch-file($config-file, {
+    $log.info('config change detected, rebuilding');
+    rebuild();
+    CATCH { default { $log.error("rebuild failed: { .message }") } }
+  });
 
   my $server = Cro::HTTP::Server.new(
     host        => 'localhost',

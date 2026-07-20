@@ -88,17 +88,37 @@ describe 'a non-empty target', {
 
 describe 'framework selection', {
   let(:dir, { temp-made('fw') });
+  let(:out, { temp-made('fwout') });
 
-  after-each { nuke(dir()) }
+  after-each {
+    nuke(dir());
+    nuke(out());
+  }
+
+  sub build-scaffold {
+    build(
+      src => dir().add('content'),
+      config => Blogin::Config.load(dir().add('blogin.json')),
+      out => out(),
+      log => Blogin::Log.new(:level('quiet')),
+    );
+  }
 
   it 'records the chosen framework in the config', {
     Blogin::Scaffold::init(dir(), framework => 'bootstrap5', date => '2026-07-20');
     expect(Blogin::Config.load(dir().add('blogin.json')).css-framework).to.eq('bootstrap5');
   }
 
-  it 'wires the framework stylesheet into base.haml', {
+  it 'links the framework stylesheet in the built pages', {
     Blogin::Scaffold::init(dir(), framework => 'bootstrap5', date => '2026-07-20');
-    expect(dir().add('layouts/base.haml').slurp.contains('bootstrap')).to.be-truthy;
+    build-scaffold;
+    expect(out().add('index.html').slurp.contains('bootstrap@5.3.3')).to.be-truthy;
+  }
+
+  it 'links no framework stylesheet under the none framework', {
+    Blogin::Scaffold::init(dir(), framework => 'none', date => '2026-07-20');
+    build-scaffold;
+    expect(out().add('index.html').slurp.contains('cdn.jsdelivr.net')).to.be-falsy;
   }
 
   it 'rejects an unknown framework', {
