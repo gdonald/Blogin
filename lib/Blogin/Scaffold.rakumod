@@ -61,6 +61,7 @@ sub base-haml(--> Str) {
         != debug-open('partial: footer')
         != render(:partial<footer>)
         != debug-close('partial: footer')
+      != framework-script-tag
   HAML
 }
 

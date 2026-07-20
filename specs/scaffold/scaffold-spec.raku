@@ -112,7 +112,13 @@ describe 'framework selection', {
   it 'links the framework stylesheet in the built pages', {
     Blogin::Scaffold::init(dir(), framework => 'bootstrap5', date => '2026-07-20');
     build-scaffold;
-    expect(out().add('index.html').slurp.contains('bootstrap@5.3.3')).to.be-truthy;
+    expect(out().add('index.html').slurp.contains('bootstrap@5.3.3/dist/css')).to.be-truthy;
+  }
+
+  it 'includes the framework script bundle in the built pages', {
+    Blogin::Scaffold::init(dir(), framework => 'bootstrap5', date => '2026-07-20');
+    build-scaffold;
+    expect(out().add('index.html').slurp.contains('bootstrap.bundle.min.js')).to.be-truthy;
   }
 
   it 'links no framework stylesheet under the none framework', {

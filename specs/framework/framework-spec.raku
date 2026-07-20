@@ -60,6 +60,18 @@ describe 'framework profiles', {
   it 'exposes no stylesheet for none', {
     expect(Blogin::Framework::profile('none').stylesheet).to.eq('');
   }
+
+  it 'exposes the bootstrap5 script bundle', {
+    expect(Blogin::Framework::profile('bootstrap5').script.contains('bootstrap.bundle')).to.be-truthy;
+  }
+
+  it 'exposes no script for a css-only framework', {
+    expect(Blogin::Framework::profile('bulma').script).to.eq('');
+  }
+
+  it 'exposes no script for none', {
+    expect(Blogin::Framework::profile('none').script).to.eq('');
+  }
 }
 
 describe 'element classes on the same semantic html', {

@@ -39,6 +39,12 @@ class ChromeView does Template::HAML::HelpersRole {
     $href.chars ?? "<link rel=\"stylesheet\" href=\"{ attr-escape($href) }\">" !! '';
   }
 
+  method framework-script-tag(--> Str) {
+    my $src = $!framework.script;
+
+    $src.chars ?? "<script src=\"{ attr-escape($src) }\"></script>" !! '';
+  }
+
   method site-title  { %!site<title> // '' }
   method section     { $!section }
   method url         { $!url }
