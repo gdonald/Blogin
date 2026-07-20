@@ -5,6 +5,7 @@ use Blogin::Layout;
 use Blogin::Slug;
 use Blogin::Nav;
 use Blogin::Feed;
+use Blogin::Search;
 
 unit module Blogin::Site;
 
@@ -316,6 +317,9 @@ our sub build(
   Int   :$page-size = 10,
   Str   :$home-section = '',
         :%sections = %(),
+  Bool  :$search = True,
+  Int   :$search-text-length = 2000,
+  Int   :$search-cap = 10,
   --> BuildResult
 ) {
   my @nav = Blogin::Nav::build-tree($content, :%sections, :$clean-urls);
@@ -361,15 +365,17 @@ our sub build(
   my $haml-lock = Lock.new;
 
   my @written = @ordered.hyper(:degree($jobs max 1), :batch(1)).map(-> $page {
-    my $body-html = Blogin::Layout::render-body(
+    my $parts = Blogin::Layout::render-parts(
       post      => $page<post>,
       framework => $framework,
     );
 
+    $page<text> = $parts<text>;
+
     my $html = $haml-lock.protect({
       Blogin::Layout::render-with-layout(
         post      => $page<post>,
-        body-html => $body-html,
+        body-html => $parts<html>,
         layouts   => $layouts,
         site      => %site,
         section   => $page<section>,
@@ -398,6 +404,11 @@ our sub build(
     @listings.append: build-feeds(
       :@pages, :@page-files, :$out, :%site, :$clean-urls,
     );
+
+    if $search {
+      @listings.push: Blogin::Search::write-index(@pages, :$out, text-length => $search-text-length);
+      @listings.push: Blogin::Search::write-js(:$out, cap => $search-cap);
+    }
   }
 
   copy-tree($static, $out) if $static.d;

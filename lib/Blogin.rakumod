@@ -31,6 +31,9 @@ our sub build(
     home-section => $config.home-section,
     sections     => $config.sections,
     debug        => $debug-on,
+    search             => $config.search,
+    search-text-length => $config.search-text-length,
+    search-cap         => $config.search-cap,
     :$drafts,
     :$jobs,
   );

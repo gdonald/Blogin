@@ -13,6 +13,9 @@ has Str  $.home-section  = '';
 has Bool $.clean-urls    = True;
 has Str  $.css-framework = 'none';
 has Bool $.debug         = False;
+has Bool $.search             = True;
+has Int  $.search-text-length = 2000;
+has Int  $.search-cap         = 10;
 has      %.sections;
 
 my sub want-str($value, Str $key) {
@@ -56,6 +59,9 @@ method from-data(Blogin::Config:U: %data --> Blogin::Config) {
   %args<clean-urls>    = want-bool($_, 'clean-urls')    with %data<clean-urls>;
   %args<css-framework> = want-str($_,  'css-framework') with %data<css-framework>;
   %args<debug>         = want-bool($_, 'debug')         with %data<debug>;
+  %args<search>             = want-bool($_, 'search')             with %data<search>;
+  %args<search-text-length> = want-int($_,  'search-text-length') with %data<search-text-length>;
+  %args<search-cap>         = want-int($_,  'search-cap')         with %data<search-cap>;
   %args<sections>      = validate-sections($_)          with %data<sections>;
 
   self.new(|%args);

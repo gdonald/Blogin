@@ -121,12 +121,17 @@ sub layout-search-paths(IO() $layouts, Str $section --> Array) {
   @paths;
 }
 
-# Pure: markdown body to an HTML fragment. Safe to run concurrently.
-our sub render-body(:$post!, Str :$framework = 'none' --> Str) is export {
+# Pure: markdown body to an HTML fragment plus stripped plain text (one parse).
+# Safe to run concurrently.
+our sub render-parts(:$post!, Str :$framework = 'none' --> Hash) is export {
   my $document = Blogin::Markdown::parse($post.body);
-  my $renderer = Blogin::Markdown::Html.new(framework => Blogin::Framework::profile($framework));
+  my $result   = Blogin::Markdown::Html.new(framework => Blogin::Framework::profile($framework)).render($document);
 
-  $renderer.render($document).html;
+  %( html => $result.html, text => $result.text );
+}
+
+our sub render-body(:$post!, Str :$framework = 'none' --> Str) is export {
+  render-parts(:$post, :$framework)<html>;
 }
 
 # HAML layout wrap. Template::HAML's compile caches are not thread-safe, so
