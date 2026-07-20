@@ -183,12 +183,15 @@ our sub render-listing(
   Str   :$prev-url = '',
   Str   :$next-url = '',
   Bool  :$debug = False,
+        :@templates = ['index'],
   --> Str
 ) is export {
   my @paths = layout-search-paths($layouts, $section);
 
-  die "required layout 'index.haml' not found (searched { @paths.join(', ') })"
-    unless template-exists(@paths, 'index');
+  my $template = @templates.first({ template-exists(@paths, $_) });
+
+  die "required listing layout ({ @templates.join(', ') }) not found (searched { @paths.join(', ') })"
+    without $template;
 
   die "required layout 'base.haml' not found (searched { @paths.join(', ') })"
     unless template-exists(@paths, 'base');
@@ -209,5 +212,5 @@ our sub render-listing(
 
   my $haml = HAML.new(:search-paths(@paths));
 
-  $haml.render(:file<index>, :layout<base>, :context($view));
+  $haml.render(:file($template), :layout<base>, :context($view));
 }

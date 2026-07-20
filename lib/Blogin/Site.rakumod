@@ -2,6 +2,7 @@ use v6.d;
 
 use Blogin::Post;
 use Blogin::Layout;
+use Blogin::Slug;
 
 unit module Blogin::Site;
 
@@ -153,6 +154,62 @@ sub build-listings(
   @written;
 }
 
+sub build-tags(
+  :@pages, IO::Path:D :$out!, IO() :$layouts!, :%site,
+  Bool :$clean-urls!, Bool :$debug!,
+  --> Array
+) {
+  my %tag-posts;
+  for @pages -> $page {
+    %tag-posts{$_}.push($page) for $page<post>.tags;
+  }
+
+  my @written;
+  return @written unless %tag-posts;
+
+  for %tag-posts.keys.sort -> $tag {
+    my @sorted = %tag-posts{$tag}.sort({
+      (date-key($^b) <=> date-key($^a)) || ($^a<post>.slug leg $^b<post>.slug)
+    });
+
+    my $slug     = Blogin::Slug::slugify($tag);
+    my $out-file = $clean-urls ?? $out.add("tags/$slug.html") !! $out.add("tags/$slug").add('index.html');
+
+    my @entries = @sorted.map({
+      %( title => .<post>.title, url => .<url>, date => (.<post>.date.defined ?? .<post>.date.Str !! '') )
+    });
+
+    my $html = Blogin::Layout::render-listing(
+      :$layouts, :%site, :@entries, templates => ['tag', 'index'], :$debug,
+    );
+
+    $out-file.parent.mkdir;
+    $out-file.spurt($html);
+    @written.push($out-file);
+  }
+
+  my @tag-entries = %tag-posts.keys.sort.map(-> $tag {
+    my $slug = Blogin::Slug::slugify($tag);
+    %(
+      title => "$tag ({ %tag-posts{$tag}.elems })",
+      url   => ($clean-urls ?? "/tags/$slug" !! "/tags/$slug/"),
+      date  => '',
+    )
+  });
+
+  my $index-file = $clean-urls ?? $out.add('tags.html') !! $out.add('tags').add('index.html');
+
+  my $html = Blogin::Layout::render-listing(
+    :$layouts, :%site, entries => @tag-entries, templates => ['index'], :$debug,
+  );
+
+  $index-file.parent.mkdir;
+  $index-file.spurt($html);
+  @written.push($index-file);
+
+  @written;
+}
+
 our sub build(
   IO()  :$content!,
   IO()  :$out!,
@@ -234,6 +291,10 @@ our sub build(
   my @listings = build-listings(
     :@pages, :$out, :$layouts, :%site, :$clean-urls, :$debug,
     :$page-size, :$home-section,
+  );
+
+  @listings.append: build-tags(
+    :@pages, :$out, :$layouts, :%site, :$clean-urls, :$debug,
   );
 
   copy-tree($static, $out) if $static.d;
