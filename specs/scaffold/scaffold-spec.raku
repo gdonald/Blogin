@@ -1,28 +1,14 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Scaffold;
 use Blogin::Config;
 use Blogin;
 use Blogin::Log;
 
-my $seq = 0;
-
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
-
-sub fresh-dir(Str $tag) {
-  my $dir = $*TMPDIR.add("blogin-$tag-{$*PID}-{$seq++}");
-  $dir.mkdir;
-  $dir;
-}
-
 describe 'scaffolding a site', {
-  let(:dir, { fresh-dir('init') });
+  let(:dir, { temp-made('init') });
 
   before-each { Blogin::Scaffold::init(dir(), date => '2026-07-20') }
   after-each  { nuke(dir()) }
@@ -51,8 +37,8 @@ describe 'scaffolding a site', {
 }
 
 describe 'the scaffold builds', {
-  let(:dir, { fresh-dir('build') });
-  let(:out, { fresh-dir('out') });
+  let(:dir, { temp-made('build') });
+  let(:out, { temp-made('out') });
 
   before-each { Blogin::Scaffold::init(dir(), date => '2026-07-20') }
 
@@ -83,7 +69,7 @@ describe 'the scaffold builds', {
 }
 
 describe 'a non-empty target', {
-  let(:dir, { fresh-dir('nonempty') });
+  let(:dir, { temp-made('nonempty') });
 
   after-each { nuke(dir()) }
 
@@ -101,7 +87,7 @@ describe 'a non-empty target', {
 }
 
 describe 'framework selection', {
-  let(:dir, { fresh-dir('fw') });
+  let(:dir, { temp-made('fw') });
 
   after-each { nuke(dir()) }
 

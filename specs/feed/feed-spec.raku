@@ -1,18 +1,12 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Site;
 use XML;
 
 my $PAGINATED = 'specs/fixtures/paginated'.IO;
-my $seq       = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub build(IO::Path:D $out) {
   Blogin::Site::build(
@@ -24,7 +18,7 @@ sub build(IO::Path:D $out) {
 }
 
 describe 'the site-wide atom feed', {
-  let(:out, { $*TMPDIR.add("blogin-feed-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('feed') });
 
   after-each { nuke(out()) }
 
@@ -51,7 +45,7 @@ describe 'the site-wide atom feed', {
 }
 
 describe 'per-section atom feeds', {
-  let(:out, { $*TMPDIR.add("blogin-secfeed-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('secfeed') });
 
   after-each { nuke(out()) }
 
@@ -68,7 +62,7 @@ describe 'per-section atom feeds', {
 }
 
 describe 'the sitemap', {
-  let(:out, { $*TMPDIR.add("blogin-sitemap-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('sitemap') });
 
   after-each { nuke(out()) }
 

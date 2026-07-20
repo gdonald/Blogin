@@ -20,22 +20,12 @@ our sub build(
   --> Bool
 ) is export {
   my $out-dir = $out // $config.output-dir.IO;
-  my $debug-on = $debug // $config.debug;
 
   my $result = Blogin::Site::build(
-    content      => $src,
-    out          => $out-dir,
-    site         => %( title => $config.title, base-url => $config.base-url, author => $config.author ),
-    clean-urls   => $config.clean-urls,
-    framework    => $config.css-framework,
-    page-size    => $config.page-size,
-    home-section => $config.home-section,
-    sections     => $config.sections,
-    debug        => $debug-on,
-    search             => $config.search,
-    search-text-length => $config.search-text-length,
-    search-cap         => $config.search-cap,
-    highlight          => $config.highlight,
+    content => $src,
+    out     => $out-dir,
+    debug   => ($debug // $config.debug),
+    |$config.build-options,
     :$drafts,
     :$jobs,
     :$force,

@@ -1,21 +1,15 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Scaffold;
 use Blogin::Site;
 
 my $BASIC = 'specs/fixtures/basic'.IO;
-my $seq   = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 describe 'creating a new post', {
-  let(:content, { my $d = $*TMPDIR.add("blogin-new-{$*PID}-{$seq++}"); $d.mkdir; $d });
+  let(:content, { temp-made('new') });
 
   after-each { nuke(content()) }
 
@@ -42,8 +36,8 @@ describe 'creating a new post', {
 }
 
 describe 'the new post is buildable', {
-  let(:content, { my $d = $*TMPDIR.add("blogin-newbuild-{$*PID}-{$seq++}"); $d.mkdir; $d });
-  let(:out,     { $*TMPDIR.add("blogin-newout-{$*PID}-{$seq++}") });
+  let(:content, { temp-made('newbuild') });
+  let(:out,     { temp-dir('newout') });
 
   after-each {
     nuke(content());

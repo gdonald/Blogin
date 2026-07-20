@@ -81,3 +81,20 @@ method load(Blogin::Config:U: IO() $path --> Blogin::Config) {
 
   self.from-data(%data);
 }
+
+# The config-derived named arguments for Blogin::Site::build (excludes debug,
+# which callers resolve against CLI overrides).
+method build-options(--> Hash) {
+  %(
+    site               => %( title => $!title, base-url => $!base-url, author => $!author ),
+    clean-urls         => $!clean-urls,
+    framework          => $!css-framework,
+    page-size          => $!page-size,
+    home-section       => $!home-section,
+    sections           => %!sections,
+    search             => $!search,
+    search-text-length => $!search-text-length,
+    search-cap         => $!search-cap,
+    highlight          => $!highlight,
+  );
+}

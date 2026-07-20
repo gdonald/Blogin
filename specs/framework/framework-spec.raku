@@ -1,5 +1,7 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Framework;
 use Blogin::Markdown;
 use Blogin::Markdown::Html;
@@ -7,15 +9,7 @@ use Blogin::Site;
 use Blogin::Scaffold;
 
 my $PAGINATED = 'specs/fixtures/paginated'.IO;
-my $seq       = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub element-html(Str $markdown, Str $framework) {
   my $doc = Blogin::Markdown::parse($markdown);
@@ -74,7 +68,7 @@ describe 'element classes on the same semantic html', {
 }
 
 describe 'chrome reads from the profile', {
-  let(:out, { $*TMPDIR.add("blogin-fw-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('fw') });
 
   after-each { nuke(out()) }
 
@@ -100,7 +94,7 @@ describe 'chrome reads from the profile', {
 }
 
 describe 'init wires the framework stylesheet', {
-  let(:dir, { my $d = $*TMPDIR.add("blogin-fwinit-{$*PID}-{$seq++}"); $d.mkdir; $d });
+  let(:dir, { temp-made('fwinit') });
 
   after-each { nuke(dir()) }
 

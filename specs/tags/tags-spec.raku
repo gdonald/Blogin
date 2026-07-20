@@ -1,17 +1,11 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Site;
 
 my $PAGINATED = 'specs/fixtures/paginated'.IO;
-my $seq       = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub build(IO::Path:D $out) {
   Blogin::Site::build(
@@ -22,7 +16,7 @@ sub build(IO::Path:D $out) {
 }
 
 describe 'per-tag pages', {
-  let(:out, { $*TMPDIR.add("blogin-tags-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('tags') });
 
   after-each { nuke(out()) }
 
@@ -51,7 +45,7 @@ describe 'per-tag pages', {
 }
 
 describe 'the tag index', {
-  let(:out, { $*TMPDIR.add("blogin-tagindex-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('tagindex') });
 
   after-each { nuke(out()) }
 

@@ -1,6 +1,6 @@
 ---
 title: Configuration
-date: 2026-07-17
+date: 2026-07-12
 tags: [reference]
 description: The keys in blogin.json.
 ---

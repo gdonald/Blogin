@@ -1,19 +1,13 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Config;
 use Blogin;
 use Blogin::Log;
 
 my $CONFIGURED = 'specs/fixtures/configured'.IO;
-my $seq        = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub build-configured(IO::Path:D $target, *%options) {
   my $config = Blogin::Config.load($CONFIGURED.add('blogin.json'));
@@ -80,7 +74,7 @@ describe 'malformed config', {
 }
 
 describe 'config driving the build', {
-  let(:out, { $*TMPDIR.add("blogin-config-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('config') });
 
   after-each { nuke(out()) }
 

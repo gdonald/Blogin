@@ -1,17 +1,9 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
-use Blogin::Site;
+use BloginTest;
 
 my $BASIC = 'specs/fixtures/basic'.IO;
-my $seq   = 0;
-
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub read-tree(IO::Path:D $dir) {
   my %files;
@@ -28,17 +20,11 @@ sub read-tree(IO::Path:D $dir) {
 }
 
 sub build-basic(IO::Path:D $out, *%options) {
-  Blogin::Site::build(
-    content => $BASIC.add('content'),
-    out     => $out,
-    layouts => $BASIC.add('layouts'),
-    static  => $BASIC.add('static'),
-    |%options,
-  );
+  build-fixture($BASIC, $out, |%options);
 }
 
 describe 'building the basic fixture site', {
-  let(:out, { $*TMPDIR.add("blogin-site-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('site') });
 
   after-each { nuke(out()) }
 
@@ -74,7 +60,7 @@ describe 'building the basic fixture site', {
 }
 
 describe 'drafts', {
-  let(:out, { $*TMPDIR.add("blogin-draft-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('draft') });
 
   after-each { nuke(out()) }
 
@@ -90,7 +76,7 @@ describe 'drafts', {
 }
 
 describe 'rebuilds', {
-  let(:out, { $*TMPDIR.add("blogin-rebuild-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('rebuild') });
 
   after-each { nuke(out()) }
 
@@ -105,8 +91,8 @@ describe 'rebuilds', {
 }
 
 describe 'deterministic output', {
-  let(:one, { $*TMPDIR.add("blogin-j1-{$*PID}-{$seq++}") });
-  let(:many, { $*TMPDIR.add("blogin-jn-{$*PID}-{$seq++}") });
+  let(:one, { temp-dir('j1') });
+  let(:many, { temp-dir('jn') });
 
   after-each {
     nuke(one());
@@ -122,17 +108,12 @@ describe 'deterministic output', {
 }
 
 describe 'a url collision', {
-  let(:out, { $*TMPDIR.add("blogin-collision-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('collision') });
 
   after-each { nuke(out()) }
 
   it 'raises naming both source files', {
-    try Blogin::Site::build(
-      content => 'specs/fixtures/collision/content'.IO,
-      out     => out(),
-      layouts => $BASIC.add('layouts'),
-    );
-
+    try build-fixture('specs/fixtures/collision'.IO, out());
     expect($!.message.contains('a.md') && $!.message.contains('b.md')).to.be-truthy;
   }
 }

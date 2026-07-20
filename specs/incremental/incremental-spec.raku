@@ -1,17 +1,11 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Site;
 
 my $BASIC = 'specs/fixtures/basic'.IO;
-my $seq   = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub build(IO::Path:D $content, IO::Path:D $out, *%options) {
   Blogin::Site::build(
@@ -35,8 +29,8 @@ sub rel-log(@files, IO::Path:D $out) {
 }
 
 describe 'incremental rebuilds', {
-  let(:content, { my $d = $*TMPDIR.add("blogin-inc-src-{$*PID}-{$seq++}"); $d.mkdir; $d });
-  let(:out,     { $*TMPDIR.add("blogin-inc-out-{$*PID}-{$seq++}") });
+  let(:content, { temp-made('inc-src') });
+  let(:out,     { temp-dir('inc-out') });
 
   before-each { seed-content(content()) }
 

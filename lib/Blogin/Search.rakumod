@@ -50,7 +50,7 @@ our sub index-records(@pages, Int :$text-length = 2000 --> Array) is export {
     %(
       title       => $post.title,
       url         => $page<url>,
-      date        => ($post.date.defined ?? $post.date.Str !! ''),
+      date        => $post.date-str,
       tags        => $post.tags,
       description => $post.description,
       text        => ($text.chars > $text-length ?? $text.substr(0, $text-length) !! $text),
@@ -60,12 +60,6 @@ our sub index-records(@pages, Int :$text-length = 2000 --> Array) is export {
 
 our sub index-json(@pages, Int :$text-length = 2000 --> Str) is export {
   to-json(index-records(@pages, :$text-length), :sorted-keys);
-}
-
-our sub write-index(@pages, IO::Path:D :$out!, Int :$text-length = 2000 --> IO::Path) is export {
-  my $file = $out.add('search-index.json');
-  $file.spurt(index-json(@pages, :$text-length));
-  $file;
 }
 
 my constant SEARCH-JS = q:to/JS/;
@@ -152,10 +146,4 @@ JS
 
 our sub search-js(Int :$cap = 10 --> Str) is export {
   "const BLOGIN_SEARCH_CAP = $cap;\n" ~ SEARCH-JS;
-}
-
-our sub write-js(IO::Path:D :$out!, Int :$cap = 10 --> IO::Path) is export {
-  my $file = $out.add('search.js');
-  $file.spurt(search-js(:$cap));
-  $file;
 }

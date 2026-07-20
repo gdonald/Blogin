@@ -14,6 +14,10 @@ has Str  $.body;
 has      %.meta;
 has Str  $.filename = '';
 
+method date-str(--> Str) {
+  $!date.defined ?? $!date.Str !! '';
+}
+
 my @KNOWN = <title date slug tags draft description>;
 
 my sub unquote(Str $value --> Str) {

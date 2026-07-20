@@ -1,19 +1,11 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin;
 
-my $seq = 0;
-
-sub remove-tree(IO::Path:D $dir) {
-  for $dir.dir -> $entry {
-    $entry.d ?? remove-tree($entry) !! $entry.unlink;
-  }
-
-  $dir.rmdir;
-}
-
 describe 'Blogin::build', {
-  let(:root, { $*TMPDIR.add("blogin-build-{$*PID}-{$seq++}") });
+  let(:root, { temp-dir('build') });
   let(:src,  { root().add('content') });
   let(:out,  { root().add('public') });
 
@@ -22,7 +14,7 @@ describe 'Blogin::build', {
   }
 
   after-each {
-    remove-tree(root()) if root().e;
+    nuke(root()) if root().e;
   }
 
   it 'creates the output directory', {
@@ -48,7 +40,7 @@ describe 'blogin build (cli)', {
   my $output-exists;
 
   before-all {
-    $root = $*TMPDIR.add("blogin-cli-{$*PID}-{$seq++}");
+    $root = temp-dir('cli');
 
     my $src = $root.add('content');
     my $out = $root.add('public');
@@ -69,7 +61,7 @@ describe 'blogin build (cli)', {
   }
 
   after-all {
-    remove-tree($root) if $root.defined && $root.e;
+    nuke($root) if $root.defined && $root.e;
   }
 
   it 'exits 0 on an empty source directory', {

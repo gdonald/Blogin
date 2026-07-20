@@ -105,20 +105,9 @@ our sub serve(
     my $current = Blogin::Config.load($config-file);
 
     Blogin::Site::build(
-      :$content,
-      :$out,
-      :$layouts,
-      :$static,
-      site         => %( title => $current.title, base-url => $current.base-url, author => $current.author ),
-      clean-urls   => $current.clean-urls,
-      framework    => $current.css-framework,
-      page-size    => $current.page-size,
-      home-section => $current.home-section,
-      sections     => $current.sections,
-      debug        => $current.debug,
-      search             => $current.search,
-      search-text-length => $current.search-text-length,
-      search-cap         => $current.search-cap,
+      :$content, :$out, :$layouts, :$static,
+      debug => $current.debug,
+      |$current.build-options,
     );
   };
 

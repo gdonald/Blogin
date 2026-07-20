@@ -1,19 +1,13 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin;
 use Blogin::Config;
 use Blogin::Log;
 
 my $DOCS = 'docs-src'.IO;
-my $seq  = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub build-docs(IO::Path:D $out) {
   build(
@@ -25,7 +19,7 @@ sub build-docs(IO::Path:D $out) {
 }
 
 describe 'the documentation site builds with Blogin', {
-  let(:out, { $*TMPDIR.add("blogin-docs-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('docs') });
 
   before-each { build-docs(out()) }
   after-each  { nuke(out()) }

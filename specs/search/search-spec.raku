@@ -1,20 +1,14 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Site;
 use Blogin::Search;
 use Template::HAML;
 use JSON::Fast;
 
 my $PAGINATED = 'specs/fixtures/paginated'.IO;
-my $seq       = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub build(IO::Path:D $out, *%options) {
   Blogin::Site::build(
@@ -57,7 +51,7 @@ describe 'the ranking logic', {
 }
 
 describe 'the search index', {
-  let(:out, { $*TMPDIR.add("blogin-search-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('search') });
 
   after-each { nuke(out()) }
 

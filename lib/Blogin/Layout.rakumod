@@ -61,7 +61,7 @@ class View is ChromeView is export {
   has Str $.body-html = '';
 
   method title       { $!post.title }
-  method date        { $!post.date.defined ?? $!post.date.Str !! '' }
+  method date        { $!post.date-str }
   method description  { $!post.description }
 
   method body {
@@ -132,8 +132,7 @@ sub layout-search-paths(IO() $layouts, Str $section --> Array) {
   @paths;
 }
 
-# Pure: markdown body to an HTML fragment plus stripped plain text (one parse).
-# Safe to run concurrently.
+# Markdown body to HTML fragment + plain text. Concurrency-safe.
 our sub render-parts(:$post!, Str :$framework = 'none', Bool :$highlight = False --> Hash) is export {
   my $document = Blogin::Markdown::parse($post.body);
   my $renderer = Blogin::Markdown::Html.new(

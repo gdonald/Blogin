@@ -1,18 +1,12 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Server;
 use Blogin::Site;
 
 my $BASIC = 'specs/fixtures/basic'.IO;
-my $seq   = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub build-basic(IO::Path:D $out) {
   Blogin::Site::build(
@@ -25,7 +19,7 @@ sub build-basic(IO::Path:D $out) {
 }
 
 describe 'resolving a request path to a file', {
-  let(:out, { $*TMPDIR.add("blogin-serve-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('serve') });
 
   before-each { build-basic(out()) }
   after-each  { nuke(out()) }
@@ -52,7 +46,7 @@ describe 'resolving a request path to a file', {
 }
 
 describe 'serving content', {
-  let(:out, { $*TMPDIR.add("blogin-content-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('content') });
 
   before-each { build-basic(out()) }
   after-each  { nuke(out()) }
@@ -76,8 +70,8 @@ describe 'serving content', {
 }
 
 describe 'the rebuild-and-serve seam', {
-  let(:src, { $*TMPDIR.add("blogin-src-{$*PID}-{$seq++}") });
-  let(:out, { $*TMPDIR.add("blogin-rebuilt-{$*PID}-{$seq++}") });
+  let(:src, { temp-dir('src') });
+  let(:out, { temp-dir('rebuilt') });
 
   before-each {
     src().add('posts').mkdir;

@@ -1,17 +1,11 @@
 use lib 'lib';
+use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Site;
 
 my $PAGINATED = 'specs/fixtures/paginated'.IO;
-my $seq       = 0;
 
-sub nuke(IO::Path:D $dir) {
-  return unless $dir.e;
-  for $dir.dir -> $entry {
-    $entry.d ?? nuke($entry) !! $entry.unlink;
-  }
-  $dir.rmdir;
-}
 
 sub build-paginated(IO::Path:D $out, *%options) {
   Blogin::Site::build(
@@ -24,7 +18,7 @@ sub build-paginated(IO::Path:D $out, *%options) {
 }
 
 describe 'per-section paginated listings', {
-  let(:out, { $*TMPDIR.add("blogin-page-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('page') });
 
   after-each { nuke(out()) }
 
@@ -71,7 +65,7 @@ describe 'per-section paginated listings', {
 }
 
 describe 'the home section at the site root', {
-  let(:out, { $*TMPDIR.add("blogin-home-{$*PID}-{$seq++}") });
+  let(:out, { temp-dir('home') });
 
   after-each { nuke(out()) }
 

@@ -33,9 +33,8 @@ sub prune-empty-dirs(IO::Path:D $dir) {
   }
 }
 
-# Writes only files whose content changed, records the write log, and tracks
-# every produced path so stale output can be pruned. Thread-safe for the
-# parallel post writes.
+# Change-detecting writer. Thread-safe; tracks written paths so prune() can
+# remove stale output.
 class Writer {
   has Bool  $.force = False;
   has       @.written;
@@ -110,6 +109,20 @@ sub date-key(%page) {
   %page<post>.date.defined ?? %page<post>.date.daycount !! 0;
 }
 
+sub newest-first(@pages) {
+  @pages.sort({ (date-key($^b) <=> date-key($^a)) || ($^a<post>.slug leg $^b<post>.slug) });
+}
+
+sub by-section(@pages --> Hash) {
+  my %grouped;
+  %grouped{ .<section> }.push($_) for @pages;
+  %grouped;
+}
+
+sub entry-of(%page, Str :$base = '') {
+  %( title => %page<post>.title, url => $base ~ %page<url>, date => %page<post>.date-str );
+}
+
 sub listing-url(Str $section, Int $page-num, Bool :$at-root, Bool :$clean-urls) {
   my $base = $at-root ?? '' !! $section;
 
@@ -154,9 +167,7 @@ sub write-section-listing(
     my $prev-url = $page-num > 1     ?? listing-url($section, $page-num - 1, :$at-root, :$clean-urls) !! '';
     my $next-url = $page-num < $total ?? listing-url($section, $page-num + 1, :$at-root, :$clean-urls) !! '';
 
-    my @entries = @chunk.map({
-      %( title => .<post>.title, url => .<url>, date => (.<post>.date.defined ?? .<post>.date.Str !! '') )
-    });
+    my @entries = @chunk.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
       :$layouts, :$section, :%site, :@nav, :@entries,
@@ -181,20 +192,12 @@ sub build-listings(
     (%sections{$section}<page-size> // $page-size).Int;
   }
 
-  my %by-section;
-  %by-section{ .<section> }.push($_) for @pages;
-
+  my %by-section = by-section(@pages);
   my @written;
-
-  my sub sorted-of(Str $section) {
-    %by-section{$section}.sort({
-      (date-key($^b) <=> date-key($^a)) || ($^a<post>.slug leg $^b<post>.slug)
-    });
-  }
 
   for %by-section.keys.grep(*.chars).sort -> $section {
     @written.append: write-section-listing(
-      $section, sorted-of($section),
+      $section, newest-first(%by-section{$section}),
       :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer, :$framework,
       page-size => page-size-for($section),
     );
@@ -202,7 +205,7 @@ sub build-listings(
 
   if $home-section.chars && (%by-section{$home-section}:exists) {
     @written.append: write-section-listing(
-      $home-section, sorted-of($home-section),
+      $home-section, newest-first(%by-section{$home-section}),
       :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer, :$framework,
       page-size => page-size-for($home-section),
     );
@@ -225,16 +228,12 @@ sub build-tags(
   return @written unless %tag-posts;
 
   for %tag-posts.keys.sort -> $tag {
-    my @sorted = %tag-posts{$tag}.sort({
-      (date-key($^b) <=> date-key($^a)) || ($^a<post>.slug leg $^b<post>.slug)
-    });
+    my @sorted = newest-first(%tag-posts{$tag});
 
     my $slug     = Blogin::Slug::slugify($tag);
     my $out-file = $clean-urls ?? $out.add("tags/$slug.html") !! $out.add("tags/$slug").add('index.html');
 
-    my @entries = @sorted.map({
-      %( title => .<post>.title, url => .<url>, date => (.<post>.date.defined ?? .<post>.date.Str !! '') )
-    });
+    my @entries = @sorted.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
       :$layouts, :%site, :@nav, :@entries, templates => ['tag', 'index'], :$debug, :$framework,
@@ -279,19 +278,8 @@ sub file-to-url(IO::Path:D $file, IO::Path:D $out, Bool $clean-urls --> Str) {
   "/$rel/";
 }
 
-sub feed-entries(@sorted, Str $base) {
-  @sorted.map({
-    %(
-      title => .<post>.title,
-      url   => $base ~ .<url>,
-      date  => (.<post>.date.defined ?? .<post>.date.Str !! ''),
-    )
-  });
-}
-
 sub newest-date(@sorted) {
-  return '' unless @sorted;
-  @sorted[0]<post>.date.defined ?? @sorted[0]<post>.date.Str !! '';
+  @sorted ?? @sorted[0]<post>.date-str !! '';
 }
 
 sub build-feeds(
@@ -303,10 +291,6 @@ sub build-feeds(
   my $base  = %site<base-url> // '';
   my $title = %site<title>    // '';
 
-  my sub newest-first(@list) {
-    @list.sort({ (date-key($^b) <=> date-key($^a)) || ($^a<post>.slug leg $^b<post>.slug) });
-  }
-
   my @all = newest-first(@pages);
 
   my $site-feed = Blogin::Feed::atom(
@@ -314,14 +298,13 @@ sub build-feeds(
     site-url => "$base/",
     feed-url => "$base/feed.xml",
     updated  => newest-date(@all),
-    entries  => feed-entries(@all, $base),
+    entries  => @all.map({ entry-of($_, :$base) }),
   );
 
   $writer.write($out.add('feed.xml'), $site-feed);
   @written.push($out.add('feed.xml'));
 
-  my %by-section;
-  %by-section{ .<section> }.push($_) for @pages;
+  my %by-section = by-section(@pages);
 
   for %by-section.keys.grep(*.chars).sort -> $section {
     my @sorted = newest-first(%by-section{$section});
@@ -331,7 +314,7 @@ sub build-feeds(
       site-url => "$base/$section",
       feed-url => "$base/$section/feed.xml",
       updated  => newest-date(@sorted),
-      entries  => feed-entries(@sorted, $base),
+      entries  => @sorted.map({ entry-of($_, :$base) }),
     );
 
     my $file = $out.add($section).add('feed.xml');
