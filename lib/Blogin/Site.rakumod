@@ -4,6 +4,7 @@ use Blogin::Post;
 use Blogin::Layout;
 use Blogin::Slug;
 use Blogin::Nav;
+use Blogin::Feed;
 
 unit module Blogin::Site;
 
@@ -217,6 +218,90 @@ sub build-tags(
   @written;
 }
 
+sub file-to-url(IO::Path:D $file, IO::Path:D $out, Bool $clean-urls --> Str) {
+  my $rel = $file.relative($out);
+
+  return '/' if $rel eq 'index.html';
+
+  if $clean-urls {
+    $rel ~~ s/ '.html' $ //;
+    return "/$rel";
+  }
+
+  $rel ~~ s/ '/index.html' $ //;
+  "/$rel/";
+}
+
+sub feed-entries(@sorted, Str $base) {
+  @sorted.map({
+    %(
+      title => .<post>.title,
+      url   => $base ~ .<url>,
+      date  => (.<post>.date.defined ?? .<post>.date.Str !! ''),
+    )
+  });
+}
+
+sub newest-date(@sorted) {
+  return '' unless @sorted;
+  @sorted[0]<post>.date.defined ?? @sorted[0]<post>.date.Str !! '';
+}
+
+sub build-feeds(
+  :@pages, :@page-files, IO::Path:D :$out!, :%site, Bool :$clean-urls!,
+  --> Array
+) {
+  my @written;
+
+  my $base  = %site<base-url> // '';
+  my $title = %site<title>    // '';
+
+  my sub newest-first(@list) {
+    @list.sort({ (date-key($^b) <=> date-key($^a)) || ($^a<post>.slug leg $^b<post>.slug) });
+  }
+
+  my @all = newest-first(@pages);
+
+  my $site-feed = Blogin::Feed::atom(
+    :$title,
+    site-url => "$base/",
+    feed-url => "$base/feed.xml",
+    updated  => newest-date(@all),
+    entries  => feed-entries(@all, $base),
+  );
+
+  $out.add('feed.xml').spurt($site-feed);
+  @written.push($out.add('feed.xml'));
+
+  my %by-section;
+  %by-section{ .<section> }.push($_) for @pages;
+
+  for %by-section.keys.grep(*.chars).sort -> $section {
+    my @sorted = newest-first(%by-section{$section});
+
+    my $feed = Blogin::Feed::atom(
+      title    => "$title: $section",
+      site-url => "$base/$section",
+      feed-url => "$base/$section/feed.xml",
+      updated  => newest-date(@sorted),
+      entries  => feed-entries(@sorted, $base),
+    );
+
+    my $file = $out.add($section).add('feed.xml');
+    $file.parent.mkdir;
+    $file.spurt($feed);
+    @written.push($file);
+  }
+
+  my @locs = @page-files.map({ $base ~ file-to-url($_, $out, $clean-urls) }).sort;
+  my $sitemap = Blogin::Feed::sitemap(locs => @locs);
+
+  $out.add('sitemap.xml').spurt($sitemap);
+  @written.push($out.add('sitemap.xml'));
+
+  @written;
+}
+
 our sub build(
   IO()  :$content!,
   IO()  :$out!,
@@ -306,6 +391,14 @@ our sub build(
   @listings.append: build-tags(
     :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug,
   );
+
+  if @pages.elems {
+    my @page-files = [ |@written, |@listings ];
+
+    @listings.append: build-feeds(
+      :@pages, :@page-files, :$out, :%site, :$clean-urls,
+    );
+  }
 
   copy-tree($static, $out) if $static.d;
 

@@ -8,7 +8,7 @@
   "auth": "zef:gdonald",
   "depends": ["Template::HAML:auth<zef:gdonald>", "JSON::Fast"],
   "build-depends": [],
-  "test-depends": ["BDD::Behave:auth<zef:gdonald>", "META6", "URI"],
+  "test-depends": ["BDD::Behave:auth<zef:gdonald>", "META6", "URI", "XML"],
   "provides": {
     "Blogin": "lib/Blogin.rakumod",
     "Blogin::Log": "lib/Blogin/Log.rakumod",
@@ -23,7 +23,8 @@
     "Blogin::Layout": "lib/Blogin/Layout.rakumod",
     "Blogin::Site": "lib/Blogin/Site.rakumod",
     "Blogin::Nav": "lib/Blogin/Nav.rakumod",
-    "Blogin::Config": "lib/Blogin/Config.rakumod"
+    "Blogin::Config": "lib/Blogin/Config.rakumod",
+    "Blogin::Feed": "lib/Blogin/Feed.rakumod"
   },
   "resources": [],
   "support": {
