@@ -20,6 +20,9 @@ jobs:
       - name: Install BDD::Behave
         run: zef install --/test --force-install https://github.com/gdonald/BDD-Behave.git
 
+      - name: Install Template::HAML
+        run: zef install --/test --force-install https://github.com/gdonald/Template-HAML.git
+
       - name: Install dependencies
         run: zef install --/test --test-depends --deps-only .
 

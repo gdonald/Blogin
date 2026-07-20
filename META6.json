@@ -6,7 +6,7 @@
   "perl": "6.d",
   "authors": ["Greg Donald"],
   "auth": "zef:gdonald",
-  "depends": [],
+  "depends": ["Template::HAML:auth<zef:gdonald>"],
   "build-depends": [],
   "test-depends": ["BDD::Behave:auth<zef:gdonald>", "META6", "URI"],
   "provides": {
@@ -19,7 +19,8 @@
     "Blogin::Markdown::Html": "lib/Blogin/Markdown/Html.rakumod",
     "Blogin::Slug": "lib/Blogin/Slug.rakumod",
     "Blogin::Framework": "lib/Blogin/Framework.rakumod",
-    "Blogin::Post": "lib/Blogin/Post.rakumod"
+    "Blogin::Post": "lib/Blogin/Post.rakumod",
+    "Blogin::Layout": "lib/Blogin/Layout.rakumod"
   },
   "resources": [],
   "support": {

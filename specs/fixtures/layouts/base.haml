@@ -1,0 +1,14 @@
+!!! 5
+%html
+  %head
+    %title= site-title
+  %body
+    - if has-header
+      != render(:partial<header>, :locals(%( brand => site-title )))
+    - if has-sidebar
+      %aside
+        != render(:partial<sidebar>)
+    %main
+      = yield
+    - if has-footer
+      != render(:partial<footer>)
