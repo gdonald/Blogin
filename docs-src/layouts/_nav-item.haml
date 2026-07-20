@@ -1,0 +1,8 @@
+%li
+  - if nav-current($node)
+    %a.current{href: "#{$node.url}"}= $node.label
+  - else
+    %a{href: "#{$node.url}"}= $node.label
+  - if $node.children.elems
+    %ul
+      != render(:partial<nav-item>, :collection($node.children), :as<node>)

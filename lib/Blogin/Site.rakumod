@@ -139,7 +139,7 @@ sub write-section-listing(
   Str $section, @sorted,
   Bool :$at-root = False,
   IO::Path:D :$out!, IO() :$layouts!, :%site, :@nav, Bool :$clean-urls!,
-  Bool :$debug!, Int :$page-size!, Writer :$writer!,
+  Bool :$debug!, Int :$page-size!, Writer :$writer!, Str :$framework!,
 ) {
   my @written;
 
@@ -161,7 +161,7 @@ sub write-section-listing(
     my $html = Blogin::Layout::render-listing(
       :$layouts, :$section, :%site, :@nav, :@entries,
       page-number => $page-num, total-pages => $total,
-      :$prev-url, :$next-url, :$debug,
+      :$prev-url, :$next-url, :$debug, :$framework,
     );
 
     $writer.write($out-file, $html);
@@ -174,7 +174,7 @@ sub write-section-listing(
 sub build-listings(
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%sections,
   Bool :$clean-urls!, Bool :$debug!, Int :$page-size!, Str :$home-section!,
-  Writer :$writer!,
+  Writer :$writer!, Str :$framework!,
   --> Array
 ) {
   my sub page-size-for(Str $section) {
@@ -195,7 +195,7 @@ sub build-listings(
   for %by-section.keys.grep(*.chars).sort -> $section {
     @written.append: write-section-listing(
       $section, sorted-of($section),
-      :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer,
+      :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer, :$framework,
       page-size => page-size-for($section),
     );
   }
@@ -203,7 +203,7 @@ sub build-listings(
   if $home-section.chars && (%by-section{$home-section}:exists) {
     @written.append: write-section-listing(
       $home-section, sorted-of($home-section),
-      :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer,
+      :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer, :$framework,
       page-size => page-size-for($home-section),
     );
   }
@@ -213,7 +213,7 @@ sub build-listings(
 
 sub build-tags(
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site,
-  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!,
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!,
   --> Array
 ) {
   my %tag-posts;
@@ -237,7 +237,7 @@ sub build-tags(
     });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :%site, :@nav, :@entries, templates => ['tag', 'index'], :$debug,
+      :$layouts, :%site, :@nav, :@entries, templates => ['tag', 'index'], :$debug, :$framework,
     );
 
     $writer.write($out-file, $html);
@@ -256,7 +256,7 @@ sub build-tags(
   my $index-file = $clean-urls ?? $out.add('tags.html') !! $out.add('tags').add('index.html');
 
   my $html = Blogin::Layout::render-listing(
-    :$layouts, :%site, :@nav, entries => @tag-entries, templates => ['index'], :$debug,
+    :$layouts, :%site, :@nav, entries => @tag-entries, templates => ['index'], :$debug, :$framework,
   );
 
   $writer.write($index-file, $html);
@@ -430,6 +430,7 @@ our sub build(
         url       => $page<url>,
         nav       => @nav,
         debug     => $debug,
+        framework => $framework,
       );
     });
 
@@ -439,11 +440,11 @@ our sub build(
 
   my @listings = build-listings(
     :@pages, :@nav, :$out, :$layouts, :%site, :%sections, :$clean-urls, :$debug,
-    :$page-size, :$home-section, :$writer,
+    :$page-size, :$home-section, :$writer, :$framework,
   );
 
   @listings.append: build-tags(
-    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer,
+    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer, :$framework,
   );
 
   if @pages.elems {

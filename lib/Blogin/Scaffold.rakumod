@@ -5,9 +5,11 @@ use Blogin::Slug;
 unit module Blogin::Scaffold;
 
 my %STYLESHEETS =
-  bootstrap5 => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css';
+  bootstrap5 => 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
+  pico       => 'https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css',
+  bulma      => 'https://cdn.jsdelivr.net/npm/bulma@1/css/bulma.min.css';
 
-my @KNOWN-FRAMEWORKS = <none bootstrap5>;
+my @KNOWN-FRAMEWORKS = <none bootstrap5 pico bulma>;
 
 sub blogin-json(Str $framework --> Str) {
   qq:to/JSON/;

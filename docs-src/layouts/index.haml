@@ -1,0 +1,5 @@
+%section.listing
+  %h1= section
+  %ul
+    != render(:partial<entry>, :collection(posts), :as<entry>)
+  != pagination-html

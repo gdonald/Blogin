@@ -1,0 +1,9 @@
+{
+  "title": "Blogin",
+  "base-url": "https://blogin.dev",
+  "home-section": "guide",
+  "clean-urls": true,
+  "css-framework": "none",
+  "highlight": true,
+  "page-size": 20
+}

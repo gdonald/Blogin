@@ -27,6 +27,11 @@ class ChromeView does Template::HAML::HelpersRole {
   has Bool $.has-sidebar = False;
   has Bool $.has-footer  = False;
   has Bool $.debug       = False;
+  has Profile $.framework = Blogin::Framework::profile('none');
+
+  method framework-class(Str $slot --> Str) {
+    $!framework.class-for($slot);
+  }
 
   method site-title  { %!site<title> // '' }
   method section     { $!section }
@@ -85,9 +90,15 @@ class ListView is ChromeView is export {
   method total-pages { $!total-pages }
 
   method pagination-html {
-    my $out = '';
+    return '' unless $!prev-url.chars || $!next-url.chars;
+
+    my $class = self.framework-class('pagination');
+    my $attr  = $class.chars ?? " class=\"{ $class }\"" !! '';
+
+    my $out = "<nav$attr>";
     $out ~= '<a class="prev" href="' ~ attr-escape($!prev-url) ~ '">newer</a>' if $!prev-url.chars;
     $out ~= '<a class="next" href="' ~ attr-escape($!next-url) ~ '">older</a>' if $!next-url.chars;
+    $out ~= '</nav>';
     $out;
   }
 }
@@ -149,6 +160,7 @@ our sub render-with-layout(
   Str   :$url = '',
         :@nav = [],
   Bool  :$debug = False,
+  Str   :$framework = 'none',
   --> Str
 ) is export {
   my @paths = layout-search-paths($layouts, $section);
@@ -167,6 +179,7 @@ our sub render-with-layout(
     :@nav,
     :$body-html,
     :$debug,
+    framework => Blogin::Framework::profile($framework),
     has-header  => partial-exists(@paths, 'header'),
     has-sidebar => partial-exists(@paths, 'sidebar'),
     has-footer  => partial-exists(@paths, 'footer'),
@@ -190,7 +203,7 @@ our sub render-post(
 ) is export {
   my $body-html = render-body(:$post, :$framework);
 
-  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug);
+  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug, :$framework);
 }
 
 our sub render-listing(
@@ -204,6 +217,7 @@ our sub render-listing(
   Str   :$next-url = '',
         :@nav = [],
   Bool  :$debug = False,
+  Str   :$framework = 'none',
         :@templates = ['index'],
   --> Str
 ) is export {
@@ -227,6 +241,7 @@ our sub render-listing(
     :$prev-url,
     :$next-url,
     :$debug,
+    framework => Blogin::Framework::profile($framework),
     has-header  => partial-exists(@paths, 'header'),
     has-sidebar => partial-exists(@paths, 'sidebar'),
     has-footer  => partial-exists(@paths, 'footer'),

@@ -8,7 +8,24 @@ my %PROFILES =
     table      => 'table',
     blockquote => 'blockquote',
     image      => 'img-fluid',
+    pagination => 'pagination',
+    nav        => 'nav',
+    container  => 'container',
+  ),
+  pico => %(
+    container => 'container',
+  ),
+  bulma => %(
+    table       => 'table',
+    image       => 'image',
+    article     => 'content',
+    pagination  => 'pagination',
+    nav         => 'navbar',
+    tag         => 'tag',
+    container   => 'container',
   );
+
+my @KNOWN = %PROFILES.keys.sort;
 
 class Profile is export {
   has Str $.name;
@@ -19,8 +36,13 @@ class Profile is export {
   }
 }
 
+our sub known(--> List) is export {
+  @KNOWN;
+}
+
 our sub profile(Str $name = 'none' --> Profile) is export {
-  die "unknown css-framework '$name'" unless %PROFILES{$name}:exists;
+  die "unknown css-framework '$name' (known: { @KNOWN.join(', ') })"
+    unless %PROFILES{$name}:exists;
 
   Profile.new(:$name, classes => %PROFILES{$name});
 }
