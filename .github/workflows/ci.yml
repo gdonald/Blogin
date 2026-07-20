@@ -1,9 +1,6 @@
 name: CI
 
-on:
-  push:
-  pull_request:
-  workflow_dispatch:
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   test:
@@ -24,7 +21,7 @@ jobs:
         run: zef install --/test --force-install https://github.com/gdonald/BDD-Behave.git
 
       # Add git installs here for any dependency not yet on zef
-      # (Template::HAML, RJST) as they are wired into META6.json.
+      # (e.g. Template::HAML) as they are wired into META6.json.
 
       - name: Install dependencies
         run: zef install --/test --test-depends --deps-only .

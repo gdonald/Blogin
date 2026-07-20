@@ -11,7 +11,11 @@
   "test-depends": ["BDD::Behave:auth<zef:gdonald>", "META6", "URI"],
   "provides": {
     "Blogin": "lib/Blogin.rakumod",
-    "Blogin::Log": "lib/Blogin/Log.rakumod"
+    "Blogin::Log": "lib/Blogin/Log.rakumod",
+    "Blogin::Markdown": "lib/Blogin/Markdown.rakumod",
+    "Blogin::Markdown::Node": "lib/Blogin/Markdown/Node.rakumod",
+    "Blogin::Markdown::Grammar": "lib/Blogin/Markdown/Grammar.rakumod",
+    "Blogin::Markdown::Actions": "lib/Blogin/Markdown/Actions.rakumod"
   },
   "resources": [],
   "support": {
