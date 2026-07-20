@@ -21,7 +21,8 @@
     "Blogin::Framework": "lib/Blogin/Framework.rakumod",
     "Blogin::Post": "lib/Blogin/Post.rakumod",
     "Blogin::Layout": "lib/Blogin/Layout.rakumod",
-    "Blogin::Site": "lib/Blogin/Site.rakumod"
+    "Blogin::Site": "lib/Blogin/Site.rakumod",
+    "Blogin::Nav": "lib/Blogin/Nav.rakumod"
   },
   "resources": [],
   "support": {

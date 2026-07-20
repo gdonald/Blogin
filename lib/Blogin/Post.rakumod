@@ -52,10 +52,6 @@ my sub date-from-filename(Str $filename --> Date) {
   Date;
 }
 
-my sub humanize(Str $stem --> Str) {
-  $stem.split(/ <[-_]>+ /).grep(*.chars).map(*.tc).join(' ');
-}
-
 my sub parse-tags(Str $raw --> List) {
   my $value = $raw.trim;
 
@@ -98,7 +94,7 @@ method parse(Blogin::Post:U: Str $source, Str :$filename = '' --> Blogin::Post) 
 
   my $title = %fields<title>:exists && %fields<title>.chars
     ?? unquote(%fields<title>)
-    !! humanize(filename-stem($filename));
+    !! Blogin::Slug::humanize(filename-stem($filename));
 
   die "missing title in '$filename'" unless $title.defined && $title.chars;
 

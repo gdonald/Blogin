@@ -5,6 +5,7 @@ use Template::HAML::HelpersRole;
 use Blogin::Markdown;
 use Blogin::Markdown::Html;
 use Blogin::Framework;
+use Blogin::Nav;
 
 unit module Blogin::Layout;
 
@@ -21,6 +22,7 @@ class ChromeView does Template::HAML::HelpersRole {
   has      %.site;
   has Str  $.section   = '';
   has Str  $.url       = '';
+  has      @.nav;
   has Bool $.has-header  = False;
   has Bool $.has-sidebar = False;
   has Bool $.has-footer  = False;
@@ -33,6 +35,12 @@ class ChromeView does Template::HAML::HelpersRole {
   method has-sidebar { $!has-sidebar }
   method has-footer  { $!has-footer }
   method template-label { 'template: show' }
+
+  method nav-nodes { @!nav }
+
+  method nav-current(NavNode $node --> Bool) {
+    $!section eq $node.path || $!section.starts-with($node.path ~ '/');
+  }
 
   method debug-open(Str $label --> Str) {
     $!debug ?? "<!-- begin { sanitize-comment($label) } -->\n" !! '';
@@ -130,6 +138,7 @@ our sub render-with-layout(
         :%site = %(),
   Str   :$section = '',
   Str   :$url = '',
+        :@nav = [],
   Bool  :$debug = False,
   --> Str
 ) is export {
@@ -146,6 +155,7 @@ our sub render-with-layout(
     :%site,
     :$section,
     :$url,
+    :@nav,
     :$body-html,
     :$debug,
     has-header  => partial-exists(@paths, 'header'),
@@ -164,13 +174,14 @@ our sub render-post(
         :%site = %(),
   Str   :$section = '',
   Str   :$url = '',
+        :@nav = [],
   Str   :$framework = 'none',
   Bool  :$debug = False,
   --> Str
 ) is export {
   my $body-html = render-body(:$post, :$framework);
 
-  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url, :$debug);
+  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug);
 }
 
 our sub render-listing(
@@ -182,6 +193,7 @@ our sub render-listing(
   Int   :$total-pages = 1,
   Str   :$prev-url = '',
   Str   :$next-url = '',
+        :@nav = [],
   Bool  :$debug = False,
         :@templates = ['index'],
   --> Str
@@ -199,6 +211,7 @@ our sub render-listing(
   my $view = ListView.new(
     :%site,
     :$section,
+    :@nav,
     :@entries,
     :$page-number,
     :$total-pages,

@@ -11,3 +11,7 @@ our sub slugify(Str $text --> Str) is export {
 
   $slug;
 }
+
+our sub humanize(Str $text --> Str) is export {
+  $text.split(/ <[-_]>+ /).grep(*.chars).map(*.tc).join(' ');
+}
