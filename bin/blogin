@@ -30,12 +30,19 @@ multi sub MAIN(
   Str  :$src = 'content',
   Str  :$out = 'public',
   Bool :$drafts = False,
+  Int  :$jobs,
   Bool :$verbose = False,
   Bool :$quiet = False,
 ) {
   my $log = make-log(:$verbose, :$quiet);
 
-  Blogin::build(:src($src.IO), :out($out.IO), :$drafts, :$log);
+  Blogin::build(
+    :src($src.IO),
+    :out($out.IO),
+    :$drafts,
+    jobs => ($jobs // ($*KERNEL.cpu-cores // 1)),
+    :$log,
+  );
 
   $log.info("built $out");
 }

@@ -58,19 +58,25 @@ sub layout-search-paths(IO() $layouts, Str $section --> Array) {
   @paths;
 }
 
-our sub render-post(
+# Pure: markdown body to an HTML fragment. Safe to run concurrently.
+our sub render-body(:$post!, Str :$framework = 'none' --> Str) is export {
+  my $document = Blogin::Markdown::parse($post.body);
+  my $renderer = Blogin::Markdown::Html.new(framework => Blogin::Framework::profile($framework));
+
+  $renderer.render($document).html;
+}
+
+# HAML layout wrap. Template::HAML's compile caches are not thread-safe, so
+# callers that parallelize must serialize this step.
+our sub render-with-layout(
   :$post!,
+  Str   :$body-html!,
   IO()  :$layouts!,
         :%site = %(),
   Str   :$section = '',
   Str   :$url = '',
-  Str   :$framework = 'none',
   --> Str
 ) is export {
-  my $document  = Blogin::Markdown::parse($post.body);
-  my $renderer  = Blogin::Markdown::Html.new(framework => Blogin::Framework::profile($framework));
-  my $body-html = $renderer.render($document).html;
-
   my @paths = layout-search-paths($layouts, $section);
 
   die "required layout 'show.haml' not found (searched { @paths.join(', ') })"
@@ -93,4 +99,18 @@ our sub render-post(
   my $haml = HAML.new(:search-paths(@paths));
 
   $haml.render(:file<show>, :layout<base>, :context($view));
+}
+
+our sub render-post(
+  :$post!,
+  IO()  :$layouts!,
+        :%site = %(),
+  Str   :$section = '',
+  Str   :$url = '',
+  Str   :$framework = 'none',
+  --> Str
+) is export {
+  my $body-html = render-body(:$post, :$framework);
+
+  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url);
 }

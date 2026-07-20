@@ -1,6 +1,7 @@
 use v6.d;
 
 use Blogin::Log;
+use Blogin::Site;
 
 unit module Blogin;
 
@@ -10,12 +11,18 @@ our sub build(
   IO()        :$src!,
   IO()        :$out!,
   Bool        :$drafts = False,
+  Int         :$jobs = ($*KERNEL.cpu-cores // 1),
   Blogin::Log :$log = Blogin::Log.new,
   --> Bool
 ) is export {
-  $out.mkdir unless $out.d;
+  my $result = Blogin::Site::build(
+    content => $src,
+    out     => $out,
+    :$drafts,
+    :$jobs,
+  );
 
-  $log.verbose("wrote {$out}");
+  $log.verbose("wrote { $result.written.elems } pages to { $out }");
 
   True;
 }
