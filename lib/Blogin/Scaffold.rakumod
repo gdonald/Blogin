@@ -1,5 +1,7 @@
 use v6.d;
 
+use Blogin::Slug;
+
 unit module Blogin::Scaffold;
 
 my %STYLESHEETS =
@@ -155,7 +157,44 @@ sub style-css(--> Str) {
   aside { width: 14rem; }
   nav ul { list-style: none; padding: 0; display: flex; gap: 1rem; }
   .current { font-weight: bold; }
+  pre { background: #f5f5f5; padding: 1rem; overflow-x: auto; }
+  .hl-keyword { color: #d73a49; }
+  .hl-string { color: #032f62; }
+  .hl-number { color: #005cc5; }
+  .hl-comment { color: #6a737d; font-style: italic; }
   CSS
+}
+
+sub post-stub(Str $title, Str $date --> Str) {
+  qq:to/POST/;
+  ---
+  title: "$title"
+  date: $date
+  tags: []
+  description:
+  ---
+  Write your post here.
+  POST
+}
+
+our sub new-post(
+  Str   $title,
+  IO()  :$content!,
+  Str   :$section = '',
+  Str   :$date = Date.today.Str,
+  Bool  :$force = False,
+  --> IO::Path
+) is export {
+  my $slug = Blogin::Slug::slugify($title);
+  my $dir  = $section.chars ?? $content.add($section) !! $content;
+  my $file = $dir.add("{ $date }-{ $slug }.md");
+
+  die "post already exists: $file (use --force)" if $file.e && !$force;
+
+  $dir.mkdir;
+  $file.spurt(post-stub($title, $date));
+
+  $file;
 }
 
 sub scaffold-files(Str $framework, Str $date) {

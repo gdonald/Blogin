@@ -34,6 +34,7 @@ our sub build(
     search             => $config.search,
     search-text-length => $config.search-text-length,
     search-cap         => $config.search-cap,
+    highlight          => $config.highlight,
     :$drafts,
     :$jobs,
   );

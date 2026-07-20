@@ -74,11 +74,18 @@ multi sub MAIN(
 multi sub MAIN(
   'new',
   Str  $title,
+  Str  :$src = 'content',
   Str  :$section,
   Bool :$verbose = False,
   Bool :$quiet = False,
 ) {
-  not-implemented('new', :$verbose, :$quiet);
+  my $log     = make-log(:$verbose, :$quiet);
+  my $config  = Blogin::Config.load($src.IO.parent.add('blogin.json'));
+  my $in      = $section // $config.home-section;
+
+  my $file = Blogin::Scaffold::new-post($title, content => $src.IO, section => $in);
+
+  $log.info("created $file");
 }
 
 multi sub MAIN(

@@ -3,6 +3,7 @@ use v6.d;
 use Blogin::Markdown::Node;
 use Blogin::Framework;
 use Blogin::Slug;
+use Blogin::Highlight;
 
 sub html-escape(Str $text --> Str) {
   $text.trans([ '&', '<', '>' ] => [ '&amp;', '&lt;', '&gt;' ]);
@@ -19,6 +20,7 @@ class Blogin::Markdown::Html::Result {
 
 class Blogin::Markdown::Html {
   has Profile $.framework = Blogin::Framework::profile('none');
+  has Bool $.highlight = False;
   has Str $!html = '';
   has Str $!text = '';
 
@@ -107,7 +109,9 @@ class Blogin::Markdown::Html {
         my $class    = ($language, $extra).grep(*.chars).join(' ');
 
         $!html ~= '<pre><code' ~ self!class-attr($class) ~ '>';
-        $!html ~= html-escape($node.text);
+        $!html ~= $.highlight
+          ?? Blogin::Highlight::highlight($node.text, $node.info)
+          !! html-escape($node.text);
         $!html ~= "</code></pre>\n";
         $!text ~= $node.text ~ "\n";
       }

@@ -27,7 +27,8 @@
     "Blogin::Feed": "lib/Blogin/Feed.rakumod",
     "Blogin::Search": "lib/Blogin/Search.rakumod",
     "Blogin::Server": "lib/Blogin/Server.rakumod",
-    "Blogin::Scaffold": "lib/Blogin/Scaffold.rakumod"
+    "Blogin::Scaffold": "lib/Blogin/Scaffold.rakumod",
+    "Blogin::Highlight": "lib/Blogin/Highlight.rakumod"
   },
   "resources": [],
   "support": {

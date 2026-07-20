@@ -320,6 +320,7 @@ our sub build(
   Bool  :$search = True,
   Int   :$search-text-length = 2000,
   Int   :$search-cap = 10,
+  Bool  :$highlight = False,
   --> BuildResult
 ) {
   my @nav = Blogin::Nav::build-tree($content, :%sections, :$clean-urls);
@@ -368,6 +369,7 @@ our sub build(
     my $parts = Blogin::Layout::render-parts(
       post      => $page<post>,
       framework => $framework,
+      highlight => $highlight,
     );
 
     $page<text> = $parts<text>;
