@@ -4,6 +4,7 @@ use Blogin::Markdown::Node;
 use Blogin::Framework;
 use Blogin::Slug;
 use Blogin::Highlight;
+use Blogin::Shortcode;
 
 sub html-escape(Str $text --> Str) {
   $text.trans([ '&', '<', '>' ] => [ '&amp;', '&lt;', '&gt;' ]);
@@ -107,6 +108,13 @@ class Blogin::Markdown::Html {
 
       when ThematicBreak {
         $!html ~= "<hr />\n";
+      }
+
+      when Shortcode {
+        $!html ~= Blogin::Shortcode::known($node.name)
+          ?? Blogin::Shortcode::expand($node.name, $node.args)
+          !! html-escape($node.raw);
+        $!html ~= "\n";
       }
 
       when Footnotes {

@@ -109,3 +109,9 @@ class FootnoteItem does Node is export {
 class Footnotes does Node is export {
   has @.items;
 }
+
+class Shortcode does Node is export {
+  has Str $.name;
+  has     %.args;
+  has Str $.raw;
+}

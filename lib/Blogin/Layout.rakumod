@@ -8,6 +8,7 @@ use Blogin::Framework;
 use Blogin::Nav;
 use Blogin::Slug;
 use Blogin::Toc;
+use Blogin::Filters;
 
 unit module Blogin::Layout;
 
@@ -64,6 +65,10 @@ class ChromeView does Template::HAML::HelpersRole {
   method data        { %!data }
   method section     { $!section }
   method index-dates { True }
+
+  method truncate(Str $text, Int $length --> Str)       { Blogin::Filters::truncate($text, $length) }
+  method format-date(Str $date, Str $format --> Str)    { Blogin::Filters::format-date($date, $format) }
+  method group-by(@items, Str $field)                   { Blogin::Filters::group-by(@items, $field) }
 
   method meta-title(--> Str)       { self.site-title }
   method meta-description(--> Str) { '' }

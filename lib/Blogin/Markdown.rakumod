@@ -2,6 +2,7 @@ use v6.d;
 
 use Blogin::Markdown::Node;
 use Blogin::Markdown::Actions;
+use Blogin::Shortcode;
 
 unit module Blogin::Markdown;
 
@@ -78,12 +79,18 @@ sub cell-align(Str $spec) {
   Str;
 }
 
+sub shortcode-of(Str $line) {
+  return $/ if $line ~~ / ^ \h* '{{<' \h* $<name>=(<[\w-]>+) \h* $<args>=( [ <!before '>}}'> . ]* ) '>}}' \h* $ /;
+  Nil;
+}
+
 sub is-block-start(Str $line --> Bool) {
   return True if is-atx($line);
   return True if is-thematic-break($line);
   return True if fence-of($line);
   return True if $line ~~ /^ \h* '>' /;
   return True if marker-of($line);
+  return True if shortcode-of($line);
 
   False;
 }
@@ -198,6 +205,16 @@ sub parse-blocks(@lines --> Array) {
 
     if is-thematic-break($line) {
       @blocks.push(ThematicBreak.new);
+      $index++;
+      next;
+    }
+
+    with shortcode-of($line) -> $match {
+      @blocks.push(Shortcode.new(
+        name => ~$match<name>,
+        args => Blogin::Shortcode::parse-args(~$match<args>),
+        raw  => $line.trim,
+      ));
       $index++;
       next;
     }
