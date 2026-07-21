@@ -64,3 +64,44 @@ describe 'a shortcode through a build', {
     expect(out().add('posts/hello.html').slurp.contains('https://www.youtube.com/embed/abc123')).to.be-truthy;
   }
 }
+
+describe 'Blogin::Shortcode::render-template', {
+  it 'substitutes a placeholder with an argument', {
+    expect(Blogin::Shortcode::render-template('<p>{{ msg }}</p>', %( msg => 'Hi' ))).to.eq('<p>Hi</p>');
+  }
+
+  it 'escapes html in a substituted value', {
+    expect(Blogin::Shortcode::render-template('{{ x }}', %( x => 'a<b' ))).to.eq('a&lt;b');
+  }
+
+  it 'drops a placeholder with no matching argument', {
+    expect(Blogin::Shortcode::render-template('[{{ y }}]', %())).to.eq('[]');
+  }
+}
+
+describe 'Blogin::Shortcode::load', {
+  it 'loads a template file keyed by name', {
+    my %templates = Blogin::Shortcode::load('specs/fixtures/shortcodes/shortcodes'.IO);
+    expect(%templates<note>.contains('class="note"')).to.be-truthy;
+  }
+
+  it 'returns empty for a missing directory', {
+    expect(Blogin::Shortcode::load('specs/fixtures/shortcodes/nope'.IO).elems).to.eq(0);
+  }
+}
+
+describe 'a user-defined shortcode through a build', {
+  my $FIXTURE = 'specs/fixtures/shortcodes'.IO;
+
+  let(:out, {
+    my $dir = temp-dir('user-shortcode');
+    build-fixture($FIXTURE, $dir, shortcodes => $FIXTURE.add('shortcodes'));
+    $dir
+  });
+
+  after-each { nuke(out()) }
+
+  it 'expands a shortcode defined by a template file', {
+    expect(out().add('posts/hi.html').slurp.contains('<aside class="note">Heads up</aside>')).to.be-truthy;
+  }
+}

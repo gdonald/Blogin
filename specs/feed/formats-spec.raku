@@ -80,6 +80,45 @@ describe 'Blogin::Feed::json-feed', {
   }
 }
 
+describe 'rss date formatting', {
+  sub rss-of(*@entries, Str :$updated = '2026-07-19') {
+    Blogin::Feed::rss(title => 'My Site', :$updated, :@entries);
+  }
+
+  it 'formats the publication date with its weekday', {
+    my $sunday = %( title => 'S', url => '/s', date => '2026-07-19', summary => 'x' );
+    expect(rss-of($sunday).contains('<pubDate>Sun, 19 Jul 2026 00:00:00 +0000</pubDate>')).to.be-truthy;
+  }
+
+  it 'computes a different weekday correctly', {
+    my $monday = %( title => 'M', url => '/m', date => '2026-07-20', summary => 'x' );
+    expect(rss-of($monday).contains('<pubDate>Mon, 20 Jul 2026 00:00:00 +0000</pubDate>')).to.be-truthy;
+  }
+
+  it 'falls back to the epoch for a missing publication date', {
+    my $undated = %( title => 'U', url => '/u', date => '', summary => 'x' );
+    expect(rss-of($undated).contains('<pubDate>Thu, 01 Jan 1970 00:00:00 +0000</pubDate>')).to.be-truthy;
+  }
+
+  it 'uses the title as the description when there is no summary', {
+    my $bare = %( title => 'Only Title', url => '/o', date => '2026-07-19', summary => '' );
+    expect(rss-of($bare).contains('<description>Only Title</description>')).to.be-truthy;
+  }
+
+  it 'omits lastBuildDate when there is no updated date', {
+    my $entry = %( title => 'T', url => '/t', date => '2026-07-19', summary => 'x' );
+    expect(rss-of($entry, updated => '').contains('lastBuildDate')).to.be-falsy;
+  }
+}
+
+describe 'json feed date formatting', {
+  it 'falls back to the epoch for a missing publication date', {
+    my $undated = %( title => 'U', url => '/u', date => '', summary => 'x' );
+    my %feed = from-json(Blogin::Feed::json-feed(title => 'S', entries => [ $undated ]));
+    expect(%feed<items>[0]<date_published>).to.eq('1970-01-01T00:00:00Z');
+  }
+}
+
 describe 'feed formats through a build', {
   my $BASIC = 'specs/fixtures/basic'.IO;
 

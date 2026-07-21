@@ -42,6 +42,10 @@ describe 'alias redirects through a build', {
   it 'sets a canonical link on the stub', {
     expect(out().add('old-hello.html').slurp.contains('<link rel="canonical" href="/posts/hello">')).to.be-truthy;
   }
+
+  it 'does not overwrite a real page with a colliding alias', {
+    expect(out().add('posts/hello.html').slurp.contains('Redirecting')).to.be-falsy;
+  }
 }
 
 describe 'a generated 404 page', {

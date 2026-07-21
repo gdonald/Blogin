@@ -26,8 +26,12 @@ describe 'scaffolding a site', {
     expect(@layouts.map({ dir().add("layouts/$_.haml").e }).all.so).to.be-truthy;
   }
 
-  it 'writes a stylesheet for the none framework', {
-    expect(dir().add('static/style.css').e).to.be-truthy;
+  it 'writes a stylesheet under assets/css', {
+    expect(dir().add('assets/css/style.css').e).to.be-truthy;
+  }
+
+  it 'creates the assets js and img directories', {
+    expect(dir().add('assets/js').d && dir().add('assets/img').d).to.be-truthy;
   }
 
   it 'defaults the home section in the config', {
@@ -161,7 +165,7 @@ describe 'framework selection', {
     }
 
     it 'links the emitted search stylesheet from the widget', {
-      expect(out().add('index.html').slurp.contains('/search.css')).to.be-truthy;
+      expect(out().add('index.html').slurp.contains('/assets/css/search.css')).to.be-truthy;
     }
   }
 

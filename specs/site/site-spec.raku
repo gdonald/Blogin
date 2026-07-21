@@ -55,22 +55,22 @@ describe 'building the basic fixture site', {
 
   it 'emits the content stylesheet', {
     build-basic(out());
-    expect(out().add('blogin.css').e).to.be-truthy;
+    expect(out().add('assets/css/blogin.css').e).to.be-truthy;
   }
 
   it 'includes the syntax highlight colors in the content stylesheet', {
     build-basic(out());
-    expect(out().add('blogin.css').slurp.contains('.hl-keyword')).to.be-truthy;
+    expect(out().add('assets/css/blogin.css').slurp.contains('.hl-keyword')).to.be-truthy;
   }
 
   it 'styles the heading anchor in the content stylesheet', {
     build-basic(out());
-    expect(out().add('blogin.css').slurp.contains('.anchor')).to.be-truthy;
+    expect(out().add('assets/css/blogin.css').slurp.contains('.anchor')).to.be-truthy;
   }
 
   it 'contains the definition list styling in the content stylesheet', {
     build-basic(out());
-    expect(out().add('blogin.css').slurp.contains('dl {')).to.be-truthy;
+    expect(out().add('assets/css/blogin.css').slurp.contains('dl {')).to.be-truthy;
   }
 
   it 'reports the rendered non-draft pages', {

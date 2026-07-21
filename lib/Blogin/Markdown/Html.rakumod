@@ -23,6 +23,7 @@ class Blogin::Markdown::Html::Result {
 class Blogin::Markdown::Html {
   has Profile $.framework = Blogin::Framework::profile('none');
   has Bool $.highlight = False;
+  has      %.shortcodes;
   has Str $!html = '';
   has Str $!text = '';
   has     @!headings;
@@ -111,9 +112,15 @@ class Blogin::Markdown::Html {
       }
 
       when Shortcode {
-        $!html ~= Blogin::Shortcode::known($node.name)
-          ?? Blogin::Shortcode::expand($node.name, $node.args)
-          !! html-escape($node.raw);
+        $!html ~= do if %!shortcodes{$node.name}:exists {
+          Blogin::Shortcode::render-template(%!shortcodes{$node.name}, $node.args);
+        }
+        elsif Blogin::Shortcode::known($node.name) {
+          Blogin::Shortcode::expand($node.name, $node.args);
+        }
+        else {
+          html-escape($node.raw);
+        }
         $!html ~= "\n";
       }
 

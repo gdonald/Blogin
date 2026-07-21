@@ -80,6 +80,26 @@ describe 'related posts through a build', {
   }
 }
 
+describe 'the related-count limit', {
+  my $FIXTURE = 'specs/fixtures/metadata'.IO;
+
+  let(:related, {
+    my $dir = temp-dir('related-cap');
+    build-fixture($FIXTURE, $dir, related-count => 1);
+    my $html = $dir.add('posts/alpha.html').slurp;
+    nuke($dir);
+    $html
+  });
+
+  it 'shows the single most-related post', {
+    expect(related().contains('Bravo')).to.be-truthy;
+  }
+
+  it 'drops related posts beyond the configured count', {
+    expect(related().contains('Charlie') || related().contains('Delta')).to.be-falsy;
+  }
+}
+
 describe 'future-dated posts', {
   my $FIXTURE = 'specs/fixtures/metadata'.IO;
 

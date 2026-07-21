@@ -103,32 +103,44 @@ our sub serve-content(Str $url-path, IO() $root, Bool :$clean-urls = True --> Ha
   %( status => 200, content-type => content-type-for($file), file => $file );
 }
 
+# Resolve a request to what should be served: status, content-type, and body.
+# HTML bodies get the reload client injected when $inject is set; other files
+# are served as raw bytes.
+our sub render-response(Str $url-path, IO() $root, Bool :$clean-urls = True, Bool :$inject = False --> Hash) is export {
+  my %result = serve-content($url-path, $root, :$clean-urls);
+
+  return %( status => 404, content-type => 'text/plain', body => 'Not Found' )
+    if %result<status> != 200;
+
+  return %( status => 200, content-type => %result<content-type>, body => inject-reload(%result<file>.slurp) )
+    if $inject && %result<content-type>.starts-with('text/html');
+
+  %( status => 200, content-type => %result<content-type>, body => %result<file>.slurp(:bin) );
+}
+
+# The server-sent event stream: one reload Blob per rebuild notification.
+our sub reload-events(ReloadChannel $channel --> Supply) is export {
+  supply {
+    whenever $channel.Supply {
+      emit reload-event();
+    }
+  }
+}
+
 sub make-app(IO() $root, Bool :$clean-urls = True, ReloadChannel :$reload) {
   route {
     if $reload.defined {
       get -> '__blogin-reload' {
         header 'Cache-Control', 'no-cache';
-        content 'text/event-stream', supply {
-          whenever $reload.Supply {
-            emit reload-event();
-          }
-        }
+        content 'text/event-stream', reload-events($reload);
       }
     }
 
     get -> *@segments {
-      my %result = serve-content('/' ~ @segments.join('/'), $root, :$clean-urls);
+      my %response = render-response('/' ~ @segments.join('/'), $root, :$clean-urls, inject => $reload.defined);
 
-      if %result<status> != 200 {
-        response.status = 404;
-        content 'text/plain', 'Not Found';
-      }
-      elsif $reload.defined && %result<content-type>.starts-with('text/html') {
-        content %result<content-type>, inject-reload(%result<file>.slurp);
-      }
-      else {
-        content %result<content-type>, %result<file>.slurp(:bin);
-      }
+      response.status = %response<status>;
+      content %response<content-type>, %response<body>;
     }
   }
 }
@@ -164,7 +176,9 @@ our sub serve(
   IO()  :$out!,
   IO()  :$layouts = $content.parent.add('layouts'),
   IO()  :$static  = $content.parent.add('static'),
+  IO()  :$assets  = $content.parent.add('assets'),
   IO()  :$data    = $content.parent.add('data'),
+  IO()  :$shortcodes = $content.parent.add('shortcodes'),
   Blogin::Config :$config = Blogin::Config.new,
   Int   :$port = 3000,
   Blogin::Log :$log = Blogin::Log.new,
@@ -176,7 +190,7 @@ our sub serve(
     my $current = Blogin::Config.load($config-file);
 
     Blogin::Site::build(
-      :$content, :$out, :$layouts, :$static, :$data,
+      :$content, :$out, :$layouts, :$static, :$assets, :$data, :$shortcodes,
       debug => $current.debug,
       |$current.build-options,
     );
@@ -184,7 +198,7 @@ our sub serve(
 
   rebuild();
 
-  for ($content, $layouts, $static, $data).grep({ .defined && .d }) -> $dir {
+  for ($content, $layouts, $static, $assets, $data, $shortcodes).grep({ .defined && .d }) -> $dir {
     watch-recursive($dir, {
       $log.info('change detected, rebuilding');
       rebuild-and-reload($reload, &rebuild);

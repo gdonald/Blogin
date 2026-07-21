@@ -97,17 +97,17 @@ describe 'the search index', {
 
   it 'emits search.js', {
     build(out());
-    expect(out().add('search.js').e).to.be-truthy;
+    expect(out().add('assets/js/search.js').e).to.be-truthy;
   }
 
   it 'injects the result cap into search.js', {
     build(out(), search-cap => 7);
-    expect(out().add('search.js').slurp.contains('BLOGIN_SEARCH_CAP = 7')).to.be-truthy;
+    expect(out().add('assets/js/search.js').slurp.contains('BLOGIN_SEARCH_CAP = 7')).to.be-truthy;
   }
 
   it 'hides the results list until there are matches', {
     build(out());
-    expect(out().add('search.css').slurp.contains('[data-blogin-results]:empty')).to.be-truthy;
+    expect(out().add('assets/css/search.css').slurp.contains('[data-blogin-results]:empty')).to.be-truthy;
   }
 
   it 'omits search output when search is disabled', {
@@ -117,17 +117,17 @@ describe 'the search index', {
 
   it 'emits a search stylesheet', {
     build(out());
-    expect(out().add('search.css').e).to.be-truthy;
+    expect(out().add('assets/css/search.css').e).to.be-truthy;
   }
 
   it 'styles the results as a dropdown in the stylesheet', {
     build(out());
-    expect(out().add('search.css').slurp.contains('[data-blogin-results]')).to.be-truthy;
+    expect(out().add('assets/css/search.css').slurp.contains('[data-blogin-results]')).to.be-truthy;
   }
 
   it 'omits the search stylesheet when search is disabled', {
     build(out(), search => False);
-    expect(out().add('search.css').e).to.be-falsy;
+    expect(out().add('assets/css/search.css').e).to.be-falsy;
   }
 }
 
@@ -166,6 +166,6 @@ describe 'the search partial', {
   it 'renders a form and the script tag', {
     my $haml = HAML.new(search-paths => 'specs/fixtures/layouts');
     my $html = $haml.render(:file<search>);
-    expect($html.contains('/search.js') && $html.contains('data-blogin-search')).to.be-truthy;
+    expect($html.contains('/assets/js/search.js') && $html.contains('data-blogin-search')).to.be-truthy;
   }
 }

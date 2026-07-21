@@ -64,6 +64,22 @@ describe 'the supported languages', {
     expect(keyword-of('interface P {}', 'typescript', 'interface')).to.be-truthy;
   }
 
+  it 'highlights a ruby keyword', {
+    expect(keyword-of('def run; end', 'ruby', 'def')).to.be-truthy;
+  }
+
+  it 'highlights a python keyword', {
+    expect(keyword-of('def run(): pass', 'python', 'def')).to.be-truthy;
+  }
+
+  it 'highlights a bash keyword', {
+    expect(keyword-of('if true; then echo hi; fi', 'bash', 'if')).to.be-truthy;
+  }
+
+  it 'highlights a string in a keywordless language like json', {
+    expect(Blogin::Highlight::highlight('{"a": "b"}', 'json').contains('<span class="hl-string">"a"</span>')).to.be-truthy;
+  }
+
   it 'highlights a double-slash line comment', {
     expect(Blogin::Highlight::highlight('code // a note', 'go').contains('<span class="hl-comment">// a note</span>')).to.be-truthy;
   }

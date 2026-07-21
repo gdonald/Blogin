@@ -1,7 +1,9 @@
 use lib 'lib';
 use lib 'specs/support';
 use BDD::Behave;
+use BloginTest;
 use Blogin::Server;
+use Blogin::Site;
 
 describe 'the reload client script', {
   it 'connects an EventSource to the reload endpoint', {
@@ -49,6 +51,52 @@ describe 'the reload channel', {
     $tap.close;
 
     expect(@received.elems).to.eq(1);
+  }
+}
+
+describe 'the served response', {
+  my $BASIC = 'specs/fixtures/basic'.IO;
+
+  let(:out, {
+    my $dir = temp-dir('render-response');
+    Blogin::Site::build(content => $BASIC.add('content'), out => $dir, layouts => $BASIC.add('layouts'), static => $BASIC.add('static'), home-section => 'posts');
+    $dir
+  });
+
+  after-each { nuke(out()) }
+
+  it 'injects the reload client into an html page when reload is on', {
+    my %response = Blogin::Server::render-response('/posts/hello', out(), inject => True);
+    expect(%response<body>.contains('EventSource("/__blogin-reload")')).to.be-truthy;
+  }
+
+  it 'does not inject the client when reload is off', {
+    my %response = Blogin::Server::render-response('/posts/hello', out(), inject => False);
+    expect(%response<body>.decode.contains('__blogin-reload')).to.be-falsy;
+  }
+
+  it 'serves a non-html asset without injection', {
+    my %response = Blogin::Server::render-response('/style.css', out(), inject => True);
+    expect(%response<body> ~~ Blob && !%response<body>.decode.contains('__blogin-reload')).to.be-truthy;
+  }
+
+  it 'returns a 404 for a missing path', {
+    my %response = Blogin::Server::render-response('/nope', out(), inject => True);
+    expect(%response<status>).to.eq(404);
+  }
+}
+
+describe 'the server-sent event stream', {
+  it 'emits one reload Blob per rebuild notification', {
+    my $channel = Blogin::Server::ReloadChannel.new;
+
+    my @events;
+    my $tap = Blogin::Server::reload-events($channel).tap({ @events.push($_) });
+
+    $channel.notify;
+    $tap.close;
+
+    expect(@events.elems == 1 && @events[0] ~~ Blob).to.be-truthy;
   }
 }
 

@@ -44,8 +44,8 @@ sub base-haml(--> Str) {
       %title= site-title
       != head-meta
       != framework-stylesheet-tag
-      %link{rel: 'stylesheet', href: '/blogin.css'}
-      %link{rel: 'stylesheet', href: '/style.css'}
+      %link{rel: 'stylesheet', href: '/assets/css/blogin.css'}
+      %link{rel: 'stylesheet', href: '/assets/css/style.css'}
     %body
       - if has-header
         != debug-open('partial: header')
@@ -164,8 +164,8 @@ sub search-haml(--> Str) {
     %form{'data-blogin-search' => 'true'}
       %input{type: 'search', name: 'q', placeholder: 'Search'}
     %ul{'data-blogin-results' => 'true'}
-  %link{rel: 'stylesheet', href: '/search.css'}
-  %script{src: '/search.js'}
+  %link{rel: 'stylesheet', href: '/assets/css/search.css'}
+  %script{src: '/assets/js/search.js'}
   HAML
 }
 
@@ -179,8 +179,8 @@ sub bootstrap-base-haml(--> Str) {
       %title= site-title
       != head-meta
       != framework-stylesheet-tag
-      %link{rel: 'stylesheet', href: '/blogin.css'}
-      %link{rel: 'stylesheet', href: '/style.css'}
+      %link{rel: 'stylesheet', href: '/assets/css/blogin.css'}
+      %link{rel: 'stylesheet', href: '/assets/css/style.css'}
     %body.d-flex.flex-column.min-vh-100
       - if has-header
         != debug-open('partial: header')
@@ -317,7 +317,7 @@ sub scaffold-files(Str $framework, Str $date) {
     'layouts/_sidebar.haml'                => sidebar-haml(),
     'layouts/_footer.haml'                 => footer-haml(),
     'layouts/_search.haml'                 => search-haml(),
-    'static/style.css'                     => style-css(),
+    'assets/css/style.css'                 => style-css(),
     ;
 
   if $framework eq 'bootstrap5' {
@@ -354,6 +354,8 @@ our sub init(
     $path.parent.mkdir;
     $path.spurt($content);
   }
+
+  $dir.add("assets/$_").mkdir for <js img>;
 
   $dir;
 }

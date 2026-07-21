@@ -64,6 +64,30 @@ describe 'Blogin::Assets::rewrite-refs', {
   }
 }
 
+describe 'mirroring the assets source directory', {
+  my $FIXTURE = 'specs/fixtures/assets'.IO;
+
+  let(:out, {
+    my $dir = temp-dir('assets-src');
+    build-fixture($FIXTURE, $dir);
+    $dir
+  });
+
+  after-each { nuke(out()) }
+
+  it 'copies a source css asset into public/assets/css', {
+    expect(out().add('assets/css/site.css').e).to.be-truthy;
+  }
+
+  it 'copies a source js asset into public/assets/js preserving structure', {
+    expect(out().add('assets/js/app.js').e).to.be-truthy;
+  }
+
+  it 'places the generated content stylesheet under assets/css', {
+    expect(out().add('assets/css/blogin.css').e).to.be-truthy;
+  }
+}
+
 describe 'minifying and fingerprinting through a build', {
   my $FIXTURE = 'specs/fixtures/assets'.IO;
 
@@ -92,12 +116,17 @@ describe 'minifying and fingerprinting through a build', {
     expect($file.slurp.contains('/*')).to.be-falsy;
   }
 
+  it 'minifies a javascript asset, dropping comment and blank lines', {
+    my $file = fingerprinted(out().add('assets/js'), 'app', 'js');
+    expect($file.slurp.contains('// a comment') || $file.slurp ~~ /\n\n/).to.be-falsy;
+  }
+
   it 'rewrites the page reference to the fingerprinted stylesheet', {
     my $name = fingerprinted(out(), 'style', 'css').basename;
     expect(out().add('posts/hello.html').slurp.contains("/$name")).to.be-truthy;
   }
 
   it 'fingerprints the generated content stylesheet too', {
-    expect(fingerprinted(out(), 'blogin', 'css').defined && !out().add('blogin.css').e).to.be-truthy;
+    expect(fingerprinted(out().add('assets/css'), 'blogin', 'css').defined && !out().add('assets/css/blogin.css').e).to.be-truthy;
   }
 }

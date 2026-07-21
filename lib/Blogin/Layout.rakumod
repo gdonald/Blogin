@@ -253,12 +253,13 @@ sub layout-search-paths(IO() $layouts, Str $section --> Array) {
 }
 
 # Markdown body to HTML fragment + plain text. Concurrency-safe.
-our sub render-parts(:$post!, Str :$framework = 'none', Bool :$highlight = False --> Hash) is export {
+our sub render-parts(:$post!, Str :$framework = 'none', Bool :$highlight = False, :%shortcodes = %() --> Hash) is export {
   my $body     = $post.body.subst('<!--more-->', '', :g);
   my $document = Blogin::Markdown::parse($body);
   my $renderer = Blogin::Markdown::Html.new(
     framework => Blogin::Framework::profile($framework),
     :$highlight,
+    :%shortcodes,
   );
   my $result = $renderer.render($document);
 

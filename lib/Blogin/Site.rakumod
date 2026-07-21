@@ -11,6 +11,7 @@ use Blogin::Data;
 use Blogin::Summary;
 use Blogin::Assets;
 use Blogin::Metrics;
+use Blogin::Shortcode;
 
 unit module Blogin::Site;
 
@@ -597,7 +598,9 @@ our sub build(
   IO()  :$out!,
   IO()  :$layouts = $content.parent.add('layouts'),
   IO()  :$static  = $content.parent.add('static'),
+  IO()  :$assets  = $content.parent.add('assets'),
   IO()  :$data    = $content.parent.add('data'),
+  IO()  :$shortcodes = $content.parent.add('shortcodes'),
         :%site = %(),
   Bool  :$drafts = False,
   Int   :$jobs = ($*KERNEL.cpu-cores // 1),
@@ -625,6 +628,8 @@ our sub build(
   --> BuildResult
 ) {
   my @nav = Blogin::Nav::build-tree($content, :%sections, :$clean-urls);
+
+  my %shortcode-templates = Blogin::Shortcode::load($shortcodes);
 
   my %data-global = Blogin::Data::load($data);
   my %data-cache;
@@ -718,6 +723,7 @@ our sub build(
       post      => $page<post>,
       framework => $framework,
       highlight => $highlight,
+      shortcodes => %shortcode-templates,
     );
 
     $page<text>     = $parts<text>;
@@ -799,16 +805,16 @@ our sub build(
       $writer.write($index-file, Blogin::Search::index-json(@pages, text-length => $search-text-length));
       @listings.push: $index-file;
 
-      my $js-file = $out.add('search.js');
+      my $js-file = $out.add('assets/js/search.js');
       $writer.write($js-file, Blogin::Search::search-js(cap => $search-cap));
       @listings.push: $js-file;
 
-      my $css-file = $out.add('search.css');
+      my $css-file = $out.add('assets/css/search.css');
       $writer.write($css-file, Blogin::Search::search-css());
       @listings.push: $css-file;
     }
 
-    my $style-file = $out.add('blogin.css');
+    my $style-file = $out.add('assets/css/blogin.css');
     $writer.write($style-file, Blogin::Style::content-css());
     @listings.push: $style-file;
 
@@ -838,6 +844,7 @@ our sub build(
   }
 
   copy-static($static, $out, $writer) if $static.d;
+  copy-static($assets, $out.add('assets'), $writer) if $assets.d;
 
   $writer.prune($out);
 

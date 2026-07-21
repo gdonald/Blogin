@@ -10,6 +10,26 @@ sub attr-escape(Str $text --> Str) {
   $text.trans([ '&', '<', '>', '"' ] => [ '&amp;', '&lt;', '&gt;', '&quot;' ]);
 }
 
+# Load user shortcode templates from a directory: shortcodes/<name>.html, keyed
+# by name.
+our sub load(IO() $dir --> Hash) {
+  return %() unless $dir.d;
+
+  my %templates;
+
+  for $dir.dir.grep({ .extension.lc eq 'html' }) -> $file {
+    %templates{ $file.extension('').basename } = $file.slurp;
+  }
+
+  %templates;
+}
+
+# Substitute {{ key }} placeholders in a user template with escaped argument
+# values.
+our sub render-template(Str $template, %args --> Str) {
+  $template.subst(/ '{{' \h* $<key>=(<[\w-]>+) \h* '}}' /, { attr-escape(%args{ ~$/<key> } // '') }, :g);
+}
+
 our sub parse-args(Str $raw --> Hash) {
   my %args;
 

@@ -69,6 +69,72 @@ describe 'building a categories taxonomy', {
   }
 }
 
+describe 'a taxonomy with no name-specific layout', {
+  let(:out, {
+    my $dir = temp-dir('taxonomies-fallback');
+    build-fixture($FIXTURE, $dir, taxonomies => ['tags', 'categories', 'series']);
+    $dir
+  });
+
+  after-each { nuke(out()) }
+
+  it 'slugifies a multi-word term for the page path', {
+    expect(out().add('series/part-one.html').e).to.be-truthy;
+  }
+
+  it 'falls back to the index layout for the term page', {
+    expect(out().add('series/part-one.html').slurp.contains("class='listing'")).to.be-truthy;
+  }
+
+  it 'falls back to the index layout for the term index', {
+    expect(out().add('series.html').slurp.contains("class='listing'")).to.be-truthy;
+  }
+
+  it 'does not use a name-specific layout it has none of', {
+    expect(out().add('series/part-one.html').slurp.contains("class='category'")).to.be-falsy;
+  }
+}
+
+describe 'taxonomies with directory-index urls', {
+  let(:out, {
+    my $dir = temp-dir('taxonomies-dirindex');
+    build-fixture($FIXTURE, $dir, taxonomies => ['tags', 'categories'], clean-urls => False);
+    $dir
+  });
+
+  after-each { nuke(out()) }
+
+  it 'writes a term page as a directory index', {
+    expect(out().add('categories/news/index.html').e).to.be-truthy;
+  }
+
+  it 'writes the taxonomy index as a directory index', {
+    expect(out().add('categories/index.html').e).to.be-truthy;
+  }
+
+  it 'links terms with trailing-slash urls', {
+    expect(out().add('categories/index.html').slurp.contains("href='/categories/news/'")).to.be-truthy;
+  }
+}
+
+describe 'a taxonomy no post uses', {
+  let(:out, {
+    my $dir = temp-dir('taxonomies-empty');
+    build-fixture($FIXTURE, $dir, taxonomies => ['tags', 'authors']);
+    $dir
+  });
+
+  after-each { nuke(out()) }
+
+  it 'builds the site without error', {
+    expect(out().add('posts/alpha.html').e).to.be-truthy;
+  }
+
+  it 'writes no pages for the empty taxonomy', {
+    expect(out().add('authors.html').e || out().add('authors').e).to.be-falsy;
+  }
+}
+
 describe 'taxonomies flowing from config build options', {
   let(:out, {
     my $dir   = temp-dir('taxonomies-config');
