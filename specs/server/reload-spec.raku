@@ -13,6 +13,16 @@ describe 'the reload client script', {
   }
 }
 
+describe 'the server-sent reload event', {
+  it 'is a Blob so Cro can stream it', {
+    expect(Blogin::Server::reload-event() ~~ Blob).to.be-truthy;
+  }
+
+  it 'is formatted as an SSE data line', {
+    expect(Blogin::Server::reload-event().decode('utf-8')).to.eq("data: reload\n\n");
+  }
+}
+
 describe 'injecting the reload client', {
   it 'inserts the script before the closing body tag', {
     my $out = Blogin::Server::inject-reload('<html><body>hi</body></html>', '<script>x</script>');

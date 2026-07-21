@@ -59,6 +59,11 @@ our sub rebuild-and-reload(ReloadChannel $channel, &rebuild --> Nil) is export {
   $channel.notify;
 }
 
+# Cro's streaming body serializer requires the event Supply to emit Blobs.
+our sub reload-event(--> Blob) is export {
+  "data: reload\n\n".encode('utf-8');
+}
+
 # Map a request path to a file on disk, mirroring how a static host rewrites
 # extensionless URLs to their `.html` files.
 our sub resolve-file(Str $url-path, IO() $root, Bool :$clean-urls = True --> IO::Path) is export {
@@ -99,7 +104,7 @@ sub make-app(IO() $root, Bool :$clean-urls = True, ReloadChannel :$reload) {
         header 'Cache-Control', 'no-cache';
         content 'text/event-stream', supply {
           whenever $reload.Supply {
-            emit "data: reload\n\n";
+            emit reload-event();
           }
         }
       }
