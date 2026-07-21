@@ -8,7 +8,9 @@ token inline {
   || <esc>
   || <code>
   || <image>
+  || <footref>
   || <link>
+  || <reflink>
   || <autolink>
   || <strong>
   || <emph>
@@ -16,6 +18,12 @@ token inline {
   || <hardbreak>
   || <softbreak>
   || <text>
+}
+
+token footref { '[^' $<label>=(<[\w-]>+) ']' }
+
+token reflink {
+  '[' $<text>=(<-[\]]>+) ']' '[' $<label>=(<-[\]]>*) ']'
 }
 
 token esc { '\\' $<char>=(<[ \\ \` \* _ \~ \[ \] \( \) \# \+ \- \. \! \< \> ]>) }

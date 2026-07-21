@@ -49,11 +49,36 @@ method TOP($/) {
 }
 
 method inline($/) {
-  my $child = $<esc> // $<code> // $<image> // $<link> // $<autolink>
-           // $<strong> // $<emph> // $<strike> // $<hardbreak>
+  my $child = $<esc> // $<code> // $<image> // $<footref> // $<link> // $<reflink>
+           // $<autolink> // $<strong> // $<emph> // $<strike> // $<hardbreak>
            // $<softbreak> // $<text>;
 
   make $child.made;
+}
+
+method footref($/) {
+  make FootnoteRef.new(label => ~$<label>);
+}
+
+method reflink($/) {
+  my $text  = ~$<text>;
+  my $label = (~$<label>).trim;
+  $label = $text.trim unless $label.chars;
+
+  my %defs = (try %*LINK-DEFS) // %();
+
+  if %defs{ $label.lc }:exists {
+    my %def = %defs{ $label.lc };
+
+    make Link.new(
+      url      => %def<url>,
+      title    => (%def<title> // ''),
+      children => parse-inline($text),
+    );
+  }
+  else {
+    make Text.new(text => "[$text][{ ~$<label> }]");
+  }
 }
 
 method esc($/) {

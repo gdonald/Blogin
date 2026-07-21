@@ -109,6 +109,21 @@ class Blogin::Markdown::Html {
         $!html ~= "<hr />\n";
       }
 
+      when Footnotes {
+        $!html ~= "<section class=\"footnotes\">\n<ol>\n";
+
+        for $node.items -> $item {
+          my $id = attr-escape($item.label);
+
+          $!html ~= "<li id=\"fn-$id\">";
+          self!inline($item.children);
+          $!html ~= " <a href=\"#fnref-$id\" class=\"footnote-back\">&#8617;</a>";
+          $!html ~= "</li>\n";
+        }
+
+        $!html ~= "</ol>\n</section>\n";
+      }
+
       when CodeBlock {
         my $language = $node.info.chars ?? "language-{ $node.info }" !! '';
         my $extra    = $.framework.class-for('code-block');
@@ -283,6 +298,18 @@ class Blogin::Markdown::Html {
         $!html ~= self!attrs-str($node.attrs, :extra-class($extra));
         $!html ~= ' />';
         $!text ~= $node.alt;
+      }
+
+      when FootnoteRef {
+        if $node.number > 0 {
+          my $id     = attr-escape($node.label);
+          my $ref-id = $node.occurrence == 1 ?? "fnref-$id" !! "fnref-$id-{ $node.occurrence }";
+          $!html ~= "<sup class=\"footnote-ref\"><a href=\"#fn-$id\" id=\"$ref-id\">{ $node.number }</a></sup>";
+        }
+        else {
+          $!html ~= html-escape("[^{ $node.label }]");
+          $!text ~= "[^{ $node.label }]";
+        }
       }
 
       when SoftBreak {

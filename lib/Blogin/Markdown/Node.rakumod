@@ -93,3 +93,19 @@ class Image does Node is export {
 class SoftBreak does Node is export {}
 
 class LineBreak does Node is export {}
+
+class FootnoteRef does Node is export {
+  has Str $.label;
+  has Int $.number is rw = 0;
+  has Int $.occurrence is rw = 1;
+}
+
+class FootnoteItem does Node is export {
+  has Str $.label;
+  has Int $.number;
+  has @.children;
+}
+
+class Footnotes does Node is export {
+  has @.items;
+}

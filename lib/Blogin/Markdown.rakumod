@@ -303,11 +303,137 @@ sub parse-blocks(@lines --> Array) {
   @blocks;
 }
 
+sub link-def-of(Str $line) {
+  return $/ if $line ~~ /^ \h* '[' $<label>=(<-[\]^]> <-[\]]>*) ']' ':' \h+
+    $<url>=(\S+) [ \h+ '"' $<title>=(<-["]>*) '"' ]? \h* $/;
+  Nil;
+}
+
+sub footnote-def-of(Str $line) {
+  return $/ if $line ~~ /^ \h* '[^' $<label>=(<[\w-]>+) ']' ':' \h+ $<content>=(\N*) $/;
+  Nil;
+}
+
+# Pull link reference definitions and footnote definitions off the top of the
+# line stream so they never render as content. Fenced code is left untouched.
+sub extract-defs(@lines) {
+  my %link-defs;
+  my %footnote-defs;
+  my @kept;
+
+  my $fence-char;
+  my $fence-len;
+
+  for @lines -> $line {
+    if $fence-char.defined {
+      @kept.push($line);
+      $fence-char = Str if is-close-fence($line, $fence-char, $fence-len);
+      next;
+    }
+
+    with fence-of($line) -> $fence {
+      $fence-char = $fence<fence>.Str.substr(0, 1);
+      $fence-len  = $fence<fence>.Str.chars;
+      @kept.push($line);
+      next;
+    }
+
+    with footnote-def-of($line) -> $match {
+      %footnote-defs{ ~$match<label> } = ~$match<content>;
+      next;
+    }
+
+    with link-def-of($line) -> $match {
+      %link-defs{ (~$match<label>).lc } = %(
+        url   => ~$match<url>,
+        title => ($match<title> ?? ~$match<title> !! ''),
+      );
+      next;
+    }
+
+    @kept.push($line);
+  }
+
+  %( link-defs => %link-defs, footnote-defs => %footnote-defs, lines => @kept );
+}
+
+sub collect-footrefs(@nodes) {
+  for @nodes -> $node {
+    given $node {
+      when FootnoteRef { take $node; }
+
+      when Paragraph | Heading | BlockQuote | Emphasis | Strong | Strikethrough | Link | ListItem {
+        collect-footrefs($node.children);
+      }
+
+      when List           { collect-footrefs($node.items); }
+      when DefinitionList { collect-footrefs($node.items); }
+
+      when DefinitionItem {
+        collect-footrefs($node.term);
+        collect-footrefs($_) for $node.definitions;
+      }
+
+      when Table {
+        collect-footrefs($_) for $node.header;
+        collect-footrefs($_) for $node.rows.map(|*);
+      }
+
+      default {}
+    }
+  }
+}
+
+# Number footnote references in first-reference order and build the footnotes
+# block from their definitions. Modifies the refs in place.
+sub resolve-footnotes(@blocks, %footnote-defs --> Array) {
+  my @refs = gather collect-footrefs(@blocks);
+
+  return [] unless @refs;
+
+  my %number-of;
+  my %occurrences;
+  my @order;
+  my $next = 1;
+
+  for @refs -> $ref {
+    if %footnote-defs{ $ref.label }:exists {
+      unless %number-of{ $ref.label }:exists {
+        %number-of{ $ref.label } = $next++;
+        @order.push($ref.label);
+      }
+
+      $ref.number     = %number-of{ $ref.label };
+      $ref.occurrence = ++%occurrences{ $ref.label };
+    }
+  }
+
+  return [] unless @order;
+
+  my @items = @order.map(-> $label {
+    FootnoteItem.new(
+      label    => $label,
+      number   => %number-of{ $label },
+      children => parse-inline(%footnote-defs{ $label }),
+    )
+  });
+
+  [ Footnotes.new(:@items) ];
+}
+
 our sub parse(Str $source --> Document) is export {
   my $normalized = $source.subst(/\r\n/, "\n", :g).subst(/\r/, "\n", :g);
   my @lines = $normalized.split("\n");
 
   @lines.pop if @lines.elems && @lines[*-1] eq '';
 
-  Document.new(children => parse-blocks(@lines));
+  my %defs = extract-defs(@lines);
+
+  my %*LINK-DEFS = %defs<link-defs>;
+
+  my @blocks = parse-blocks(%defs<lines>);
+
+  @blocks.append: resolve-footnotes(@blocks, %defs<footnote-defs>);
+
+  Document.new(children => @blocks);
 }
