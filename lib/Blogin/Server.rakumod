@@ -27,6 +27,38 @@ our sub content-type-for(IO::Path:D $file --> Str) is export {
   %CONTENT-TYPES{ $file.extension.lc } // 'application/octet-stream';
 }
 
+constant RELOAD-PATH = '/__blogin-reload';
+
+# A rebuild pushes a reload to every connected preview page over this channel.
+class ReloadChannel is export {
+  has Supplier $!supplier = Supplier.new;
+
+  method notify(--> Nil) {
+    $!supplier.emit('reload');
+  }
+
+  method Supply(--> Supply) {
+    $!supplier.Supply;
+  }
+}
+
+our sub reload-script(Str $path = RELOAD-PATH --> Str) is export {
+  "<script>new EventSource(\"$path\").onmessage = () => location.reload();</script>";
+}
+
+# Insert the reload client before the closing body tag, or append it when the
+# page has none.
+our sub inject-reload(Str $html, Str $script = reload-script() --> Str) is export {
+  return $html ~ $script unless $html.contains('</body>');
+
+  $html.subst('</body>', $script ~ '</body>');
+}
+
+our sub rebuild-and-reload(ReloadChannel $channel, &rebuild --> Nil) is export {
+  rebuild();
+  $channel.notify;
+}
+
 # Map a request path to a file on disk, mirroring how a static host rewrites
 # extensionless URLs to their `.html` files.
 our sub resolve-file(Str $url-path, IO() $root, Bool :$clean-urls = True --> IO::Path) is export {
@@ -60,17 +92,31 @@ our sub serve-content(Str $url-path, IO() $root, Bool :$clean-urls = True --> Ha
   %( status => 200, content-type => content-type-for($file), file => $file );
 }
 
-sub make-app(IO() $root, Bool :$clean-urls = True) {
+sub make-app(IO() $root, Bool :$clean-urls = True, ReloadChannel :$reload) {
   route {
+    if $reload.defined {
+      get -> '__blogin-reload' {
+        header 'Cache-Control', 'no-cache';
+        content 'text/event-stream', supply {
+          whenever $reload.Supply {
+            emit "data: reload\n\n";
+          }
+        }
+      }
+    }
+
     get -> *@segments {
       my %result = serve-content('/' ~ @segments.join('/'), $root, :$clean-urls);
 
-      if %result<status> == 200 {
-        content %result<content-type>, %result<file>.slurp(:bin);
-      }
-      else {
+      if %result<status> != 200 {
         response.status = 404;
         content 'text/plain', 'Not Found';
+      }
+      elsif $reload.defined && %result<content-type>.starts-with('text/html') {
+        content %result<content-type>, inject-reload(%result<file>.slurp);
+      }
+      else {
+        content %result<content-type>, %result<file>.slurp(:bin);
       }
     }
   }
@@ -113,6 +159,7 @@ our sub serve(
   Blogin::Log :$log = Blogin::Log.new,
 ) is export {
   my $config-file = $content.parent.add('blogin.json');
+  my $reload      = ReloadChannel.new;
 
   my &rebuild = {
     my $current = Blogin::Config.load($config-file);
@@ -129,21 +176,21 @@ our sub serve(
   for ($content, $layouts, $static, $data).grep({ .defined && .d }) -> $dir {
     watch-recursive($dir, {
       $log.info('change detected, rebuilding');
-      rebuild();
+      rebuild-and-reload($reload, &rebuild);
       CATCH { default { $log.error("rebuild failed: { .message }") } }
     });
   }
 
   watch-file($config-file, {
     $log.info('config change detected, rebuilding');
-    rebuild();
+    rebuild-and-reload($reload, &rebuild);
     CATCH { default { $log.error("rebuild failed: { .message }") } }
   });
 
   my $server = Cro::HTTP::Server.new(
     host        => 'localhost',
     :$port,
-    application => make-app($out, clean-urls => $config.clean-urls),
+    application => make-app($out, clean-urls => $config.clean-urls, :$reload),
   );
 
   $server.start;
