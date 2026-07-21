@@ -34,6 +34,41 @@ sub prune-empty-dirs(IO::Path:D $dir) {
   }
 }
 
+sub remove-tree(IO::Path:D $path) {
+  return unless $path.e;
+
+  if $path.d {
+    remove-tree($_) for $path.dir;
+    $path.rmdir;
+  }
+  else {
+    $path.unlink;
+  }
+}
+
+sub within(IO::Path:D $target, IO::Path:D $base --> Bool) {
+  my $inner = $target.absolute.chomp('/');
+  my $outer = $base.absolute.chomp('/');
+
+  $inner ne $outer && $inner.starts-with("$outer/");
+}
+
+our sub clean(IO() :$out!, IO() :$root = $*CWD --> Int) {
+  my $target = $out.absolute.IO;
+  my $base   = $root.absolute.IO;
+
+  die "refusing to clean '{ $target }': it is not inside '{ $base }'"
+    unless within($target, $base);
+
+  return 0 unless $target.d;
+
+  my $count = all-files($target).elems;
+
+  remove-tree($target);
+
+  $count;
+}
+
 # Change-detecting writer. Thread-safe; tracks written paths so prune() can
 # remove stale output.
 class Writer {
@@ -432,6 +467,9 @@ our sub build(
 
     my $show-dates = (%sections{$page<section>}<show-dates> // True).Bool;
 
+    my $section-layout = (%sections{$page<section>}<layout> // '').Str;
+    my @templates = $section-layout.chars ?? [$section-layout, 'show'] !! ['show'];
+
     my $prev = %prev-of{$page<url>};
     my $next = %next-of{$page<url>};
 
@@ -447,6 +485,7 @@ our sub build(
         debug     => $debug,
         framework => $framework,
         show-dates => $show-dates,
+        templates  => @templates,
         prev-url   => ($prev ?? $prev<url> !! ''),
         prev-title => ($prev ?? $prev<post>.title !! ''),
         next-url   => ($next ?? $next<url> !! ''),

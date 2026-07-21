@@ -35,3 +35,16 @@ our sub build(
 
   True;
 }
+
+our sub clean(
+  IO()        :$out!,
+  IO()        :$root = $*CWD,
+  Blogin::Log :$log = Blogin::Log.new,
+  --> Int
+) is export {
+  my $removed = Blogin::Site::clean(:$out, :$root);
+
+  $log.verbose("cleaned { $out } ($removed files)");
+
+  $removed;
+}

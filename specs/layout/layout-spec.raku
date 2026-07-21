@@ -126,6 +126,26 @@ describe 'per-section layout resolution', {
   }
 }
 
+describe 'a named layout override', {
+  it 'renders a post through the named layout when present', {
+    expect(render('J', 'b', templates => ['journal', 'show']).contains("<article class='journal'>")).to.be-truthy;
+  }
+
+  it 'falls back to the next template when the named layout is absent', {
+    expect(render('J', 'b', templates => ['missing', 'show']).contains('<article>')).to.be-truthy;
+  }
+
+  it 'errors naming every candidate when none resolve', {
+    try Blogin::Layout::render-post(
+      post => post-of('T', 'b'),
+      layouts => $LAYOUTS,
+      site => %( title => 'S' ),
+      templates => ['nope'],
+    );
+    expect($!.message.contains('nope.haml')).to.be-truthy;
+  }
+}
+
 describe 'missing required layouts', {
   it 'errors naming show.haml when show is missing', {
     try Blogin::Layout::render-post(

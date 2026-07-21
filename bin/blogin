@@ -15,14 +15,6 @@ sub make-log(Bool :$verbose --> Blogin::Log) {
   Blogin::Log.new(:$level);
 }
 
-sub not-implemented(Str $name, Bool :$verbose) {
-  my $log = make-log(:$verbose);
-
-  $log.error("$name is not implemented yet");
-
-  exit 1;
-}
-
 multi sub MAIN(
   'build',
   Str  :$src = 'content',
@@ -105,8 +97,14 @@ multi sub MAIN(
 
 multi sub MAIN(
   'clean',
-  Str  :$out = 'public',
+  Str  :$out,
   Bool :$verbose = False,
 ) {
-  not-implemented('clean', :$verbose);
+  my $log    = make-log(:$verbose);
+  my $config = Blogin::Config.load('blogin.json'.IO);
+  my $target = ($out // $config.output-dir).IO;
+
+  my $removed = Blogin::clean(:out($target), :$log);
+
+  $log.info("cleaned $target ($removed files)");
 }

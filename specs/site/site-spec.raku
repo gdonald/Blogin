@@ -79,6 +79,22 @@ describe 'building the basic fixture site', {
   }
 }
 
+describe 'a per-section layout override', {
+  let(:out, { temp-dir('section-layout') });
+
+  after-each { nuke(out()) }
+
+  it 'renders a section post through the configured layout', {
+    build-basic(out(), sections => %( posts => %( layout => 'journal' ) ));
+    expect(out().add('posts/hello.html').slurp.contains("<article class='journal'>")).to.be-truthy;
+  }
+
+  it 'leaves an unconfigured section on the default show layout', {
+    build-basic(out());
+    expect(out().add('posts/hello.html').slurp.contains("<article class='journal'>")).to.be-falsy;
+  }
+}
+
 describe 'drafts', {
   let(:out, { temp-dir('draft') });
 

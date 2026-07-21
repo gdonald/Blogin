@@ -220,12 +220,15 @@ our sub render-with-layout(
   Str   :$prev-title = '',
   Str   :$next-url = '',
   Str   :$next-title = '',
+        :@templates = ['show'],
   --> Str
 ) is export {
   my @paths = layout-search-paths($layouts, $section);
 
-  die "required layout 'show.haml' not found (searched { @paths.join(', ') })"
-    unless template-exists(@paths, 'show');
+  my $template = @templates.first({ template-exists(@paths, $_) });
+
+  die "required layout ({ @templates.map({ "$_.haml" }).join(', ') }) not found (searched { @paths.join(', ') })"
+    without $template;
 
   die "required layout 'base.haml' not found (searched { @paths.join(', ') })"
     unless template-exists(@paths, 'base');
@@ -251,7 +254,7 @@ our sub render-with-layout(
 
   my $haml = HAML.new(:search-paths(@paths));
 
-  $haml.render(:file<show>, :layout<base>, :context($view));
+  $haml.render(:file($template), :layout<base>, :context($view));
 }
 
 our sub render-post(
@@ -268,13 +271,14 @@ our sub render-post(
   Str   :$prev-title = '',
   Str   :$next-url = '',
   Str   :$next-title = '',
+        :@templates = ['show'],
   --> Str
 ) is export {
   my $body-html = render-body(:$post, :$framework);
 
   render-with-layout(
     :$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug, :$framework, :$show-dates,
-    :$prev-url, :$prev-title, :$next-url, :$next-title,
+    :$prev-url, :$prev-title, :$next-url, :$next-title, :@templates,
   );
 }
 
