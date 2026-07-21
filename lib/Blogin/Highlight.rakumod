@@ -33,6 +33,45 @@ my %LANGS =
     comment  => '',
     keywords => set(),
   ),
+  c => %(
+    comment  => '//',
+    keywords => set(<int char short long float double void unsigned signed const
+                     static struct union enum typedef sizeof if else for while do
+                     switch case default break continue return goto extern>),
+  ),
+  cpp => %(
+    comment  => '//',
+    keywords => set(<int char bool float double void auto const static struct class
+                     namespace template typename public private protected virtual
+                     if else for while do switch case default break continue return
+                     new delete this using nullptr true false enum union>),
+  ),
+  java => %(
+    comment  => '//',
+    keywords => set(<public private protected class interface extends implements
+                     static final void int long double boolean char new return if
+                     else for while do switch case default break continue this super
+                     import package try catch finally throw throws null true false>),
+  ),
+  go => %(
+    comment  => '//',
+    keywords => set(<func package import var const type struct interface map chan go
+                     defer if else for range switch case default break continue
+                     return nil true false new make>),
+  ),
+  rust => %(
+    comment  => '//',
+    keywords => set(<fn let mut const static struct enum impl trait pub use mod
+                     match if else for while loop return self where as ref move dyn
+                     true false None Some Ok Err>),
+  ),
+  typescript => %(
+    comment  => '//',
+    keywords => set(<function const let var interface type class enum public private
+                     protected readonly extends implements import export from if else
+                     for while return new this async await try catch throw typeof of
+                     as null undefined true false>),
+  ),
   ;
 
 sub esc(Str $text --> Str) {
@@ -45,6 +84,10 @@ sub span(Str $class, Str $text --> Str) {
 
 our sub languages(--> List) is export {
   %LANGS.keys.sort.List;
+}
+
+our sub supports(Str $language --> Bool) is export {
+  %LANGS{ ($language.words.head // '').lc }:exists;
 }
 
 our sub highlight(Str $code, Str $language --> Str) is export {

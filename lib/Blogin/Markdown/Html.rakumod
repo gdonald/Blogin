@@ -127,7 +127,8 @@ class Blogin::Markdown::Html {
       when CodeBlock {
         my $language = $node.info.chars ?? "language-{ $node.info }" !! '';
         my $extra    = $.framework.class-for('code-block');
-        my $class    = ($language, $extra).grep(*.chars).join(' ');
+        my $plain    = $.highlight && $node.info.chars && !Blogin::Highlight::supports($node.info) ?? 'hl-plain' !! '';
+        my $class    = ($language, $plain, $extra).grep(*.chars).join(' ');
 
         $!html ~= '<pre><code' ~ self!class-attr($class) ~ '>';
         $!html ~= $.highlight
