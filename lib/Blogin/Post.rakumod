@@ -10,6 +10,7 @@ has Str  $.slug;
 has      @.tags;
 has Bool $.draft = False;
 has Str  $.description = '';
+has      $.order;
 has Str  $.body;
 has      %.meta;
 has Str  $.filename = '';
@@ -18,7 +19,7 @@ method date-str(--> Str) {
   $!date.defined ?? $!date.Str !! '';
 }
 
-my @KNOWN = <title date slug tags draft description>;
+my @KNOWN = <title date slug tags draft description order>;
 
 my sub unquote(Str $value --> Str) {
   return $value.substr(1, $value.chars - 2)
@@ -54,6 +55,14 @@ my sub date-from-filename(Str $filename --> Date) {
   return parse-date("$0-$1-$2") if $base ~~ / ^ (\d ** 4) '-' (\d\d) '-' (\d\d) /;
 
   Date;
+}
+
+my sub parse-order(Str $text) {
+  my $value = $text.trim;
+
+  return Nil unless $value ~~ / ^ '-'? \d+ [ '.' \d+ ]? $ /;
+
+  +$value;
 }
 
 my sub parse-tags(Str $raw --> List) {
@@ -120,6 +129,10 @@ method parse(Blogin::Post:U: Str $source, Str :$filename = '' --> Blogin::Post) 
   my $draft       = (%fields<draft> // '').lc eq 'true';
   my $description = unquote(%fields<description> // '');
 
+  my $order = %fields<order>:exists && %fields<order>.chars
+    ?? parse-order(unquote(%fields<order>))
+    !! Nil;
+
   my %meta;
   for %fields.kv -> $key, $value {
     %meta{$key} = $value unless $key eq any(@KNOWN);
@@ -132,6 +145,7 @@ method parse(Blogin::Post:U: Str $source, Str :$filename = '' --> Blogin::Post) 
     :@tags,
     :$draft,
     :$description,
+    :$order,
     body => %parsed<body>,
     meta => %meta,
     :$filename,

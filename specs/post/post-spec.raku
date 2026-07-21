@@ -56,6 +56,27 @@ describe 'a post with partial front matter', {
   it 'defaults the description to empty', {
     expect(post().description).to.eq('');
   }
+
+  it 'defaults the order to an undefined value', {
+    expect(post().order.defined).to.be-falsy;
+  }
+}
+
+describe 'a post with an explicit order', {
+  it 'reads an integer order', {
+    my $post = Blogin::Post.parse("---\ntitle: T\norder: 3\n---\nx\n", filename => 'f.md');
+    expect($post.order).to.eq(3);
+  }
+
+  it 'ignores a non-numeric order', {
+    my $post = Blogin::Post.parse("---\ntitle: T\norder: soon\n---\nx\n", filename => 'f.md');
+    expect($post.order.defined).to.be-falsy;
+  }
+
+  it 'keeps the order key out of the raw metadata', {
+    my $post = Blogin::Post.parse("---\ntitle: T\norder: 2\n---\nx\n", filename => 'f.md');
+    expect($post.meta<order>:exists).to.be-falsy;
+  }
 }
 
 describe 'a post with no front matter', {

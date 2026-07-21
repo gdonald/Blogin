@@ -146,8 +146,16 @@ sub date-key(%page) {
   %page<post>.date.defined ?? %page<post>.date.daycount !! 0;
 }
 
+sub order-key(%page) {
+  %page<post>.order // Inf;
+}
+
 sub newest-first(@pages) {
-  @pages.sort({ (date-key($^b) <=> date-key($^a)) || ($^a<post>.slug leg $^b<post>.slug) });
+  @pages.sort({
+    (order-key($^a) <=> order-key($^b))
+      || (date-key($^b) <=> date-key($^a))
+      || ($^a<post>.slug leg $^b<post>.slug)
+  });
 }
 
 sub by-section(@pages --> Hash) {
