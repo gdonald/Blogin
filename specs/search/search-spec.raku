@@ -141,6 +141,27 @@ describe 'the search stylesheet', {
   }
 }
 
+describe 'a clickable search result', {
+  let(:js, { Blogin::Search::search-js() });
+
+  it 'wraps the result title in the anchor', {
+    expect(js().contains('a.appendChild(title)')).to.be-truthy;
+  }
+
+  it 'wraps the result snippet in the same anchor', {
+    expect(js().contains('a.appendChild(p)')).to.be-truthy;
+  }
+
+  it 'puts only the anchor directly in the list item', {
+    expect(js().contains('li.appendChild(p)')).to.be-falsy;
+  }
+
+  it 'gives the result anchor the padded clickable area', {
+    my $css = Blogin::Search::search-css();
+    expect($css.contains('[data-blogin-results] a {') && $css.contains('padding: 0.5rem 0.75rem;')).to.be-truthy;
+  }
+}
+
 describe 'the search partial', {
   it 'renders a form and the script tag', {
     my $haml = HAML.new(search-paths => 'specs/fixtures/layouts');

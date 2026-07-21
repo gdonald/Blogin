@@ -43,7 +43,13 @@ class ReloadChannel is export {
 }
 
 our sub reload-script(Str $path = RELOAD-PATH --> Str) is export {
-  "<script>new EventSource(\"$path\").onmessage = () => location.reload();</script>";
+  # Close the stream before navigating so the persistent connection does not
+  # hold one of the browser's limited per-host sockets across page loads.
+  '<script>(function(){' ~
+    "var source = new EventSource(\"$path\");" ~
+    'source.onmessage = function () { location.reload(); };' ~
+    'window.addEventListener("pagehide", function () { source.close(); });' ~
+  '})();</script>';
 }
 
 # Insert the reload client before the closing body tag, or append it when the

@@ -129,13 +129,17 @@ my constant SEARCH-JS = q:to/JS/;
 
       const a = document.createElement('a');
       a.href = rec.url;
-      a.textContent = rec.title;
-      li.appendChild(a);
+
+      const title = document.createElement('span');
+      title.className = 'blogin-result-title';
+      title.textContent = rec.title;
+      a.appendChild(title);
 
       const p = document.createElement('p');
       p.textContent = snippet(rec.text || '', tokens);
-      li.appendChild(p);
+      a.appendChild(p);
 
+      li.appendChild(a);
       results.appendChild(li);
     }
   }
@@ -196,23 +200,24 @@ my constant SEARCH-CSS = q:to/CSS/;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
-[data-blogin-results] li {
-  padding: 0.5rem 0.75rem;
-}
-
 [data-blogin-results] li + li {
   border-top: 1px solid #f0f0f0;
 }
 
-[data-blogin-results] li:hover {
+[data-blogin-results] a {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+[data-blogin-results] a:hover {
   background: #f6f8fa;
 }
 
-[data-blogin-results] a {
+[data-blogin-results] .blogin-result-title {
   display: block;
   font-weight: 600;
-  text-decoration: none;
-  color: inherit;
 }
 
 [data-blogin-results] p {

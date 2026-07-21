@@ -11,6 +11,10 @@ describe 'the reload client script', {
   it 'reloads the page on a message', {
     expect(Blogin::Server::reload-script.contains('location.reload()')).to.be-truthy;
   }
+
+  it 'closes the stream before the page unloads so connections do not pile up', {
+    expect(Blogin::Server::reload-script.contains('pagehide') && Blogin::Server::reload-script.contains('source.close()')).to.be-truthy;
+  }
 }
 
 describe 'the server-sent reload event', {
