@@ -13,6 +13,7 @@ our sub build(
   Blogin::Config :$config = Blogin::Config.new,
   IO()           :$out,
   Bool           :$drafts = False,
+  Bool           :$future = False,
   Int            :$jobs = ($*KERNEL.cpu-cores // 1),
   Bool           :$debug,
   Bool           :$force = False,
@@ -27,6 +28,7 @@ our sub build(
     debug   => ($debug // $config.debug),
     |$config.build-options,
     :$drafts,
+    :$future,
     :$jobs,
     :$force,
   );

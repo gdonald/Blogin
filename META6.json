@@ -26,6 +26,7 @@
     "Blogin::Config": "lib/Blogin/Config.rakumod",
     "Blogin::Assets": "lib/Blogin/Assets.rakumod",
     "Blogin::Data": "lib/Blogin/Data.rakumod",
+    "Blogin::Metrics": "lib/Blogin/Metrics.rakumod",
     "Blogin::Summary": "lib/Blogin/Summary.rakumod",
     "Blogin::Toc": "lib/Blogin/Toc.rakumod",
     "Blogin::Feed": "lib/Blogin/Feed.rakumod",

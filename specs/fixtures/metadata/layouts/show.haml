@@ -1,0 +1,7 @@
+%article
+  %h1= title
+  %p.words= word-count
+  %p.reading= reading-time
+  %ul.related
+    != render(:partial<entry>, :collection(related), :as<entry>)
+  != body

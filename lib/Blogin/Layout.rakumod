@@ -63,6 +63,7 @@ class ChromeView does Template::HAML::HelpersRole {
   method site-title  { %!site<title> // '' }
   method data        { %!data }
   method section     { $!section }
+  method index-dates { True }
 
   method meta-title(--> Str)       { self.site-title }
   method meta-description(--> Str) { '' }
@@ -131,6 +132,9 @@ class View is ChromeView is export {
   has Str  $.body-html = '';
   has Str  $.summary = '';
   has      @.headings;
+  has Int  $.word-count = 0;
+  has Int  $.reading-time = 0;
+  has      @.related;
   has Bool $.show-dates = True;
   has Str  $.prev-url = '';
   has Str  $.prev-title = '';
@@ -149,6 +153,11 @@ class View is ChromeView is export {
   method has-toc(--> Bool) { $!post.toc.so }
   method toc               { Blogin::Toc::build(@!headings) }
   method toc-html(--> Str) { Blogin::Toc::render(self.toc) }
+
+  method word-count   { $!word-count }
+  method reading-time { $!reading-time }
+  method related      { @!related }
+  method has-related(--> Bool) { @!related.elems.so }
 
   method post-nav-html {
     return '' unless $!prev-url.chars || $!next-url.chars;
@@ -279,6 +288,9 @@ our sub render-with-layout(
   Bool  :$show-dates = True,
   Str   :$summary = '',
         :@headings = [],
+  Int   :$word-count = 0,
+  Int   :$reading-time = 0,
+        :@related = [],
   Str   :$prev-url = '',
   Str   :$prev-title = '',
   Str   :$next-url = '',
@@ -306,6 +318,9 @@ our sub render-with-layout(
     :$body-html,
     :$summary,
     :@headings,
+    :$word-count,
+    :$reading-time,
+    :@related,
     :$debug,
     :$show-dates,
     :$prev-url,

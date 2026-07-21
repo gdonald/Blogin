@@ -72,12 +72,17 @@ sub show-haml(--> Str) {
   %article
     %h1= title
     - if show-dates
-      %p.meta= date
+      %p.meta= "#{date} · #{reading-time} min read"
     - if has-toc
       %nav.toc
         != toc-html
     != body
   != post-nav-html
+  - if has-related
+    %nav.related
+      %h2 Related posts
+      %ul
+        != render(:partial<entry>, :collection(related), :as<entry>)
   HAML
 }
 

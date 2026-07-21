@@ -22,6 +22,8 @@ has Bool $.robots             = True;
 has Bool $.minify             = False;
 has Bool $.fingerprint        = False;
 has      @.image-widths       = [];
+has Int  $.reading-wpm        = 200;
+has Int  $.related-count      = 5;
 has      @.taxonomies         = ['tags'];
 has      @.feed-formats       = ['atom'];
 has      %.sections;
@@ -113,6 +115,8 @@ method from-data(Blogin::Config:U: %data --> Blogin::Config) {
   %args<minify>             = want-bool($_, 'minify')             with %data<minify>;
   %args<fingerprint>        = want-bool($_, 'fingerprint')        with %data<fingerprint>;
   %args<image-widths>      := want-int-list($_, 'image-widths')    with %data<image-widths>;
+  %args<reading-wpm>        = want-int($_,  'reading-wpm')         with %data<reading-wpm>;
+  %args<related-count>      = want-int($_,  'related-count')       with %data<related-count>;
   %args<taxonomies>        := want-str-list($_, 'taxonomies')      with %data<taxonomies>;
   %args<feed-formats>      := want-feed-formats($_)                with %data<feed-formats>;
   %args<sections>      = validate-sections($_)          with %data<sections>;
@@ -152,6 +156,8 @@ method build-options(--> Hash) {
     minify             => $!minify,
     fingerprint        => $!fingerprint,
     image-widths       => @!image-widths,
+    reading-wpm        => $!reading-wpm,
+    related-count      => $!related-count,
     taxonomies         => @!taxonomies,
     feed-formats       => @!feed-formats,
   );

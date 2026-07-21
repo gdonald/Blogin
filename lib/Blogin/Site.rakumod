@@ -10,6 +10,7 @@ use Blogin::Style;
 use Blogin::Data;
 use Blogin::Summary;
 use Blogin::Assets;
+use Blogin::Metrics;
 
 unit module Blogin::Site;
 
@@ -567,6 +568,9 @@ our sub build(
   Bool  :$minify = False,
   Bool  :$fingerprint = False,
         :@image-widths = [],
+  Int   :$reading-wpm = 200,
+  Int   :$related-count = 5,
+  Bool  :$future = False,
   Bool  :$force = False,
   --> BuildResult
 ) {
@@ -594,6 +598,7 @@ our sub build(
     my $section = section-of($file, $content);
 
     next if $post.draft && !$drafts;
+    next if !$future && $post.date.defined && $post.date > Date.today;
 
     my $url-path = $section.chars ?? "$section/{ $post.slug }" !! $post.slug;
     my $url      = $clean-urls ?? "/$url-path" !! "/$url-path/";
@@ -630,6 +635,30 @@ our sub build(
     }
   }
 
+  my @tax-names = @taxonomies.map({ $_ ~~ Str ?? $_ !! |$_ });
+
+  my %terms-of;
+  for @pages -> $page {
+    my @terms = @tax-names.map(-> $tax { $page<post>.terms($tax).map({ "$tax:$_" }) }).flat;
+    %terms-of{$page<url>} = @terms.Set;
+  }
+
+  for @pages -> $page {
+    my $mine = %terms-of{$page<url>};
+
+    $page<related> = [];
+
+    next unless $mine.elems;
+
+    my @scored = @pages
+      .grep({ .<url> ne $page<url> })
+      .map(-> $other { %( page => $other, score => ($mine ∩ %terms-of{$other<url>}).elems ) })
+      .grep(*.<score> > 0)
+      .sort({ ($^b<score> <=> $^a<score>) || (date-key($^b<page>) <=> date-key($^a<page>)) });
+
+    $page<related> = @scored.head($related-count).map({ entry-of(.<page>) }).Array;
+  }
+
   my @ordered = @pages.sort({ -.<post>.body.chars });
 
   my $haml-lock = Lock.new;
@@ -656,6 +685,9 @@ our sub build(
       length   => $summary-length,
     );
 
+    my $words        = Blogin::Metrics::word-count($parts<text>);
+    my $reading-time = Blogin::Metrics::reading-time($words, wpm => $reading-wpm);
+
     my $show-dates = (%sections{$page<section>}<show-dates> // True).Bool;
 
     my $section-layout = (%sections{$page<section>}<layout> // '').Str;
@@ -680,6 +712,9 @@ our sub build(
         data       => data-for($page<section>),
         summary    => $page<summary>,
         headings   => $page<headings>,
+        word-count => $words,
+        reading-time => $reading-time,
+        related    => $page<related>,
         prev-url   => ($prev ?? $prev<url> !! ''),
         prev-title => ($prev ?? $prev<post>.title !! ''),
         next-url   => ($next ?? $next<url> !! ''),

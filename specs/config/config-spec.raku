@@ -87,6 +87,14 @@ describe 'config defaults', {
   it 'defaults image widths to empty', {
     expect(config().image-widths.elems).to.eq(0);
   }
+
+  it 'defaults reading words-per-minute', {
+    expect(config().reading-wpm).to.eq(200);
+  }
+
+  it 'defaults the related count', {
+    expect(config().related-count).to.eq(5);
+  }
 }
 
 describe 'reading the metadata keys', {
