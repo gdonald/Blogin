@@ -6,7 +6,7 @@
   "perl": "6.d",
   "authors": ["Greg Donald"],
   "auth": "zef:gdonald",
-  "depends": ["Template::HAML:auth<zef:gdonald>", "JSON::Fast", "Cro::HTTP"],
+  "depends": ["Template::HAML:auth<zef:gdonald>", "JSON::Fast", "YAMLish", "Cro::HTTP"],
   "build-depends": [],
   "test-depends": ["BDD::Behave:auth<zef:gdonald>", "META6", "URI", "XML"],
   "provides": {
@@ -24,6 +24,7 @@
     "Blogin::Site": "lib/Blogin/Site.rakumod",
     "Blogin::Nav": "lib/Blogin/Nav.rakumod",
     "Blogin::Config": "lib/Blogin/Config.rakumod",
+    "Blogin::Data": "lib/Blogin/Data.rakumod",
     "Blogin::Feed": "lib/Blogin/Feed.rakumod",
     "Blogin::Search": "lib/Blogin/Search.rakumod",
     "Blogin::Server": "lib/Blogin/Server.rakumod",

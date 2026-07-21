@@ -33,6 +33,7 @@ sub nav-node-for(@nodes, Str $path) {
 
 class ChromeView does Template::HAML::HelpersRole {
   has      %.site;
+  has      %.data;
   has Str  $.section   = '';
   has Str  $.url       = '';
   has      @.nav;
@@ -59,6 +60,7 @@ class ChromeView does Template::HAML::HelpersRole {
   }
 
   method site-title  { %!site<title> // '' }
+  method data        { %!data }
   method section     { $!section }
 
   method section-label(--> Str) {
@@ -210,6 +212,7 @@ our sub render-with-layout(
   Str   :$body-html!,
   IO()  :$layouts!,
         :%site = %(),
+        :%data = %(),
   Str   :$section = '',
   Str   :$url = '',
         :@nav = [],
@@ -236,6 +239,7 @@ our sub render-with-layout(
   my $view = View.new(
     :$post,
     :%site,
+    :%data,
     :$section,
     :$url,
     :@nav,
@@ -261,6 +265,7 @@ our sub render-post(
   :$post!,
   IO()  :$layouts!,
         :%site = %(),
+        :%data = %(),
   Str   :$section = '',
   Str   :$url = '',
         :@nav = [],
@@ -277,7 +282,7 @@ our sub render-post(
   my $body-html = render-body(:$post, :$framework);
 
   render-with-layout(
-    :$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug, :$framework, :$show-dates,
+    :$post, :$body-html, :$layouts, :%site, :%data, :$section, :$url, :@nav, :$debug, :$framework, :$show-dates,
     :$prev-url, :$prev-title, :$next-url, :$next-title, :@templates,
   );
 }
@@ -286,6 +291,7 @@ our sub render-listing(
   IO()  :$layouts!,
   Str   :$section = '',
         :%site = %(),
+        :%data = %(),
         :@entries,
   Int   :$page-number = 1,
   Int   :$total-pages = 1,
@@ -310,6 +316,7 @@ our sub render-listing(
 
   my $view = ListView.new(
     :%site,
+    :%data,
     :$section,
     :@nav,
     :@entries,

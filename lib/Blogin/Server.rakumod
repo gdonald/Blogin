@@ -107,6 +107,7 @@ our sub serve(
   IO()  :$out!,
   IO()  :$layouts = $content.parent.add('layouts'),
   IO()  :$static  = $content.parent.add('static'),
+  IO()  :$data    = $content.parent.add('data'),
   Blogin::Config :$config = Blogin::Config.new,
   Int   :$port = 3000,
   Blogin::Log :$log = Blogin::Log.new,
@@ -117,7 +118,7 @@ our sub serve(
     my $current = Blogin::Config.load($config-file);
 
     Blogin::Site::build(
-      :$content, :$out, :$layouts, :$static,
+      :$content, :$out, :$layouts, :$static, :$data,
       debug => $current.debug,
       |$current.build-options,
     );
@@ -125,7 +126,7 @@ our sub serve(
 
   rebuild();
 
-  for ($content, $layouts, $static).grep(*.defined) -> $dir {
+  for ($content, $layouts, $static, $data).grep({ .defined && .d }) -> $dir {
     watch-recursive($dir, {
       $log.info('change detected, rebuilding');
       rebuild();

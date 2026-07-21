@@ -7,6 +7,7 @@ use Blogin::Nav;
 use Blogin::Feed;
 use Blogin::Search;
 use Blogin::Style;
+use Blogin::Data;
 
 unit module Blogin::Site;
 
@@ -192,7 +193,7 @@ sub listing-file(IO::Path:D $out, Str $section, Int $page-num, Bool :$at-root, B
 sub write-section-listing(
   Str $section, @sorted,
   Bool :$at-root = False,
-  IO::Path:D :$out!, IO() :$layouts!, :%site, :@nav, Bool :$clean-urls!,
+  IO::Path:D :$out!, IO() :$layouts!, :%site, :%data, :@nav, Bool :$clean-urls!,
   Bool :$debug!, Int :$page-size!, Writer :$writer!, Str :$framework!,
   :@templates = ['index'],
   Bool :$index-dates = True,
@@ -213,7 +214,7 @@ sub write-section-listing(
     my @entries = @chunk.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :$section, :%site, :@nav, :@entries, :@templates,
+      :$layouts, :$section, :%site, :%data, :@nav, :@entries, :@templates,
       page-number => $page-num, total-pages => $total,
       :$prev-url, :$next-url, :$debug, :$framework, :$index-dates,
     );
@@ -228,7 +229,7 @@ sub write-section-listing(
 sub build-listings(
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%sections,
   Bool :$clean-urls!, Bool :$debug!, Int :$page-size!, Str :$home-section!,
-  Writer :$writer!, Str :$framework!,
+  Writer :$writer!, Str :$framework!, :&data-for!,
   --> Array
 ) {
   my sub page-size-for(Str $section) {
@@ -245,7 +246,7 @@ sub build-listings(
   for %by-section.keys.grep(*.chars).sort -> $section {
     @written.append: write-section-listing(
       $section, newest-first(%by-section{$section}),
-      :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer, :$framework,
+      :$out, :$layouts, :%site, data => data-for($section), :@nav, :$clean-urls, :$debug, :$writer, :$framework,
       page-size => page-size-for($section),
       index-dates => index-dates-for($section),
     );
@@ -254,7 +255,7 @@ sub build-listings(
   if $home-section.chars && (%by-section{$home-section}:exists) {
     @written.append: write-section-listing(
       $home-section, newest-first(%by-section{$home-section}),
-      :at-root, :$out, :$layouts, :%site, :@nav, :$clean-urls, :$debug, :$writer, :$framework,
+      :at-root, :$out, :$layouts, :%site, data => data-for($home-section), :@nav, :$clean-urls, :$debug, :$writer, :$framework,
       page-size => page-size-for($home-section),
       index-dates => index-dates-for($home-section),
       templates => ['home', 'index'],
@@ -266,9 +267,11 @@ sub build-listings(
 
 sub build-tags(
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site,
-  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!,
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, :&data-for!,
   --> Array
 ) {
+  my %data = data-for('');
+
   my %tag-posts;
   for @pages -> $page {
     %tag-posts{$_}.push($page) for $page<post>.tags;
@@ -286,7 +289,7 @@ sub build-tags(
     my @entries = @sorted.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :%site, :@nav, :@entries, templates => ['tag', 'index'], :$debug, :$framework,
+      :$layouts, :%site, :%data, :@nav, :@entries, templates => ['tag', 'index'], :$debug, :$framework,
     );
 
     $writer.write($out-file, $html);
@@ -305,7 +308,7 @@ sub build-tags(
   my $index-file = $clean-urls ?? $out.add('tags.html') !! $out.add('tags').add('index.html');
 
   my $html = Blogin::Layout::render-listing(
-    :$layouts, :%site, :@nav, entries => @tag-entries, templates => ['index'], :$debug, :$framework,
+    :$layouts, :%site, :%data, :@nav, entries => @tag-entries, templates => ['index'], :$debug, :$framework,
   );
 
   $writer.write($index-file, $html);
@@ -386,6 +389,7 @@ our sub build(
   IO()  :$out!,
   IO()  :$layouts = $content.parent.add('layouts'),
   IO()  :$static  = $content.parent.add('static'),
+  IO()  :$data    = $content.parent.add('data'),
         :%site = %(),
   Bool  :$drafts = False,
   Int   :$jobs = ($*KERNEL.cpu-cores // 1),
@@ -403,6 +407,16 @@ our sub build(
   --> BuildResult
 ) {
   my @nav = Blogin::Nav::build-tree($content, :%sections, :$clean-urls);
+
+  my %data-global = Blogin::Data::load($data);
+  my %data-cache;
+  my $data-lock = Lock.new;
+
+  my sub data-for(Str $section --> Hash) {
+    $data-lock.protect({
+      %data-cache{$section} //= Blogin::Data::resolve(%data-global, $content, $section);
+    });
+  }
 
   $out.mkdir unless $out.d;
 
@@ -486,6 +500,7 @@ our sub build(
         framework => $framework,
         show-dates => $show-dates,
         templates  => @templates,
+        data       => data-for($page<section>),
         prev-url   => ($prev ?? $prev<url> !! ''),
         prev-title => ($prev ?? $prev<post>.title !! ''),
         next-url   => ($next ?? $next<url> !! ''),
@@ -499,11 +514,11 @@ our sub build(
 
   my @listings = build-listings(
     :@pages, :@nav, :$out, :$layouts, :%site, :%sections, :$clean-urls, :$debug,
-    :$page-size, :$home-section, :$writer, :$framework,
+    :$page-size, :$home-section, :$writer, :$framework, :&data-for,
   );
 
   @listings.append: build-tags(
-    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer, :$framework,
+    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer, :$framework, :&data-for,
   );
 
   if @pages.elems {
