@@ -21,6 +21,12 @@ method date-str(--> Str) {
   $!date.defined ?? $!date.Str !! '';
 }
 
+method terms(Str $taxonomy --> List) {
+  return @!tags.List if $taxonomy eq 'tags';
+
+  parse-tags(%!meta{$taxonomy} // '');
+}
+
 my @KNOWN = <title date slug tags draft description summary toc order>;
 
 my sub unquote(Str $value --> Str) {

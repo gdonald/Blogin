@@ -276,56 +276,78 @@ sub build-listings(
   @written;
 }
 
-sub build-tags(
-  :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site,
-  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, :&data-for!,
+sub build-taxonomy(
+  Str $name,
+  :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%data,
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!,
   --> Array
 ) {
-  my %data = data-for('');
-
-  my %tag-posts;
+  my %term-posts;
   for @pages -> $page {
-    %tag-posts{$_}.push($page) for $page<post>.tags;
+    %term-posts{$_}.push($page) for $page<post>.terms($name);
   }
 
   my @written;
-  return @written unless %tag-posts;
+  return @written unless %term-posts;
 
-  for %tag-posts.keys.sort -> $tag {
-    my @sorted = newest-first(%tag-posts{$tag});
+  my @term-templates  = ($name, $name.subst(/ 's' $ /, ''), 'term', 'index').unique;
+  my @index-templates = ($name, 'index').unique;
 
-    my $slug     = Blogin::Slug::slugify($tag);
-    my $out-file = $clean-urls ?? $out.add("tags/$slug.html") !! $out.add("tags/$slug").add('index.html');
-    my $url      = $clean-urls ?? "/tags/$slug" !! "/tags/$slug/";
+  for %term-posts.keys.sort -> $term {
+    my @sorted = newest-first(%term-posts{$term});
+
+    my $slug     = Blogin::Slug::slugify($term);
+    my $out-file = $clean-urls ?? $out.add("$name/$slug.html") !! $out.add("$name/$slug").add('index.html');
+    my $url      = $clean-urls ?? "/$name/$slug" !! "/$name/$slug/";
 
     my @entries = @sorted.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :$url, :%site, :%data, :@nav, :@entries, templates => ['tag', 'index'], :$debug, :$framework,
+      :$layouts, :$url, :%site, :%data, :@nav, :@entries, templates => @term-templates, :$debug, :$framework,
     );
 
     $writer.write($out-file, $html);
     @written.push($out-file);
   }
 
-  my @tag-entries = %tag-posts.keys.sort.map(-> $tag {
-    my $slug = Blogin::Slug::slugify($tag);
+  my @term-entries = %term-posts.keys.sort.map(-> $term {
+    my $slug = Blogin::Slug::slugify($term);
     %(
-      title => "$tag ({ %tag-posts{$tag}.elems })",
-      url   => ($clean-urls ?? "/tags/$slug" !! "/tags/$slug/"),
+      title => "$term ({ %term-posts{$term}.elems })",
+      url   => ($clean-urls ?? "/$name/$slug" !! "/$name/$slug/"),
       date  => '',
     )
   });
 
-  my $index-file = $clean-urls ?? $out.add('tags.html') !! $out.add('tags').add('index.html');
-  my $index-url  = $clean-urls ?? '/tags' !! '/tags/';
+  my $index-file = $clean-urls ?? $out.add("$name.html") !! $out.add($name).add('index.html');
+  my $index-url  = $clean-urls ?? "/$name" !! "/$name/";
 
   my $html = Blogin::Layout::render-listing(
-    :$layouts, url => $index-url, :%site, :%data, :@nav, entries => @tag-entries, templates => ['index'], :$debug, :$framework,
+    :$layouts, url => $index-url, :%site, :%data, :@nav, entries => @term-entries, templates => @index-templates, :$debug, :$framework,
   );
 
   $writer.write($index-file, $html);
   @written.push($index-file);
+
+  @written;
+}
+
+sub build-taxonomies(
+  @taxonomies,
+  :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site,
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, :&data-for!,
+  --> Array
+) {
+  my %data = data-for('');
+
+  my @written;
+
+  for @taxonomies -> $name {
+    @written.append: build-taxonomy(
+      $name, :@pages, :@nav, :$out, :$layouts, :%site, :%data,
+      :$clean-urls, :$debug, :$writer, :$framework,
+    );
+  }
 
   @written;
 }
@@ -425,6 +447,7 @@ our sub build(
   Int   :$page-size = 10,
   Str   :$home-section = '',
         :%sections = %(),
+        :@taxonomies = ['tags'],
   Bool  :$search = True,
   Int   :$search-text-length = 2000,
   Int   :$search-cap = 10,
@@ -560,7 +583,8 @@ our sub build(
     :$page-size, :$home-section, :$writer, :$framework, :&data-for,
   );
 
-  @listings.append: build-tags(
+  @listings.append: build-taxonomies(
+    @taxonomies.map({ $_ ~~ Str ?? $_ !! |$_ }),
     :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer, :$framework, :&data-for,
   );
 

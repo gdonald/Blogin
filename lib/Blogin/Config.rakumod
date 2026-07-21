@@ -19,6 +19,7 @@ has Int  $.search-cap         = 10;
 has Bool $.highlight          = False;
 has Int  $.summary-length     = 200;
 has Bool $.robots             = True;
+has      @.taxonomies         = ['tags'];
 has      %.sections;
 
 my sub want-str($value, Str $key) {
@@ -34,6 +35,18 @@ my sub want-int($value, Str $key) {
 my sub want-bool($value, Str $key) {
   die "config key '$key' must be a boolean" unless $value ~~ Bool;
   $value;
+}
+
+my sub want-str-list($value, Str $key) {
+  die "config key '$key' must be a list of strings" unless $value ~~ Positional;
+
+  my @strings;
+  for @($value) -> $item {
+    die "config key '$key' must be a list of strings" unless $item ~~ Str;
+    @strings.push($item);
+  }
+
+  @strings;
 }
 
 my sub validate-sections(%sections) {
@@ -70,6 +83,7 @@ method from-data(Blogin::Config:U: %data --> Blogin::Config) {
   %args<highlight>          = want-bool($_, 'highlight')          with %data<highlight>;
   %args<summary-length>     = want-int($_,  'summary-length')     with %data<summary-length>;
   %args<robots>             = want-bool($_, 'robots')             with %data<robots>;
+  %args<taxonomies>        := want-str-list($_, 'taxonomies')      with %data<taxonomies>;
   %args<sections>      = validate-sections($_)          with %data<sections>;
 
   self.new(|%args);
@@ -104,5 +118,6 @@ method build-options(--> Hash) {
     highlight          => $!highlight,
     summary-length     => $!summary-length,
     robots             => $!robots,
+    taxonomies         => @!taxonomies,
   );
 }

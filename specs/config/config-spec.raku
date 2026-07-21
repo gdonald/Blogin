@@ -67,6 +67,10 @@ describe 'config defaults', {
   it 'defaults robots to true', {
     expect(config().robots).to.be-truthy;
   }
+
+  it 'defaults the taxonomies to tags', {
+    expect(config().taxonomies.join(',')).to.eq('tags');
+  }
 }
 
 describe 'reading the metadata keys', {
@@ -76,6 +80,21 @@ describe 'reading the metadata keys', {
 
   it 'reads the robots toggle', {
     expect(Blogin::Config.from-data(%( robots => False )).robots).to.be-falsy;
+  }
+
+  it 'reads a custom taxonomy list', {
+    my @taxonomies = Blogin::Config.from-data(%( taxonomies => ['tags', 'categories'] )).taxonomies;
+    expect(@taxonomies.elems).to.eq(2);
+  }
+
+  it 'reads the second custom taxonomy name', {
+    my @taxonomies = Blogin::Config.from-data(%( taxonomies => ['tags', 'categories'] )).taxonomies;
+    expect(@taxonomies[1]).to.eq('categories');
+  }
+
+  it 'rejects a non-list taxonomies value', {
+    try Blogin::Config.from-data(%( taxonomies => 'tags' ));
+    expect($!.message.contains('taxonomies')).to.be-truthy;
   }
 
   it 'rejects a non-integer summary length', {
