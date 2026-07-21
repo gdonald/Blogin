@@ -71,6 +71,10 @@ describe 'config defaults', {
   it 'defaults the taxonomies to tags', {
     expect(config().taxonomies.join(',')).to.eq('tags');
   }
+
+  it 'defaults the feed formats to atom', {
+    expect(config().feed-formats.join(',')).to.eq('atom');
+  }
 }
 
 describe 'reading the metadata keys', {
@@ -95,6 +99,16 @@ describe 'reading the metadata keys', {
   it 'rejects a non-list taxonomies value', {
     try Blogin::Config.from-data(%( taxonomies => 'tags' ));
     expect($!.message.contains('taxonomies')).to.be-truthy;
+  }
+
+  it 'reads a custom feed-formats list', {
+    my @formats = Blogin::Config.from-data(%( feed-formats => ['atom', 'json'] )).feed-formats;
+    expect(@formats.join(',')).to.eq('atom,json');
+  }
+
+  it 'rejects an unknown feed format', {
+    try Blogin::Config.from-data(%( feed-formats => ['atom', 'pdf'] ));
+    expect($!.message.contains('feed-formats')).to.be-truthy;
   }
 
   it 'rejects a non-integer summary length', {

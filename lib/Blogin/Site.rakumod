@@ -378,8 +378,25 @@ sub robots-txt(Str $base --> Str) {
   @lines.join("\n") ~ "\n";
 }
 
+sub feed-filename(Str $format --> Str) {
+  given $format {
+    when 'rss'  { 'rss.xml' }
+    when 'json' { 'feed.json' }
+    default     { 'feed.xml' }
+  }
+}
+
+sub render-feed(Str $format, %args --> Str) {
+  given $format {
+    when 'rss'  { Blogin::Feed::rss(|%args) }
+    when 'json' { Blogin::Feed::json-feed(|%args) }
+    default     { Blogin::Feed::atom(|%args) }
+  }
+}
+
 sub build-feeds(
-  :@pages, :@page-files, IO::Path:D :$out!, :%site, Bool :$clean-urls!, Bool :$robots!, Writer :$writer!,
+  :@pages, :@page-files, IO::Path:D :$out!, :%site, Bool :$clean-urls!, Bool :$robots!,
+  :@feed-formats!, Writer :$writer!,
   --> Array
 ) {
   my @written;
@@ -389,33 +406,37 @@ sub build-feeds(
 
   my @all = newest-first(@pages);
 
-  my $site-feed = Blogin::Feed::atom(
-    :$title,
-    site-url => "$base/",
-    feed-url => "$base/feed.xml",
-    updated  => newest-date(@all),
-    entries  => @all.map({ entry-of($_, :$base) }),
-  );
-
-  $writer.write($out.add('feed.xml'), $site-feed);
-  @written.push($out.add('feed.xml'));
-
   my %by-section = by-section(@pages);
 
-  for %by-section.keys.grep(*.chars).sort -> $section {
-    my @sorted = newest-first(%by-section{$section});
+  for @feed-formats -> $format {
+    my $file = feed-filename($format);
 
-    my $feed = Blogin::Feed::atom(
-      title    => "$title: $section",
-      site-url => "$base/$section",
-      feed-url => "$base/$section/feed.xml",
-      updated  => newest-date(@sorted),
-      entries  => @sorted.map({ entry-of($_, :$base) }),
-    );
+    my $site-feed = render-feed($format, %(
+      :$title,
+      site-url => "$base/",
+      feed-url => "$base/$file",
+      updated  => newest-date(@all),
+      entries  => @all.map({ entry-of($_, :$base) }),
+    ));
 
-    my $file = $out.add($section).add('feed.xml');
-    $writer.write($file, $feed);
-    @written.push($file);
+    $writer.write($out.add($file), $site-feed);
+    @written.push($out.add($file));
+
+    for %by-section.keys.grep(*.chars).sort -> $section {
+      my @sorted = newest-first(%by-section{$section});
+
+      my $feed = render-feed($format, %(
+        title    => "$title: $section",
+        site-url => "$base/$section",
+        feed-url => "$base/$section/$file",
+        updated  => newest-date(@sorted),
+        entries  => @sorted.map({ entry-of($_, :$base) }),
+      ));
+
+      my $section-file = $out.add($section).add($file);
+      $writer.write($section-file, $feed);
+      @written.push($section-file);
+    }
   }
 
   my @locs = @page-files.map({ $base ~ file-to-url($_, $out, $clean-urls) }).sort;
@@ -448,6 +469,7 @@ our sub build(
   Str   :$home-section = '',
         :%sections = %(),
         :@taxonomies = ['tags'],
+        :@feed-formats = ['atom'],
   Bool  :$search = True,
   Int   :$search-text-length = 2000,
   Int   :$search-cap = 10,
@@ -593,6 +615,7 @@ our sub build(
 
     @listings.append: build-feeds(
       :@pages, :@page-files, :$out, :%site, :$clean-urls, :$robots, :$writer,
+      feed-formats => @feed-formats.map({ $_ ~~ Str ?? $_ !! |$_ }),
     );
 
     if $search {

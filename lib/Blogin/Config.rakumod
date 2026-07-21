@@ -20,6 +20,7 @@ has Bool $.highlight          = False;
 has Int  $.summary-length     = 200;
 has Bool $.robots             = True;
 has      @.taxonomies         = ['tags'];
+has      @.feed-formats       = ['atom'];
 has      %.sections;
 
 my sub want-str($value, Str $key) {
@@ -47,6 +48,17 @@ my sub want-str-list($value, Str $key) {
   }
 
   @strings;
+}
+
+my sub want-feed-formats($value) {
+  my @formats = want-str-list($value, 'feed-formats');
+
+  for @formats -> $format {
+    die "config key 'feed-formats' has an unknown format '$format' (use atom, rss, or json)"
+      unless $format eq any(<atom rss json>);
+  }
+
+  @formats;
 }
 
 my sub validate-sections(%sections) {
@@ -84,6 +96,7 @@ method from-data(Blogin::Config:U: %data --> Blogin::Config) {
   %args<summary-length>     = want-int($_,  'summary-length')     with %data<summary-length>;
   %args<robots>             = want-bool($_, 'robots')             with %data<robots>;
   %args<taxonomies>        := want-str-list($_, 'taxonomies')      with %data<taxonomies>;
+  %args<feed-formats>      := want-feed-formats($_)                with %data<feed-formats>;
   %args<sections>      = validate-sections($_)          with %data<sections>;
 
   self.new(|%args);
@@ -119,5 +132,6 @@ method build-options(--> Hash) {
     summary-length     => $!summary-length,
     robots             => $!robots,
     taxonomies         => @!taxonomies,
+    feed-formats       => @!feed-formats,
   );
 }
