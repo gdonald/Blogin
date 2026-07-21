@@ -86,6 +86,16 @@ sub show-haml(--> Str) {
   HAML
 }
 
+sub not-found-haml(--> Str) {
+  q:to/HAML/;
+  %section.not-found
+    %h1 404
+    %p The page you are looking for was not found.
+    %p
+      %a{href: '/'} Home
+  HAML
+}
+
 sub index-haml(--> Str) {
   q:to/HAML/;
   %section.listing
@@ -299,6 +309,7 @@ sub scaffold-files(Str $framework, Str $date) {
     'layouts/base.haml'                    => base-haml(),
     'layouts/show.haml'                    => show-haml(),
     'layouts/index.haml'                   => index-haml(),
+    'layouts/404.haml'                     => not-found-haml(),
     'layouts/_entry.haml'                  => entry-haml(),
     'layouts/_header.haml'                 => header-haml(),
     'layouts/_nav.haml'                    => nav-haml(),

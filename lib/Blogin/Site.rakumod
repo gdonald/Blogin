@@ -459,6 +459,56 @@ sub newest-date(@sorted) {
   @sorted ?? @sorted[0]<post>.date-str !! '';
 }
 
+sub attr-esc(Str $text --> Str) {
+  $text.trans([ '&', '<', '>', '"' ] => [ '&amp;', '&lt;', '&gt;', '&quot;' ]);
+}
+
+sub url-to-file(IO::Path:D $out, Str $url, Bool $clean-urls --> IO::Path) {
+  my $rel = $url;
+  $rel ~~ s/ ^ '/' //;
+  $rel ~~ s/ '/' $ //;
+
+  return $out.add('index.html') unless $rel.chars;
+
+  $clean-urls ?? $out.add("$rel.html") !! $out.add($rel).add('index.html');
+}
+
+sub redirect-html(Str $canonical --> Str) {
+  my $target = attr-esc($canonical);
+
+  qq:to/HTML/;
+  <!doctype html>
+  <html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="0; url=$target">
+  <link rel="canonical" href="$target">
+  <title>Redirecting</title>
+  </head>
+  <body>
+  <p>Redirecting to <a href="$target">{ $target }</a>.</p>
+  </body>
+  </html>
+  HTML
+}
+
+sub default-not-found-html(--> Str) {
+  q:to/HTML/;
+  <!doctype html>
+  <html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <title>404 Not Found</title>
+  </head>
+  <body>
+  <h1>404</h1>
+  <p>The page you are looking for was not found.</p>
+  <p><a href="/">Home</a></p>
+  </body>
+  </html>
+  HTML
+}
+
 sub robots-txt(Str $base --> Str) {
   my @lines = 'User-agent: *', 'Allow: /';
 
@@ -761,6 +811,30 @@ our sub build(
     my $style-file = $out.add('blogin.css');
     $writer.write($style-file, Blogin::Style::content-css());
     @listings.push: $style-file;
+
+    my $not-found  = $out.add('404.html');
+    my $has-layout = $layouts.add('404.haml').e || $layouts.add('404.html.haml').e;
+
+    my $not-found-html = $has-layout
+      ?? Blogin::Layout::render-listing(
+           :$layouts, section => '', url => '/404', :%site, data => data-for(''), :@nav,
+           entries => [], templates => ['404'], :$debug, :$framework,
+         )
+      !! default-not-found-html();
+
+    $writer.write($not-found, $not-found-html);
+    @listings.push: $not-found;
+
+    for @pages -> $page {
+      for $page<post>.aliases -> $alias {
+        my $file = url-to-file($out, $alias, $clean-urls);
+
+        next if %seen{$file.absolute}:exists;
+
+        $writer.write($file, redirect-html($page<url>));
+        @listings.push: $file;
+      }
+    }
   }
 
   copy-static($static, $out, $writer) if $static.d;
