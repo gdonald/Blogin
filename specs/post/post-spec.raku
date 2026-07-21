@@ -119,6 +119,16 @@ describe 'front matter values', {
     my $post = Blogin::Post.parse("---\ntitle: T\n---\nx\n", filename => 'f.md');
     expect($post.summary).to.eq('');
   }
+
+  it 'reads the toc flag', {
+    my $post = Blogin::Post.parse("---\ntitle: T\ntoc: true\n---\nx\n", filename => 'f.md');
+    expect($post.toc).to.be-truthy;
+  }
+
+  it 'defaults toc to false', {
+    my $post = Blogin::Post.parse("---\ntitle: T\n---\nx\n", filename => 'f.md');
+    expect($post.toc).to.be-falsy;
+  }
 }
 
 describe 'the error path', {

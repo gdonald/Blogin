@@ -16,6 +16,7 @@ sub attr-escape(Str $text --> Str) {
 class Blogin::Markdown::Html::Result {
   has Str $.html;
   has Str $.text;
+  has     @.headings;
 }
 
 class Blogin::Markdown::Html {
@@ -23,14 +24,16 @@ class Blogin::Markdown::Html {
   has Bool $.highlight = False;
   has Str $!html = '';
   has Str $!text = '';
+  has     @!headings;
 
   method render(Document $doc --> Blogin::Markdown::Html::Result) {
     $!html = '';
     $!text = '';
+    @!headings = ();
 
     self!blocks($doc.children);
 
-    Blogin::Markdown::Html::Result.new(html => $!html, text => $!text.trim);
+    Blogin::Markdown::Html::Result.new(html => $!html, text => $!text.trim, headings => @!headings);
   }
 
   method !class-attr(Str $class --> Str) {
@@ -89,8 +92,11 @@ class Blogin::Markdown::Html {
       }
 
       when Heading {
-        my $slug  = Blogin::Slug::slugify(self!node-text($node.children));
+        my $text  = self!node-text($node.children);
+        my $slug  = Blogin::Slug::slugify($text);
         my $class = $.framework.class-for('heading');
+
+        @!headings.push(%( level => $node.level, text => $text, id => $slug ));
 
         $!html ~= "<h{ $node.level } id=\"{ attr-escape($slug) }\"{ self!class-attr($class) }>";
         self!inline($node.children);

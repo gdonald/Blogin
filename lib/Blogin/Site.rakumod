@@ -505,7 +505,8 @@ our sub build(
       highlight => $highlight,
     );
 
-    $page<text> = $parts<text>;
+    $page<text>     = $parts<text>;
+    $page<headings> = $parts<headings>;
 
     my $body    = $page<post>.body;
     my $excerpt = $body.contains(Blogin::Summary::MORE)
@@ -542,6 +543,7 @@ our sub build(
         templates  => @templates,
         data       => data-for($page<section>),
         summary    => $page<summary>,
+        headings   => $page<headings>,
         prev-url   => ($prev ?? $prev<url> !! ''),
         prev-title => ($prev ?? $prev<post>.title !! ''),
         next-url   => ($next ?? $next<url> !! ''),

@@ -31,6 +31,30 @@ describe 'a heading', {
   }
 }
 
+describe 'collected headings', {
+  sub headings-of(Str $markdown) {
+    my $doc = Blogin::Markdown::parse($markdown);
+    Blogin::Markdown::Html.new.render($doc).headings;
+  }
+
+  it 'records each heading with its level, text, and slug id', {
+    my @headings = headings-of("# One\n\n## Two\n");
+    expect(@headings.elems).to.eq(2);
+  }
+
+  it 'captures a heading level', {
+    expect(headings-of("## Two\n")[0]<level>).to.eq(2);
+  }
+
+  it 'captures a heading slug id', {
+    expect(headings-of("## The Title\n")[0]<id>).to.eq('the-title');
+  }
+
+  it 'captures the heading text', {
+    expect(headings-of("## The Title\n")[0]<text>).to.eq('The Title');
+  }
+}
+
 describe 'inline marks', {
   it 'renders emphasis', {
     expect(html-of("*hi*\n").contains('<em>hi</em>')).to.be-truthy;

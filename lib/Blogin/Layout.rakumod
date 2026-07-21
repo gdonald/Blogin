@@ -7,6 +7,7 @@ use Blogin::Markdown::Html;
 use Blogin::Framework;
 use Blogin::Nav;
 use Blogin::Slug;
+use Blogin::Toc;
 
 unit module Blogin::Layout;
 
@@ -129,6 +130,7 @@ class View is ChromeView is export {
   has      $.post;
   has Str  $.body-html = '';
   has Str  $.summary = '';
+  has      @.headings;
   has Bool $.show-dates = True;
   has Str  $.prev-url = '';
   has Str  $.prev-title = '';
@@ -143,6 +145,10 @@ class View is ChromeView is export {
   method meta-title(--> Str)       { $!post.title }
   method meta-type(--> Str)        { 'article' }
   method meta-description(--> Str) { $!post.description.chars ?? $!post.description !! $!summary }
+
+  method has-toc(--> Bool) { $!post.toc.so }
+  method toc               { Blogin::Toc::build(@!headings) }
+  method toc-html(--> Str) { Blogin::Toc::render(self.toc) }
 
   method post-nav-html {
     return '' unless $!prev-url.chars || $!next-url.chars;
@@ -242,7 +248,7 @@ our sub render-parts(:$post!, Str :$framework = 'none', Bool :$highlight = False
   );
   my $result = $renderer.render($document);
 
-  %( html => $result.html, text => $result.text );
+  %( html => $result.html, text => $result.text, headings => $result.headings );
 }
 
 # Stripped plain text of a Markdown fragment, for excerpts and summaries.
@@ -272,6 +278,7 @@ our sub render-with-layout(
   Str   :$framework = 'none',
   Bool  :$show-dates = True,
   Str   :$summary = '',
+        :@headings = [],
   Str   :$prev-url = '',
   Str   :$prev-title = '',
   Str   :$next-url = '',
@@ -298,6 +305,7 @@ our sub render-with-layout(
     :@nav,
     :$body-html,
     :$summary,
+    :@headings,
     :$debug,
     :$show-dates,
     :$prev-url,

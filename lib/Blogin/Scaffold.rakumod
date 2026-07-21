@@ -73,6 +73,9 @@ sub show-haml(--> Str) {
     %h1= title
     - if show-dates
       %p.meta= date
+    - if has-toc
+      %nav.toc
+        != toc-html
     != body
   != post-nav-html
   HAML

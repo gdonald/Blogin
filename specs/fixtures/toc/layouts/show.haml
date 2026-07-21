@@ -1,0 +1,6 @@
+%article
+  %h1= title
+  - if has-toc
+    %nav.toc
+      != toc-html
+  != body
