@@ -19,6 +19,9 @@ has Int  $.search-cap         = 10;
 has Bool $.highlight          = False;
 has Int  $.summary-length     = 200;
 has Bool $.robots             = True;
+has Bool $.minify             = False;
+has Bool $.fingerprint        = False;
+has      @.image-widths       = [];
 has      @.taxonomies         = ['tags'];
 has      @.feed-formats       = ['atom'];
 has      %.sections;
@@ -48,6 +51,18 @@ my sub want-str-list($value, Str $key) {
   }
 
   @strings;
+}
+
+my sub want-int-list($value, Str $key) {
+  die "config key '$key' must be a list of integers" unless $value ~~ Positional;
+
+  my @ints;
+  for @($value) -> $item {
+    die "config key '$key' must be a list of integers" unless $item ~~ Int;
+    @ints.push($item);
+  }
+
+  @ints;
 }
 
 my sub want-feed-formats($value) {
@@ -95,6 +110,9 @@ method from-data(Blogin::Config:U: %data --> Blogin::Config) {
   %args<highlight>          = want-bool($_, 'highlight')          with %data<highlight>;
   %args<summary-length>     = want-int($_,  'summary-length')     with %data<summary-length>;
   %args<robots>             = want-bool($_, 'robots')             with %data<robots>;
+  %args<minify>             = want-bool($_, 'minify')             with %data<minify>;
+  %args<fingerprint>        = want-bool($_, 'fingerprint')        with %data<fingerprint>;
+  %args<image-widths>      := want-int-list($_, 'image-widths')    with %data<image-widths>;
   %args<taxonomies>        := want-str-list($_, 'taxonomies')      with %data<taxonomies>;
   %args<feed-formats>      := want-feed-formats($_)                with %data<feed-formats>;
   %args<sections>      = validate-sections($_)          with %data<sections>;
@@ -131,6 +149,9 @@ method build-options(--> Hash) {
     highlight          => $!highlight,
     summary-length     => $!summary-length,
     robots             => $!robots,
+    minify             => $!minify,
+    fingerprint        => $!fingerprint,
+    image-widths       => @!image-widths,
     taxonomies         => @!taxonomies,
     feed-formats       => @!feed-formats,
   );

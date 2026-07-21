@@ -75,6 +75,18 @@ describe 'config defaults', {
   it 'defaults the feed formats to atom', {
     expect(config().feed-formats.join(',')).to.eq('atom');
   }
+
+  it 'defaults minify off', {
+    expect(config().minify).to.be-falsy;
+  }
+
+  it 'defaults fingerprint off', {
+    expect(config().fingerprint).to.be-falsy;
+  }
+
+  it 'defaults image widths to empty', {
+    expect(config().image-widths.elems).to.eq(0);
+  }
 }
 
 describe 'reading the metadata keys', {
@@ -109,6 +121,16 @@ describe 'reading the metadata keys', {
   it 'rejects an unknown feed format', {
     try Blogin::Config.from-data(%( feed-formats => ['atom', 'pdf'] ));
     expect($!.message.contains('feed-formats')).to.be-truthy;
+  }
+
+  it 'reads a custom image-widths list', {
+    my @widths = Blogin::Config.from-data(%( image-widths => [320, 640] )).image-widths;
+    expect(@widths.elems).to.eq(2);
+  }
+
+  it 'rejects a non-integer image width', {
+    try Blogin::Config.from-data(%( image-widths => [320, 'big'] ));
+    expect($!.message.contains('image-widths')).to.be-truthy;
   }
 
   it 'rejects a non-integer summary length', {

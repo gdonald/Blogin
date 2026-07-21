@@ -9,6 +9,7 @@ use Blogin::Search;
 use Blogin::Style;
 use Blogin::Data;
 use Blogin::Summary;
+use Blogin::Assets;
 
 unit module Blogin::Site;
 
@@ -113,6 +114,93 @@ class Writer {
     }
 
     prune-empty-dirs($out);
+  }
+}
+
+# Resize each raster image in the output to the configured widths and add a
+# srcset to every reference. Runs before fingerprinting so the variants are
+# fingerprinted and their srcset URLs rewritten too.
+sub build-responsive-images(IO::Path:D $out, @widths) {
+  return unless @widths;
+
+  my $tool = Blogin::Assets::resizer();
+
+  unless $tool.chars {
+    note 'blogin: responsive images requested but no image resizer (ImageMagick or sips) found; skipping';
+    return;
+  }
+
+  my @images = all-files($out).grep({ Blogin::Assets::is-raster($_) }).List;
+  my %srcsets;
+
+  for @images -> $image {
+    my $source-width = Blogin::Assets::image-width($image, $tool);
+
+    next unless $source-width > 0;
+
+    my @variants;
+    for @widths.grep(* < $source-width).sort -> $width {
+      my $variant = $image.parent.add(Blogin::Assets::variant-name($image.basename, $width));
+
+      next unless Blogin::Assets::resize($image, $variant, $width, $tool);
+
+      @variants.push(%( width => $width, url => '/' ~ $variant.relative($out) ));
+    }
+
+    next unless @variants;
+
+    my $url = '/' ~ $image.relative($out);
+    %srcsets{$url} = Blogin::Assets::srcset-value($url, $source-width, @variants);
+  }
+
+  return unless %srcsets;
+
+  for all-files($out).grep({ so .extension.lc eq 'html' }) -> $file {
+    my $text    = $file.slurp;
+    my $rewrite = Blogin::Assets::add-srcset($text, %srcsets);
+
+    $file.spurt($rewrite) if $rewrite ne $text;
+  }
+}
+
+# Minify and fingerprint emitted and copied assets after the writer has settled
+# the output. Runs on canonical filenames, so prune has already removed any
+# fingerprinted files from a previous build.
+sub optimize-assets(IO::Path:D $out, Bool :$minify!, Bool :$fingerprint!) {
+  return unless $minify || $fingerprint;
+
+  if $minify {
+    for all-files($out).grep({ so .extension.lc eq any(<css js>) }) -> $file {
+      my $original = $file.slurp;
+      my $minified = $file.extension.lc eq 'css'
+        ?? Blogin::Assets::minify-css($original)
+        !! Blogin::Assets::minify-js($original);
+
+      $file.spurt($minified) if $minified ne $original;
+    }
+  }
+
+  if $fingerprint {
+    my %manifest;
+
+    for all-files($out).grep({ Blogin::Assets::is-fingerprintable($_) }) -> $file {
+      my $hash     = Blogin::Assets::content-hash($file.slurp(:bin));
+      my $new-name = Blogin::Assets::fingerprint-name($file.basename, $hash);
+
+      next if $file.basename eq $new-name;
+
+      my $new-file = $file.parent.add($new-name);
+
+      %manifest{ '/' ~ $file.relative($out) } = '/' ~ $new-file.relative($out);
+      $file.rename($new-file);
+    }
+
+    for all-files($out).grep({ so .extension.lc eq any(<html css>) }) -> $file {
+      my $text    = $file.slurp;
+      my $rewrite = Blogin::Assets::rewrite-refs($text, %manifest);
+
+      $file.spurt($rewrite) if $rewrite ne $text;
+    }
   }
 }
 
@@ -476,6 +564,9 @@ our sub build(
   Bool  :$highlight = False,
   Int   :$summary-length = 200,
   Bool  :$robots = True,
+  Bool  :$minify = False,
+  Bool  :$fingerprint = False,
+        :@image-widths = [],
   Bool  :$force = False,
   --> BuildResult
 ) {
@@ -640,6 +731,9 @@ our sub build(
   copy-static($static, $out, $writer) if $static.d;
 
   $writer.prune($out);
+
+  build-responsive-images($out, @image-widths.map({ $_ ~~ Int ?? $_ !! |$_ }));
+  optimize-assets($out, :$minify, :$fingerprint);
 
   BuildResult.new(
     written   => @written,
