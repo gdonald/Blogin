@@ -88,6 +88,37 @@ sub is-block-start(Str $line --> Bool) {
   False;
 }
 
+sub is-definition(Str $line --> Bool) {
+  so $line ~~ /^ \h* ':' \h+ \S/;
+}
+
+sub parse-definition-list(@lines, Int $index is rw --> DefinitionList) {
+  my @items;
+
+  while $index < @lines.elems {
+    my $line = @lines[$index];
+
+    last if is-blank($line);
+    last if is-definition($line) || is-block-start($line);
+    last unless $index + 1 < @lines.elems && is-definition(@lines[$index + 1]);
+
+    my @term = parse-inline($line);
+    $index++;
+
+    my @definitions;
+
+    while $index < @lines.elems && is-definition(@lines[$index]) {
+      my $body = @lines[$index].subst(/^ \h* ':' \h+ /, '');
+      @definitions.push(parse-inline($body).Array);
+      $index++;
+    }
+
+    @items.push(DefinitionItem.new(:@term, :@definitions));
+  }
+
+  DefinitionList.new(:@items);
+}
+
 sub parse-list(@lines, Int $index is rw --> List) {
   my $base    = marker-of(@lines[$index]);
   my $ordered = $base<ordered>;
@@ -228,6 +259,12 @@ sub parse-blocks(@lines --> Array) {
       }
 
       @blocks.push(Table.new(:@aligns, :@header, :@rows));
+      next;
+    }
+
+    if !is-definition($line) && !marker-of($line)
+       && $index + 1 < @lines.elems && is-definition(@lines[$index + 1]) {
+      @blocks.push(parse-definition-list(@lines, $index));
       next;
     }
 

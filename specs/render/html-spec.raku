@@ -150,3 +150,32 @@ describe 'css-framework classes', {
     expect(html-of("![c](c.png)\n", framework => 'bootstrap5').contains('class="img-fluid"')).to.be-truthy;
   }
 }
+
+describe 'a definition list', {
+  let(:html, { html-of("Term\n: A definition\n") });
+
+  it 'wraps the block in a dl', {
+    expect(html().contains('<dl>')).to.be-truthy;
+  }
+
+  it 'renders the term as a dt', {
+    expect(html().contains('<dt>Term</dt>')).to.be-truthy;
+  }
+
+  it 'renders the definition as a dd', {
+    expect(html().contains('<dd>A definition</dd>')).to.be-truthy;
+  }
+
+  it 'emits no bullet list markup', {
+    expect(html().contains('<ul>') || html().contains('<li>')).to.be-falsy;
+  }
+
+  it 'supports several definitions for one term', {
+    my $out = html-of("Term\n: First\n: Second\n");
+    expect($out.contains('<dd>First</dd>') && $out.contains('<dd>Second</dd>')).to.be-truthy;
+  }
+
+  it 'renders inline markup inside a definition', {
+    expect(html-of("Term\n: has **bold** text\n").contains('<strong>bold</strong>')).to.be-truthy;
+  }
+}

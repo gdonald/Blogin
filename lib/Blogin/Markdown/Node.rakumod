@@ -47,6 +47,15 @@ class Table does Node is export {
   has @.rows;
 }
 
+class DefinitionItem does Node is export {
+  has @.term;
+  has @.definitions;
+}
+
+class DefinitionList does Node is export {
+  has @.items;
+}
+
 class Text does Node is export {
   has Str $.text;
 }

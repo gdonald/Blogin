@@ -5,24 +5,26 @@ unit module Blogin::Framework;
 my %PROFILES =
   none => %(),
   bootstrap5 => %(
-    table      => 'table',
-    blockquote => 'blockquote',
-    image      => 'img-fluid',
-    pagination => 'pagination',
-    nav        => 'nav',
-    container  => 'container',
+    table           => 'table',
+    blockquote      => 'blockquote',
+    image           => 'img-fluid',
+    pagination      => 'pagination',
+    nav             => 'nav',
+    container       => 'container',
+    post-nav-button => 'btn btn-primary',
   ),
   pico => %(
     container => 'container',
   ),
   bulma => %(
-    table       => 'table',
-    image       => 'image',
-    article     => 'content',
-    pagination  => 'pagination',
-    nav         => 'navbar',
-    tag         => 'tag',
-    container   => 'container',
+    table           => 'table',
+    image           => 'image',
+    article         => 'content',
+    pagination      => 'pagination',
+    nav             => 'navbar',
+    tag             => 'tag',
+    container       => 'container',
+    post-nav-button => 'button',
   );
 
 my %STYLESHEETS =

@@ -405,6 +405,18 @@ our sub build(
     ));
   }
 
+  my %prev-of;
+  my %next-of;
+
+  for by-section(@pages).values -> @section-pages {
+    my @sorted = newest-first(@section-pages);
+
+    for @sorted.kv -> $index, $page {
+      %prev-of{$page<url>} = @sorted[$index - 1] if $index > 0;
+      %next-of{$page<url>} = @sorted[$index + 1] if $index < @sorted.end;
+    }
+  }
+
   my @ordered = @pages.sort({ -.<post>.body.chars });
 
   my $haml-lock = Lock.new;
@@ -420,6 +432,9 @@ our sub build(
 
     my $show-dates = (%sections{$page<section>}<show-dates> // True).Bool;
 
+    my $prev = %prev-of{$page<url>};
+    my $next = %next-of{$page<url>};
+
     my $html = $haml-lock.protect({
       Blogin::Layout::render-with-layout(
         post      => $page<post>,
@@ -432,6 +447,10 @@ our sub build(
         debug     => $debug,
         framework => $framework,
         show-dates => $show-dates,
+        prev-url   => ($prev ?? $prev<url> !! ''),
+        prev-title => ($prev ?? $prev<post>.title !! ''),
+        next-url   => ($next ?? $next<url> !! ''),
+        next-title => ($next ?? $next<post>.title !! ''),
       );
     });
 

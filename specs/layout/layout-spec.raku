@@ -3,6 +3,7 @@ use BDD::Behave;
 use Blogin::Post;
 use Blogin::Layout;
 use Blogin::Nav;
+use Blogin::Framework;
 
 my $LAYOUTS = 'specs/fixtures/layouts'.IO;
 
@@ -53,6 +54,45 @@ describe 'chrome partials', {
 
   it 'omits an absent sidebar without erroring', {
     expect(html().contains('<aside>')).to.be-falsy;
+  }
+}
+
+describe 'adjacent post links on a post view', {
+  it 'renders both neighbor links when present', {
+    my $view = Blogin::Layout::View.new(
+      prev-url => '/posts/newer', prev-title => 'Newer',
+      next-url => '/posts/older', next-title => 'Older',
+    );
+    expect($view.post-nav-html.contains('/posts/newer') && $view.post-nav-html.contains('/posts/older')).to.be-truthy;
+  }
+
+  it 'renders nothing when a post has no neighbors', {
+    expect(Blogin::Layout::View.new.post-nav-html).to.eq('');
+  }
+
+  it 'escapes a neighbor title', {
+    my $view = Blogin::Layout::View.new(next-url => '/x', next-title => 'A & B');
+    expect($view.post-nav-html.contains('A &amp; B')).to.be-truthy;
+  }
+
+  it 'styles the links as buttons by default', {
+    my $view = Blogin::Layout::View.new(next-url => '/x', next-title => 'Next');
+    expect($view.post-nav-html.contains('blogin-btn')).to.be-truthy;
+  }
+
+  it 'uses the framework button class under bootstrap5', {
+    my $view = Blogin::Layout::View.new(
+      framework => Blogin::Framework::profile('bootstrap5'),
+      next-url => '/x', next-title => 'Next',
+    );
+    expect($view.post-nav-html.contains('btn btn-primary')).to.be-truthy;
+  }
+
+  it 'gives the links directional arrows', {
+    my $view = Blogin::Layout::View.new(
+      prev-url => '/p', prev-title => 'P', next-url => '/n', next-title => 'N',
+    );
+    expect($view.post-nav-html.contains('&larr;') && $view.post-nav-html.contains('&rarr;')).to.be-truthy;
   }
 }
 

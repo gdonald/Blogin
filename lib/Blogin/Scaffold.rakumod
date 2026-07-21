@@ -73,6 +73,7 @@ sub show-haml(--> Str) {
     - if show-dates
       %p.meta= date
     != body
+  != post-nav-html
   HAML
 }
 

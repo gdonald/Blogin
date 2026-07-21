@@ -68,6 +68,11 @@ describe 'building the basic fixture site', {
     expect(out().add('blogin.css').slurp.contains('.anchor')).to.be-truthy;
   }
 
+  it 'contains the definition list styling in the content stylesheet', {
+    build-basic(out());
+    expect(out().add('blogin.css').slurp.contains('dl {')).to.be-truthy;
+  }
+
   it 'reports the rendered non-draft pages', {
     my $result = build-basic(out());
     expect($result.written.elems).to.eq(3);

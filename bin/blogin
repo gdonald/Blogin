@@ -9,18 +9,14 @@ use Blogin::Scaffold;
 
 my %*SUB-MAIN-OPTS = :named-anywhere;
 
-sub make-log(Bool :$verbose, Bool :$quiet --> Blogin::Log) {
-  my $level = do {
-    if    $verbose { 'verbose' }
-    elsif $quiet   { 'quiet' }
-    else           { 'normal' }
-  };
+sub make-log(Bool :$verbose --> Blogin::Log) {
+  my $level = $verbose ?? 'verbose' !! 'normal';
 
   Blogin::Log.new(:$level);
 }
 
-sub not-implemented(Str $name, Bool :$verbose, Bool :$quiet) {
-  my $log = make-log(:$verbose, :$quiet);
+sub not-implemented(Str $name, Bool :$verbose) {
+  my $log = make-log(:$verbose);
 
   $log.error("$name is not implemented yet");
 
@@ -36,9 +32,8 @@ multi sub MAIN(
   Bool :$debug,
   Bool :$force = False,
   Bool :$verbose = False,
-  Bool :$quiet = False,
 ) {
-  my $log    = make-log(:$verbose, :$quiet);
+  my $log    = make-log(:$verbose);
   my $config = Blogin::Config.load($src.IO.parent.add('blogin.json'));
 
   my %overrides;
@@ -64,9 +59,8 @@ multi sub MAIN(
   Str  :$framework = 'none',
   Bool :$force = False,
   Bool :$verbose = False,
-  Bool :$quiet = False,
 ) {
-  my $log = make-log(:$verbose, :$quiet);
+  my $log = make-log(:$verbose);
 
   Blogin::Scaffold::init($dir.IO, :$framework, :$force);
 
@@ -79,9 +73,8 @@ multi sub MAIN(
   Str  :$src = 'content',
   Str  :$section,
   Bool :$verbose = False,
-  Bool :$quiet = False,
 ) {
-  my $log     = make-log(:$verbose, :$quiet);
+  my $log     = make-log(:$verbose);
   my $config  = Blogin::Config.load($src.IO.parent.add('blogin.json'));
   my $in      = $section // $config.home-section;
 
@@ -95,11 +88,10 @@ multi sub MAIN(
   Str  :$src = 'content',
   Int  :$port = 3000,
   Bool :$verbose = False,
-  Bool :$quiet = False,
 ) {
   require Blogin::Server <&serve>;
 
-  my $log    = make-log(:$verbose, :$quiet);
+  my $log    = make-log(:$verbose);
   my $config = Blogin::Config.load($src.IO.parent.add('blogin.json'));
 
   serve(
@@ -115,7 +107,6 @@ multi sub MAIN(
   'clean',
   Str  :$out = 'public',
   Bool :$verbose = False,
-  Bool :$quiet = False,
 ) {
-  not-implemented('clean', :$verbose, :$quiet);
+  not-implemented('clean', :$verbose);
 }

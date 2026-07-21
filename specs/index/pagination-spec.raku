@@ -69,6 +69,33 @@ describe 'per-section paginated listings', {
   }
 }
 
+describe 'adjacent post navigation within a section', {
+  let(:out, { temp-dir('post-nav') });
+
+  before-each { build-paginated(out()) }
+  after-each  { nuke(out()) }
+
+  it 'links a middle post to the newer neighbor', {
+    expect(out().add('posts/bravo.html').slurp.contains("href=\"/posts/alpha\"")).to.be-truthy;
+  }
+
+  it 'links a middle post to the older neighbor', {
+    expect(out().add('posts/bravo.html').slurp.contains("href=\"/posts/charlie\"")).to.be-truthy;
+  }
+
+  it 'omits the newer link on the newest post', {
+    expect(out().add('posts/alpha.html').slurp.contains('class="prev"')).to.be-falsy;
+  }
+
+  it 'omits the older link on the oldest post', {
+    expect(out().add('posts/charlie.html').slurp.contains('class="next"')).to.be-falsy;
+  }
+
+  it 'shows no navigation for a section with a single post', {
+    expect(out().add('essays/first-essay.html').slurp.contains('post-nav')).to.be-falsy;
+  }
+}
+
 describe 'the home section at the site root', {
   let(:out, { temp-dir('home') });
 

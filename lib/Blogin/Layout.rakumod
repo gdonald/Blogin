@@ -93,11 +93,29 @@ class View is ChromeView is export {
   has      $.post;
   has Str  $.body-html = '';
   has Bool $.show-dates = True;
+  has Str  $.prev-url = '';
+  has Str  $.prev-title = '';
+  has Str  $.next-url = '';
+  has Str  $.next-title = '';
 
   method title       { $!post.title }
   method date        { $!post.date-str }
   method description  { $!post.description }
   method show-dates  { $!show-dates }
+
+  method post-nav-html {
+    return '' unless $!prev-url.chars || $!next-url.chars;
+
+    my $button = self.framework-class('post-nav-button') || 'blogin-btn';
+
+    my $out = '<nav class="post-nav">';
+    $out ~= '<a class="prev ' ~ $button ~ '" href="' ~ attr-escape($!prev-url) ~ '">'
+      ~ '<span aria-hidden="true">&larr;</span> ' ~ attr-escape($!prev-title) ~ '</a>' if $!prev-url.chars;
+    $out ~= '<a class="next ' ~ $button ~ '" href="' ~ attr-escape($!next-url) ~ '">'
+      ~ attr-escape($!next-title) ~ ' <span aria-hidden="true">&rarr;</span></a>' if $!next-url.chars;
+    $out ~= '</nav>';
+    $out;
+  }
 
   method body {
     return $!body-html unless self.debug;
@@ -198,6 +216,10 @@ our sub render-with-layout(
   Bool  :$debug = False,
   Str   :$framework = 'none',
   Bool  :$show-dates = True,
+  Str   :$prev-url = '',
+  Str   :$prev-title = '',
+  Str   :$next-url = '',
+  Str   :$next-title = '',
   --> Str
 ) is export {
   my @paths = layout-search-paths($layouts, $section);
@@ -217,6 +239,10 @@ our sub render-with-layout(
     :$body-html,
     :$debug,
     :$show-dates,
+    :$prev-url,
+    :$prev-title,
+    :$next-url,
+    :$next-title,
     framework => Blogin::Framework::profile($framework),
     has-header  => partial-exists(@paths, 'header'),
     has-sidebar => partial-exists(@paths, 'sidebar'),
@@ -238,11 +264,18 @@ our sub render-post(
   Str   :$framework = 'none',
   Bool  :$debug = False,
   Bool  :$show-dates = True,
+  Str   :$prev-url = '',
+  Str   :$prev-title = '',
+  Str   :$next-url = '',
+  Str   :$next-title = '',
   --> Str
 ) is export {
   my $body-html = render-body(:$post, :$framework);
 
-  render-with-layout(:$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug, :$framework, :$show-dates);
+  render-with-layout(
+    :$post, :$body-html, :$layouts, :%site, :$section, :$url, :@nav, :$debug, :$framework, :$show-dates,
+    :$prev-url, :$prev-title, :$next-url, :$next-title,
+  );
 }
 
 our sub render-listing(

@@ -49,7 +49,7 @@ describe 'blogin build (cli)', {
 
     my $proc = run(
       $*EXECUTABLE, '-Ilib', 'bin/blogin', 'build',
-      "--src=$src", "--out=$out", '--quiet',
+      "--src=$src", "--out=$out",
       :out, :err,
     );
 

@@ -132,8 +132,34 @@ class Blogin::Markdown::Html {
         self!table($node);
       }
 
+      when DefinitionList {
+        self!definition-list($node);
+      }
+
       default {}
     }
+  }
+
+  method !definition-list(DefinitionList $node) {
+    my $class = $.framework.class-for('definition-list');
+
+    $!html ~= '<dl' ~ self!class-attr($class) ~ ">\n";
+
+    for $node.items -> $item {
+      $!html ~= '<dt>';
+      self!inline($item.term);
+      $!html ~= "</dt>\n";
+      $!text ~= "\n";
+
+      for $item.definitions -> $definition {
+        $!html ~= '<dd>';
+        self!inline($definition);
+        $!html ~= "</dd>\n";
+        $!text ~= "\n";
+      }
+    }
+
+    $!html ~= "</dl>\n";
   }
 
   method !list(List $node) {

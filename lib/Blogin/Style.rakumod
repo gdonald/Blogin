@@ -34,6 +34,52 @@ h5:hover > .anchor,
 h6:hover > .anchor {
   visibility: visible;
 }
+
+.post-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.post-nav .next {
+  margin-left: auto;
+  text-align: right;
+}
+
+.blogin-btn {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: #0d6efd;
+  color: #fff;
+  border-radius: 0.375rem;
+  text-decoration: none;
+}
+
+.blogin-btn:hover {
+  background: #0b5ed7;
+  color: #fff;
+}
+
+dl {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #f9fafb;
+}
+
+dl dt {
+  font-weight: 600;
+}
+
+dl dd {
+  margin: 0.25rem 0 1rem;
+}
+
+dl dd:last-child {
+  margin-bottom: 0;
+}
 CSS
 
 our sub content-css(--> Str) is export {

@@ -134,3 +134,19 @@ describe 'a nested list', {
     expect(node().items[0].children.grep(List).elems).to.eq(1);
   }
 }
+
+describe 'a definition list', {
+  let(:node, { blocks-of("Term\n: A definition\n")[0] });
+
+  it 'is a DefinitionList node', {
+    expect(node() ~~ DefinitionList).to.be-truthy;
+  }
+
+  it 'captures the term text', {
+    expect(node().items[0].term[0].text).to.eq('Term');
+  }
+
+  it 'captures the definition text', {
+    expect(node().items[0].definitions[0][0].text).to.eq('A definition');
+  }
+}

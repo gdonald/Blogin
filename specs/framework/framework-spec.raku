@@ -28,6 +28,10 @@ describe 'framework profiles', {
     expect(Blogin::Framework::profile('bootstrap5').class-for('table')).to.eq('table');
   }
 
+  it 'maps the post-nav button to a primary button for bootstrap5', {
+    expect(Blogin::Framework::profile('bootstrap5').class-for('post-nav-button')).to.eq('btn btn-primary');
+  }
+
   it 'maps a slot for bulma', {
     expect(Blogin::Framework::profile('bulma').class-for('image')).to.eq('image');
   }
