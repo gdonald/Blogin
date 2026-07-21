@@ -59,6 +59,29 @@ describe 'config defaults', {
   it 'defaults the css framework to none', {
     expect(config().css-framework).to.eq('none');
   }
+
+  it 'defaults the summary length', {
+    expect(config().summary-length).to.eq(200);
+  }
+
+  it 'defaults robots to true', {
+    expect(config().robots).to.be-truthy;
+  }
+}
+
+describe 'reading the metadata keys', {
+  it 'reads a custom summary length', {
+    expect(Blogin::Config.from-data(%( summary-length => 120 )).summary-length).to.eq(120);
+  }
+
+  it 'reads the robots toggle', {
+    expect(Blogin::Config.from-data(%( robots => False )).robots).to.be-falsy;
+  }
+
+  it 'rejects a non-integer summary length', {
+    try Blogin::Config.from-data(%( summary-length => 'lots' ));
+    expect($!.message.contains('summary-length')).to.be-truthy;
+  }
 }
 
 describe 'malformed config', {

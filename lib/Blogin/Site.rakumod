@@ -218,13 +218,14 @@ sub write-section-listing(
     my $page-num = $index + 1;
 
     my $out-file = listing-file($out, $section, $page-num, :$at-root, :$clean-urls);
+    my $url      = listing-url($section, $page-num, :$at-root, :$clean-urls);
     my $prev-url = $page-num > 1     ?? listing-url($section, $page-num - 1, :$at-root, :$clean-urls) !! '';
     my $next-url = $page-num < $total ?? listing-url($section, $page-num + 1, :$at-root, :$clean-urls) !! '';
 
     my @entries = @chunk.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :$section, :%site, :%data, :@nav, :@entries, :@templates,
+      :$layouts, :$section, :$url, :%site, :%data, :@nav, :@entries, :@templates,
       page-number => $page-num, total-pages => $total,
       :$prev-url, :$next-url, :$debug, :$framework, :$index-dates,
     );
@@ -295,11 +296,12 @@ sub build-tags(
 
     my $slug     = Blogin::Slug::slugify($tag);
     my $out-file = $clean-urls ?? $out.add("tags/$slug.html") !! $out.add("tags/$slug").add('index.html');
+    my $url      = $clean-urls ?? "/tags/$slug" !! "/tags/$slug/";
 
     my @entries = @sorted.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :%site, :%data, :@nav, :@entries, templates => ['tag', 'index'], :$debug, :$framework,
+      :$layouts, :$url, :%site, :%data, :@nav, :@entries, templates => ['tag', 'index'], :$debug, :$framework,
     );
 
     $writer.write($out-file, $html);
@@ -316,9 +318,10 @@ sub build-tags(
   });
 
   my $index-file = $clean-urls ?? $out.add('tags.html') !! $out.add('tags').add('index.html');
+  my $index-url  = $clean-urls ?? '/tags' !! '/tags/';
 
   my $html = Blogin::Layout::render-listing(
-    :$layouts, :%site, :%data, :@nav, entries => @tag-entries, templates => ['index'], :$debug, :$framework,
+    :$layouts, url => $index-url, :%site, :%data, :@nav, entries => @tag-entries, templates => ['index'], :$debug, :$framework,
   );
 
   $writer.write($index-file, $html);
@@ -345,8 +348,16 @@ sub newest-date(@sorted) {
   @sorted ?? @sorted[0]<post>.date-str !! '';
 }
 
+sub robots-txt(Str $base --> Str) {
+  my @lines = 'User-agent: *', 'Allow: /';
+
+  @lines.push("Sitemap: { $base.subst(/ '/' $ /, '') }/sitemap.xml") if $base.chars;
+
+  @lines.join("\n") ~ "\n";
+}
+
 sub build-feeds(
-  :@pages, :@page-files, IO::Path:D :$out!, :%site, Bool :$clean-urls!, Writer :$writer!,
+  :@pages, :@page-files, IO::Path:D :$out!, :%site, Bool :$clean-urls!, Bool :$robots!, Writer :$writer!,
   --> Array
 ) {
   my @written;
@@ -391,6 +402,11 @@ sub build-feeds(
   $writer.write($out.add('sitemap.xml'), $sitemap);
   @written.push($out.add('sitemap.xml'));
 
+  if $robots {
+    $writer.write($out.add('robots.txt'), robots-txt($base));
+    @written.push($out.add('robots.txt'));
+  }
+
   @written;
 }
 
@@ -414,6 +430,7 @@ our sub build(
   Int   :$search-cap = 10,
   Bool  :$highlight = False,
   Int   :$summary-length = 200,
+  Bool  :$robots = True,
   Bool  :$force = False,
   --> BuildResult
 ) {
@@ -524,6 +541,7 @@ our sub build(
         show-dates => $show-dates,
         templates  => @templates,
         data       => data-for($page<section>),
+        summary    => $page<summary>,
         prev-url   => ($prev ?? $prev<url> !! ''),
         prev-title => ($prev ?? $prev<post>.title !! ''),
         next-url   => ($next ?? $next<url> !! ''),
@@ -548,7 +566,7 @@ our sub build(
     my @page-files = [ |@written, |@listings ];
 
     @listings.append: build-feeds(
-      :@pages, :@page-files, :$out, :%site, :$clean-urls, :$writer,
+      :@pages, :@page-files, :$out, :%site, :$clean-urls, :$robots, :$writer,
     );
 
     if $search {

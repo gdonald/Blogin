@@ -63,6 +63,40 @@ class ChromeView does Template::HAML::HelpersRole {
   method data        { %!data }
   method section     { $!section }
 
+  method meta-title(--> Str)       { self.site-title }
+  method meta-description(--> Str) { '' }
+  method meta-type(--> Str)        { 'website' }
+
+  method canonical-url(--> Str) {
+    my $base = (%!site<base-url> // '').Str.subst(/ '/' $ /, '');
+
+    $!url.chars ?? $base ~ $!url !! $base;
+  }
+
+  method head-meta(--> Str) {
+    my $title = self.meta-title;
+    my $desc  = self.meta-description;
+    my $url   = self.canonical-url;
+    my $site  = self.site-title;
+
+    my @tags;
+
+    @tags.push("<link rel=\"canonical\" href=\"{ attr-escape($url) }\"/>")               if $url.chars;
+    @tags.push("<meta name=\"description\" content=\"{ attr-escape($desc) }\"/>")         if $desc.chars;
+
+    @tags.push("<meta property=\"og:type\" content=\"{ attr-escape(self.meta-type) }\"/>");
+    @tags.push("<meta property=\"og:title\" content=\"{ attr-escape($title) }\"/>")       if $title.chars;
+    @tags.push("<meta property=\"og:description\" content=\"{ attr-escape($desc) }\"/>")  if $desc.chars;
+    @tags.push("<meta property=\"og:url\" content=\"{ attr-escape($url) }\"/>")           if $url.chars;
+    @tags.push("<meta property=\"og:site_name\" content=\"{ attr-escape($site) }\"/>")    if $site.chars;
+
+    @tags.push('<meta name="twitter:card" content="summary"/>');
+    @tags.push("<meta name=\"twitter:title\" content=\"{ attr-escape($title) }\"/>")      if $title.chars;
+    @tags.push("<meta name=\"twitter:description\" content=\"{ attr-escape($desc) }\"/>") if $desc.chars;
+
+    @tags.join("\n");
+  }
+
   method section-label(--> Str) {
     with nav-node-for(@!nav, $!section) -> $node {
       return $node.label;
@@ -94,6 +128,7 @@ class ChromeView does Template::HAML::HelpersRole {
 class View is ChromeView is export {
   has      $.post;
   has Str  $.body-html = '';
+  has Str  $.summary = '';
   has Bool $.show-dates = True;
   has Str  $.prev-url = '';
   has Str  $.prev-title = '';
@@ -104,6 +139,10 @@ class View is ChromeView is export {
   method date        { $!post.date-str }
   method description  { $!post.description }
   method show-dates  { $!show-dates }
+
+  method meta-title(--> Str)       { $!post.title }
+  method meta-type(--> Str)        { 'article' }
+  method meta-description(--> Str) { $!post.description.chars ?? $!post.description !! $!summary }
 
   method post-nav-html {
     return '' unless $!prev-url.chars || $!next-url.chars;
@@ -139,6 +178,10 @@ class ListView is ChromeView is export {
   has Str  $.prev-url = '';
   has Str  $.next-url = '';
   has Bool $.index-dates = True;
+
+  method meta-title(--> Str) {
+    $.section.chars ?? self.section-label !! self.site-title;
+  }
 
   method template-label { 'template: index' }
   method posts       { @!entries }
@@ -228,6 +271,7 @@ our sub render-with-layout(
   Bool  :$debug = False,
   Str   :$framework = 'none',
   Bool  :$show-dates = True,
+  Str   :$summary = '',
   Str   :$prev-url = '',
   Str   :$prev-title = '',
   Str   :$next-url = '',
@@ -253,6 +297,7 @@ our sub render-with-layout(
     :$url,
     :@nav,
     :$body-html,
+    :$summary,
     :$debug,
     :$show-dates,
     :$prev-url,
@@ -281,6 +326,7 @@ our sub render-post(
   Str   :$framework = 'none',
   Bool  :$debug = False,
   Bool  :$show-dates = True,
+  Str   :$summary = '',
   Str   :$prev-url = '',
   Str   :$prev-title = '',
   Str   :$next-url = '',
@@ -292,13 +338,14 @@ our sub render-post(
 
   render-with-layout(
     :$post, :$body-html, :$layouts, :%site, :%data, :$section, :$url, :@nav, :$debug, :$framework, :$show-dates,
-    :$prev-url, :$prev-title, :$next-url, :$next-title, :@templates,
+    :$summary, :$prev-url, :$prev-title, :$next-url, :$next-title, :@templates,
   );
 }
 
 our sub render-listing(
   IO()  :$layouts!,
   Str   :$section = '',
+  Str   :$url = '',
         :%site = %(),
         :%data = %(),
         :@entries,
@@ -327,6 +374,7 @@ our sub render-listing(
     :%site,
     :%data,
     :$section,
+    :$url,
     :@nav,
     :@entries,
     :$page-number,

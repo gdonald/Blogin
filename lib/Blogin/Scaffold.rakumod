@@ -42,6 +42,7 @@ sub base-haml(--> Str) {
       %meta{charset: 'utf-8'}
       %meta{name: 'viewport', content: 'width=device-width, initial-scale=1'}
       %title= site-title
+      != head-meta
       != framework-stylesheet-tag
       %link{rel: 'stylesheet', href: '/blogin.css'}
       %link{rel: 'stylesheet', href: '/style.css'}
@@ -158,6 +159,7 @@ sub bootstrap-base-haml(--> Str) {
       %meta{charset: 'utf-8'}
       %meta{name: 'viewport', content: 'width=device-width, initial-scale=1'}
       %title= site-title
+      != head-meta
       != framework-stylesheet-tag
       %link{rel: 'stylesheet', href: '/blogin.css'}
       %link{rel: 'stylesheet', href: '/style.css'}

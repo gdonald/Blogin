@@ -18,6 +18,7 @@ has Int  $.search-text-length = 2000;
 has Int  $.search-cap         = 10;
 has Bool $.highlight          = False;
 has Int  $.summary-length     = 200;
+has Bool $.robots             = True;
 has      %.sections;
 
 my sub want-str($value, Str $key) {
@@ -68,6 +69,7 @@ method from-data(Blogin::Config:U: %data --> Blogin::Config) {
   %args<search-cap>         = want-int($_,  'search-cap')         with %data<search-cap>;
   %args<highlight>          = want-bool($_, 'highlight')          with %data<highlight>;
   %args<summary-length>     = want-int($_,  'summary-length')     with %data<summary-length>;
+  %args<robots>             = want-bool($_, 'robots')             with %data<robots>;
   %args<sections>      = validate-sections($_)          with %data<sections>;
 
   self.new(|%args);
@@ -101,5 +103,6 @@ method build-options(--> Hash) {
     search-cap         => $!search-cap,
     highlight          => $!highlight,
     summary-length     => $!summary-length,
+    robots             => $!robots,
   );
 }
