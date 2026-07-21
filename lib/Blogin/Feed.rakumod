@@ -37,6 +37,11 @@ our sub atom(
     @lines.push("    <id>{ xml-escape($entry<url>) }</id>");
     @lines.push("    <link href=\"{ xml-escape($entry<url>) }\"/>");
     @lines.push("    <updated>{ atom-time($entry<date>) }</updated>");
+
+    with $entry<summary> -> $summary {
+      @lines.push("    <summary>{ xml-escape($summary) }</summary>") if $summary.chars;
+    }
+
     @lines.push('  </entry>');
   }
 

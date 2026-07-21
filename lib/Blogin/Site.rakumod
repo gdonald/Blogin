@@ -8,6 +8,7 @@ use Blogin::Feed;
 use Blogin::Search;
 use Blogin::Style;
 use Blogin::Data;
+use Blogin::Summary;
 
 unit module Blogin::Site;
 
@@ -170,6 +171,7 @@ sub entry-of(%page, Str :$base = '') {
     url         => $base ~ %page<url>,
     date        => %page<post>.date-str,
     description => %page<post>.description,
+    summary     => %page<summary> // '',
   );
 }
 
@@ -411,6 +413,7 @@ our sub build(
   Int   :$search-text-length = 2000,
   Int   :$search-cap = 10,
   Bool  :$highlight = False,
+  Int   :$summary-length = 200,
   Bool  :$force = False,
   --> BuildResult
 ) {
@@ -486,6 +489,18 @@ our sub build(
     );
 
     $page<text> = $parts<text>;
+
+    my $body    = $page<post>.body;
+    my $excerpt = $body.contains(Blogin::Summary::MORE)
+      ?? Blogin::Layout::plain-text($body.substr(0, $body.index(Blogin::Summary::MORE)), :$framework)
+      !! '';
+
+    $page<summary> = Blogin::Summary::choose(
+      explicit => $page<post>.summary,
+      :$excerpt,
+      text     => $parts<text>,
+      length   => $summary-length,
+    );
 
     my $show-dates = (%sections{$page<section>}<show-dates> // True).Bool;
 

@@ -109,6 +109,16 @@ describe 'front matter values', {
     my $post = Blogin::Post.parse("---\ntitle: T\nauthor: Greg\n---\nx\n", filename => 'f.md');
     expect($post.meta<author>).to.eq('Greg');
   }
+
+  it 'reads an explicit summary', {
+    my $post = Blogin::Post.parse("---\ntitle: T\nsummary: A teaser.\n---\nx\n", filename => 'f.md');
+    expect($post.summary).to.eq('A teaser.');
+  }
+
+  it 'defaults the summary to empty', {
+    my $post = Blogin::Post.parse("---\ntitle: T\n---\nx\n", filename => 'f.md');
+    expect($post.summary).to.eq('');
+  }
 }
 
 describe 'the error path', {

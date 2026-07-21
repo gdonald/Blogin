@@ -10,6 +10,7 @@ has Str  $.slug;
 has      @.tags;
 has Bool $.draft = False;
 has Str  $.description = '';
+has Str  $.summary = '';
 has      $.order;
 has Str  $.body;
 has      %.meta;
@@ -19,7 +20,7 @@ method date-str(--> Str) {
   $!date.defined ?? $!date.Str !! '';
 }
 
-my @KNOWN = <title date slug tags draft description order>;
+my @KNOWN = <title date slug tags draft description summary order>;
 
 my sub unquote(Str $value --> Str) {
   return $value.substr(1, $value.chars - 2)
@@ -128,6 +129,7 @@ method parse(Blogin::Post:U: Str $source, Str :$filename = '' --> Blogin::Post) 
   my @tags        = parse-tags(%fields<tags> // '');
   my $draft       = (%fields<draft> // '').lc eq 'true';
   my $description = unquote(%fields<description> // '');
+  my $summary     = unquote(%fields<summary> // '');
 
   my $order = %fields<order>:exists && %fields<order>.chars
     ?? parse-order(unquote(%fields<order>))
@@ -145,6 +147,7 @@ method parse(Blogin::Post:U: Str $source, Str :$filename = '' --> Blogin::Post) 
     :@tags,
     :$draft,
     :$description,
+    :$summary,
     :$order,
     body => %parsed<body>,
     meta => %meta,
