@@ -1,0 +1,8 @@
+!!! 5
+%html
+  %body
+    %nav.langs
+      - for languages -> $lang
+        %a{href: "#{$lang<url>}"}= $lang<code>
+    %main
+      = yield

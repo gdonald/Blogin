@@ -13,7 +13,7 @@ class NavNode is export {
   has     @.children;
 }
 
-sub nodes-in(IO::Path:D $dir, Str $prefix, %sections, Bool $clean-urls) {
+sub nodes-in(IO::Path:D $dir, Str $prefix, %sections, Bool $clean-urls, Str $url-prefix) {
   my @nodes;
 
   for $dir.dir.grep(*.d).sort(*.basename) -> $sub {
@@ -25,8 +25,8 @@ sub nodes-in(IO::Path:D $dir, Str $prefix, %sections, Bool $clean-urls) {
 
     my $label    = %config<label> // Blogin::Slug::humanize($name);
     my $order    = (%config<order> // 0).Int;
-    my $url      = $clean-urls ?? "/$path" !! "/$path/";
-    my @children = nodes-in($sub, $path, %sections, $clean-urls);
+    my $url      = $clean-urls ?? "$url-prefix/$path" !! "$url-prefix/$path/";
+    my @children = nodes-in($sub, $path, %sections, $clean-urls, $url-prefix);
 
     @nodes.push(NavNode.new(:$name, :$label, :$path, :$url, :$order, :@children));
   }
@@ -34,8 +34,8 @@ sub nodes-in(IO::Path:D $dir, Str $prefix, %sections, Bool $clean-urls) {
   @nodes.sort({ ($^a.order <=> $^b.order) || ($^a.name leg $^b.name) }).Array;
 }
 
-our sub build-tree(IO() $content, :%sections = %(), Bool :$clean-urls = True --> Array) is export {
+our sub build-tree(IO() $content, :%sections = %(), Bool :$clean-urls = True, Str :$url-prefix = '' --> Array) is export {
   return [].Array unless $content.d;
 
-  nodes-in($content, '', %sections, $clean-urls);
+  nodes-in($content, '', %sections, $clean-urls, $url-prefix);
 }

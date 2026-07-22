@@ -36,6 +36,7 @@ sub nav-node-for(@nodes, Str $path) {
 class ChromeView does Template::HAML::HelpersRole {
   has      %.site;
   has      %.data;
+  has      @.languages;
   has Str  $.section   = '';
   has Str  $.url       = '';
   has      @.nav;
@@ -63,6 +64,8 @@ class ChromeView does Template::HAML::HelpersRole {
 
   method site-title  { %!site<title> // '' }
   method data        { %!data }
+  method languages   { @!languages }
+  method has-languages(--> Bool) { @!languages.elems.so }
   method section     { $!section }
   method index-dates { True }
 
@@ -297,6 +300,7 @@ our sub render-with-layout(
   Int   :$word-count = 0,
   Int   :$reading-time = 0,
         :@related = [],
+        :@languages = [],
   Str   :$prev-url = '',
   Str   :$prev-title = '',
   Str   :$next-url = '',
@@ -318,6 +322,7 @@ our sub render-with-layout(
     :$post,
     :%site,
     :%data,
+    :@languages,
     :$section,
     :$url,
     :@nav,
@@ -377,6 +382,7 @@ our sub render-listing(
   Str   :$url = '',
         :%site = %(),
         :%data = %(),
+        :@languages = [],
         :@entries,
   Int   :$page-number = 1,
   Int   :$total-pages = 1,
@@ -402,6 +408,7 @@ our sub render-listing(
   my $view = ListView.new(
     :%site,
     :%data,
+    :@languages,
     :$section,
     :$url,
     :@nav,

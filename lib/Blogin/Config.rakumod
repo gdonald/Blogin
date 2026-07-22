@@ -26,6 +26,8 @@ has Int  $.reading-wpm        = 200;
 has Int  $.related-count      = 5;
 has      @.taxonomies         = ['tags'];
 has      @.feed-formats       = ['atom'];
+has      @.languages          = [];
+has      %.language-config;
 has      %.sections;
 
 my sub want-str($value, Str $key) {
@@ -78,6 +80,17 @@ my sub want-feed-formats($value) {
   @formats;
 }
 
+my sub want-language-config($value) {
+  die "config key 'language-config' must be a map" unless $value ~~ Associative;
+
+  for $value.kv -> $code, $entry {
+    die "config language-config '$code' must be a map" unless $entry ~~ Associative;
+    want-str($_, "language-config.$code.title") with $entry<title>;
+  }
+
+  $value;
+}
+
 my sub validate-sections(%sections) {
   for %sections.kv -> $name, $entry {
     die "config section '$name' must be a map" unless $entry ~~ Associative;
@@ -119,6 +132,8 @@ method from-data(Blogin::Config:U: %data --> Blogin::Config) {
   %args<related-count>      = want-int($_,  'related-count')       with %data<related-count>;
   %args<taxonomies>        := want-str-list($_, 'taxonomies')      with %data<taxonomies>;
   %args<feed-formats>      := want-feed-formats($_)                with %data<feed-formats>;
+  %args<languages>         := want-str-list($_, 'languages')       with %data<languages>;
+  %args<language-config>    = want-language-config($_)             with %data<language-config>;
   %args<sections>      = validate-sections($_)          with %data<sections>;
 
   self.new(|%args);

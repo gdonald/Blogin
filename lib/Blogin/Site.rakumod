@@ -233,6 +233,42 @@ sub section-of(IO::Path:D $file, IO::Path:D $content --> Str) {
   $section eq '.' ?? '' !! $section;
 }
 
+# A translation key stable across languages: the section plus the date-stripped,
+# extension-stripped filename (not the slug, which varies with the title).
+sub trans-stem(IO::Path:D $file --> Str) {
+  my $stem = $file.basename;
+  $stem = $stem.subst(/ '.' <-[.]>+ $ /, '');
+  $stem = $stem.subst(/ ^ \d ** 4 '-' \d\d '-' \d\d '-'? /, '');
+  $stem;
+}
+
+sub trans-key-of(IO::Path:D $file, IO::Path:D $content --> Str) {
+  my $section = section-of($file, $content);
+  my $stem    = trans-stem($file);
+
+  $section.chars ?? "$section/$stem" !! $stem;
+}
+
+# Map each content tree's translation key to the url-path it produces, so the
+# switcher can link a post to its translation in another language.
+our sub url-paths(IO() $content, Bool :$drafts = False, Bool :$future = False --> Hash) is export {
+  my %paths;
+
+  for find-markdown($content) -> $file {
+    my $post = Blogin::Post.load($file);
+
+    next if $post.draft && !$drafts;
+    next if !$future && $post.date.defined && $post.date > Date.today;
+
+    my $section  = section-of($file, $content);
+    my $url-path = $section.chars ?? "$section/{ $post.slug }" !! $post.slug;
+
+    %paths{ trans-key-of($file, $content) } = $url-path;
+  }
+
+  %paths;
+}
+
 sub date-key(%page) {
   %page<post>.date.defined ?? %page<post>.date.daycount !! 0;
 }
@@ -265,16 +301,16 @@ sub entry-of(%page, Str :$base = '') {
   );
 }
 
-sub listing-url(Str $section, Int $page-num, Bool :$at-root, Bool :$clean-urls) {
+sub listing-url(Str $section, Int $page-num, Bool :$at-root, Bool :$clean-urls, Str :$url-prefix = '') {
   my $base = $at-root ?? '' !! $section;
 
   my $path = $page-num == 1
     ?? $base
     !! ($base.chars ?? "$base/page/$page-num" !! "page/$page-num");
 
-  return '/' unless $path.chars;
+  return ($url-prefix.chars ?? "$url-prefix/" !! '/') unless $path.chars;
 
-  $clean-urls ?? "/$path" !! "/$path/";
+  $clean-urls ?? "$url-prefix/$path" !! "$url-prefix/$path/";
 }
 
 sub listing-file(IO::Path:D $out, Str $section, Int $page-num, Bool :$at-root, Bool :$clean-urls) {
@@ -293,8 +329,8 @@ sub listing-file(IO::Path:D $out, Str $section, Int $page-num, Bool :$at-root, B
 sub write-section-listing(
   Str $section, @sorted,
   Bool :$at-root = False,
-  IO::Path:D :$out!, IO() :$layouts!, :%site, :%data, :@nav, Bool :$clean-urls!,
-  Bool :$debug!, Int :$page-size!, Writer :$writer!, Str :$framework!,
+  IO::Path:D :$out!, IO() :$layouts!, :%site, :%data, :@languages, :@nav, Bool :$clean-urls!,
+  Bool :$debug!, Int :$page-size!, Writer :$writer!, Str :$framework!, Str :$url-prefix = '',
   :@templates = ['index'],
   Bool :$index-dates = True,
 ) {
@@ -308,14 +344,14 @@ sub write-section-listing(
     my $page-num = $index + 1;
 
     my $out-file = listing-file($out, $section, $page-num, :$at-root, :$clean-urls);
-    my $url      = listing-url($section, $page-num, :$at-root, :$clean-urls);
-    my $prev-url = $page-num > 1     ?? listing-url($section, $page-num - 1, :$at-root, :$clean-urls) !! '';
-    my $next-url = $page-num < $total ?? listing-url($section, $page-num + 1, :$at-root, :$clean-urls) !! '';
+    my $url      = listing-url($section, $page-num, :$at-root, :$clean-urls, :$url-prefix);
+    my $prev-url = $page-num > 1     ?? listing-url($section, $page-num - 1, :$at-root, :$clean-urls, :$url-prefix) !! '';
+    my $next-url = $page-num < $total ?? listing-url($section, $page-num + 1, :$at-root, :$clean-urls, :$url-prefix) !! '';
 
     my @entries = @chunk.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :$section, :$url, :%site, :%data, :@nav, :@entries, :@templates,
+      :$layouts, :$section, :$url, :%site, :%data, :@languages, :@nav, :@entries, :@templates,
       page-number => $page-num, total-pages => $total,
       :$prev-url, :$next-url, :$debug, :$framework, :$index-dates,
     );
@@ -330,7 +366,7 @@ sub write-section-listing(
 sub build-listings(
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%sections,
   Bool :$clean-urls!, Bool :$debug!, Int :$page-size!, Str :$home-section!,
-  Writer :$writer!, Str :$framework!, :&data-for!,
+  Writer :$writer!, Str :$framework!, :&data-for!, Str :$url-prefix = '', :&section-switcher!,
   --> Array
 ) {
   my sub page-size-for(Str $section) {
@@ -347,7 +383,8 @@ sub build-listings(
   for %by-section.keys.grep(*.chars).sort -> $section {
     @written.append: write-section-listing(
       $section, newest-first(%by-section{$section}),
-      :$out, :$layouts, :%site, data => data-for($section), :@nav, :$clean-urls, :$debug, :$writer, :$framework,
+      :$out, :$layouts, :%site, data => data-for($section), languages => section-switcher($section),
+      :@nav, :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix,
       page-size => page-size-for($section),
       index-dates => index-dates-for($section),
     );
@@ -356,7 +393,8 @@ sub build-listings(
   if $home-section.chars && (%by-section{$home-section}:exists) {
     @written.append: write-section-listing(
       $home-section, newest-first(%by-section{$home-section}),
-      :at-root, :$out, :$layouts, :%site, data => data-for($home-section), :@nav, :$clean-urls, :$debug, :$writer, :$framework,
+      :at-root, :$out, :$layouts, :%site, data => data-for($home-section), languages => section-switcher(''),
+      :@nav, :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix,
       page-size => page-size-for($home-section),
       index-dates => index-dates-for($home-section),
       templates => ['home', 'index'],
@@ -369,7 +407,7 @@ sub build-listings(
 sub build-taxonomy(
   Str $name,
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%data,
-  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!,
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, Str :$url-prefix = '',
   --> Array
 ) {
   my %term-posts;
@@ -388,7 +426,7 @@ sub build-taxonomy(
 
     my $slug     = Blogin::Slug::slugify($term);
     my $out-file = $clean-urls ?? $out.add("$name/$slug.html") !! $out.add("$name/$slug").add('index.html');
-    my $url      = $clean-urls ?? "/$name/$slug" !! "/$name/$slug/";
+    my $url      = $clean-urls ?? "$url-prefix/$name/$slug" !! "$url-prefix/$name/$slug/";
 
     my @entries = @sorted.map({ entry-of($_) });
 
@@ -404,13 +442,13 @@ sub build-taxonomy(
     my $slug = Blogin::Slug::slugify($term);
     %(
       title => "$term ({ %term-posts{$term}.elems })",
-      url   => ($clean-urls ?? "/$name/$slug" !! "/$name/$slug/"),
+      url   => ($clean-urls ?? "$url-prefix/$name/$slug" !! "$url-prefix/$name/$slug/"),
       date  => '',
     )
   });
 
   my $index-file = $clean-urls ?? $out.add("$name.html") !! $out.add($name).add('index.html');
-  my $index-url  = $clean-urls ?? "/$name" !! "/$name/";
+  my $index-url  = $clean-urls ?? "$url-prefix/$name" !! "$url-prefix/$name/";
 
   my $html = Blogin::Layout::render-listing(
     :$layouts, url => $index-url, :%site, :%data, :@nav, entries => @term-entries, templates => @index-templates, :$debug, :$framework,
@@ -425,7 +463,7 @@ sub build-taxonomy(
 sub build-taxonomies(
   @taxonomies,
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site,
-  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, :&data-for!,
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, :&data-for!, Str :$url-prefix = '',
   --> Array
 ) {
   my %data = data-for('');
@@ -435,7 +473,7 @@ sub build-taxonomies(
   for @taxonomies -> $name {
     @written.append: build-taxonomy(
       $name, :@pages, :@nav, :$out, :$layouts, :%site, :%data,
-      :$clean-urls, :$debug, :$writer, :$framework,
+      :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix,
     );
   }
 
@@ -536,7 +574,7 @@ sub render-feed(Str $format, %args --> Str) {
 
 sub build-feeds(
   :@pages, :@page-files, IO::Path:D :$out!, :%site, Bool :$clean-urls!, Bool :$robots!,
-  :@feed-formats!, Writer :$writer!,
+  :@feed-formats!, Writer :$writer!, Str :$url-prefix = '',
   --> Array
 ) {
   my @written;
@@ -553,8 +591,8 @@ sub build-feeds(
 
     my $site-feed = render-feed($format, %(
       :$title,
-      site-url => "$base/",
-      feed-url => "$base/$file",
+      site-url => "$base$url-prefix/",
+      feed-url => "$base$url-prefix/$file",
       updated  => newest-date(@all),
       entries  => @all.map({ entry-of($_, :$base) }),
     ));
@@ -567,8 +605,8 @@ sub build-feeds(
 
       my $feed = render-feed($format, %(
         title    => "$title: $section",
-        site-url => "$base/$section",
-        feed-url => "$base/$section/$file",
+        site-url => "$base$url-prefix/$section",
+        feed-url => "$base$url-prefix/$section/$file",
         updated  => newest-date(@sorted),
         entries  => @sorted.map({ entry-of($_, :$base) }),
       ));
@@ -579,7 +617,7 @@ sub build-feeds(
     }
   }
 
-  my @locs = @page-files.map({ $base ~ file-to-url($_, $out, $clean-urls) }).sort;
+  my @locs = @page-files.map({ $base ~ $url-prefix ~ file-to-url($_, $out, $clean-urls) }).sort;
   my $sitemap = Blogin::Feed::sitemap(locs => @locs);
 
   $writer.write($out.add('sitemap.xml'), $sitemap);
@@ -623,11 +661,40 @@ our sub build(
         :@image-widths = [],
   Int   :$reading-wpm = 200,
   Int   :$related-count = 5,
+  Str   :$url-prefix = '',
+        :@languages = [],
+  Str   :$current-language = '',
+        :%lang-paths = {},
   Bool  :$future = False,
   Bool  :$force = False,
   --> BuildResult
 ) {
-  my @nav = Blogin::Nav::build-tree($content, :%sections, :$clean-urls);
+  my @nav = Blogin::Nav::build-tree($content, :%sections, :$clean-urls, :$url-prefix);
+
+  my sub post-switcher(Str $trans-key --> Array) {
+    return [].Array unless @languages;
+
+    @languages.map(-> $code {
+      my $path = %lang-paths{$code}{$trans-key};
+      my $url  = $path.defined
+        ?? ($clean-urls ?? "/$code/$path" !! "/$code/$path/")
+        !! "/$code/";
+
+      %( code => $code, url => $url, current => ($code eq $current-language) )
+    }).Array;
+  }
+
+  my sub section-switcher(Str $section --> Array) {
+    return [].Array unless @languages;
+
+    @languages.map(-> $code {
+      my $url = $section.chars
+        ?? ($clean-urls ?? "/$code/$section" !! "/$code/$section/")
+        !! "/$code/";
+
+      %( code => $code, url => $url, current => ($code eq $current-language) )
+    }).Array;
+  }
 
   my %shortcode-templates = Blogin::Shortcode::load($shortcodes);
 
@@ -656,7 +723,7 @@ our sub build(
     next if !$future && $post.date.defined && $post.date > Date.today;
 
     my $url-path = $section.chars ?? "$section/{ $post.slug }" !! $post.slug;
-    my $url      = $clean-urls ?? "/$url-path" !! "/$url-path/";
+    my $url      = $clean-urls ?? "$url-prefix/$url-path" !! "$url-prefix/$url-path/";
     my $out-file = $clean-urls
       ?? $out.add("$url-path.html")
       !! $out.add($url-path).add('index.html');
@@ -671,10 +738,12 @@ our sub build(
     %seen{$key} = $file.Str;
 
     @pages.push(%(
-      post     => $post,
-      section  => $section,
-      url      => $url,
-      out-file => $out-file,
+      post      => $post,
+      section   => $section,
+      url       => $url,
+      url-path  => $url-path,
+      trans-key => trans-key-of($file, $content),
+      out-file  => $out-file,
     ));
   }
 
@@ -771,6 +840,7 @@ our sub build(
         word-count => $words,
         reading-time => $reading-time,
         related    => $page<related>,
+        languages  => post-switcher($page<trans-key>),
         prev-url   => ($prev ?? $prev<url> !! ''),
         prev-title => ($prev ?? $prev<post>.title !! ''),
         next-url   => ($next ?? $next<url> !! ''),
@@ -784,19 +854,19 @@ our sub build(
 
   my @listings = build-listings(
     :@pages, :@nav, :$out, :$layouts, :%site, :%sections, :$clean-urls, :$debug,
-    :$page-size, :$home-section, :$writer, :$framework, :&data-for,
+    :$page-size, :$home-section, :$writer, :$framework, :&data-for, :$url-prefix, :&section-switcher,
   );
 
   @listings.append: build-taxonomies(
     @taxonomies.map({ $_ ~~ Str ?? $_ !! |$_ }),
-    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer, :$framework, :&data-for,
+    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer, :$framework, :&data-for, :$url-prefix,
   );
 
   if @pages.elems {
     my @page-files = [ |@written, |@listings ];
 
     @listings.append: build-feeds(
-      :@pages, :@page-files, :$out, :%site, :$clean-urls, :$robots, :$writer,
+      :@pages, :@page-files, :$out, :%site, :$clean-urls, :$robots, :$writer, :$url-prefix,
       feed-formats => @feed-formats.map({ $_ ~~ Str ?? $_ !! |$_ }),
     );
 
