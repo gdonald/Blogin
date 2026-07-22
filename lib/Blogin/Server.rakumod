@@ -29,26 +29,26 @@ our sub content-type-for(IO::Path:D $file --> Str) is export {
 
 constant RELOAD-PATH = '/__blogin-reload';
 
-# A rebuild pushes a reload to every connected preview page over this channel.
+# A build version bumped on each rebuild. The preview page polls it and reloads
+# when it changes. Polling avoids a long-lived connection, so a browser that has
+# gone away leaves no socket for the server to write to.
 class ReloadChannel is export {
-  has Supplier $!supplier = Supplier.new;
+  has Int $.version = 0;
 
   method notify(--> Nil) {
-    $!supplier.emit('reload');
-  }
-
-  method Supply(--> Supply) {
-    $!supplier.Supply;
+    $!version++;
   }
 }
 
 our sub reload-script(Str $path = RELOAD-PATH --> Str) is export {
-  # Close the stream before navigating so the persistent connection does not
-  # hold one of the browser's limited per-host sockets across page loads.
-  '<script>(function(){' ~
-    "var source = new EventSource(\"$path\");" ~
-    'source.onmessage = function () { location.reload(); };' ~
-    'window.addEventListener("pagehide", function () { source.close(); });' ~
+  '<script>(function () {' ~
+    'var known = null;' ~
+    'setInterval(function () {' ~
+      "fetch(\"$path\").then(function (r) \{ return r.text(); \}).then(function (v) \{" ~
+        'if (known === null) { known = v; }' ~
+        'else if (v !== known) { location.reload(); }' ~
+      '}).catch(function () {});' ~
+    '}, 1000);' ~
   '})();</script>';
 }
 
@@ -63,11 +63,6 @@ our sub inject-reload(Str $html, Str $script = reload-script() --> Str) is expor
 our sub rebuild-and-reload(ReloadChannel $channel, &rebuild --> Nil) is export {
   rebuild();
   $channel.notify;
-}
-
-# Cro's streaming body serializer requires the event Supply to emit Blobs.
-our sub reload-event(--> Blob) is export {
-  "data: reload\n\n".encode('utf-8');
 }
 
 # Map a request path to a file on disk, mirroring how a static host rewrites
@@ -118,21 +113,12 @@ our sub render-response(Str $url-path, IO() $root, Bool :$clean-urls = True, Boo
   %( status => 200, content-type => %result<content-type>, body => %result<file>.slurp(:bin) );
 }
 
-# The server-sent event stream: one reload Blob per rebuild notification.
-our sub reload-events(ReloadChannel $channel --> Supply) is export {
-  supply {
-    whenever $channel.Supply {
-      emit reload-event();
-    }
-  }
-}
-
 sub make-app(IO() $root, Bool :$clean-urls = True, ReloadChannel :$reload) {
   route {
     if $reload.defined {
       get -> '__blogin-reload' {
         header 'Cache-Control', 'no-cache';
-        content 'text/event-stream', reload-events($reload);
+        content 'text/plain', $reload.version.Str;
       }
     }
 
@@ -183,8 +169,9 @@ our sub serve(
   Int   :$port = 3000,
   Blogin::Log :$log = Blogin::Log.new,
 ) is export {
-  my $config-file = $content.parent.add('blogin.json');
-  my $reload      = ReloadChannel.new;
+  my $config-file  = $content.parent.add('blogin.json');
+  my $reload       = ReloadChannel.new;
+  my $rebuild-lock = Lock.new;
 
   my &rebuild = {
     my $current = Blogin::Config.load($config-file);
@@ -196,21 +183,23 @@ our sub serve(
     );
   };
 
-  rebuild();
-
-  for ($content, $layouts, $static, $assets, $data, $shortcodes).grep({ .defined && .d }) -> $dir {
-    watch-recursive($dir, {
+  # Serialize rebuilds so overlapping file-watch events cannot race on the
+  # output (for example the fingerprint rename pass).
+  my &on-change = {
+    $rebuild-lock.protect({
       $log.info('change detected, rebuilding');
       rebuild-and-reload($reload, &rebuild);
       CATCH { default { $log.error("rebuild failed: { .message }") } }
     });
+  };
+
+  rebuild();
+
+  for ($content, $layouts, $static, $assets, $data, $shortcodes).grep({ .defined && .d }) -> $dir {
+    watch-recursive($dir, &on-change);
   }
 
-  watch-file($config-file, {
-    $log.info('config change detected, rebuilding');
-    rebuild-and-reload($reload, &rebuild);
-    CATCH { default { $log.error("rebuild failed: { .message }") } }
-  });
+  watch-file($config-file, &on-change);
 
   my $server = Cro::HTTP::Server.new(
     host        => 'localhost',

@@ -6,26 +6,16 @@ use Blogin::Server;
 use Blogin::Site;
 
 describe 'the reload client script', {
-  it 'connects an EventSource to the reload endpoint', {
-    expect(Blogin::Server::reload-script.contains('new EventSource("/__blogin-reload")')).to.be-truthy;
+  it 'polls the reload endpoint', {
+    expect(Blogin::Server::reload-script.contains('fetch("/__blogin-reload")')).to.be-truthy;
   }
 
-  it 'reloads the page on a message', {
+  it 'reloads the page when the version changes', {
     expect(Blogin::Server::reload-script.contains('location.reload()')).to.be-truthy;
   }
 
-  it 'closes the stream before the page unloads so connections do not pile up', {
-    expect(Blogin::Server::reload-script.contains('pagehide') && Blogin::Server::reload-script.contains('source.close()')).to.be-truthy;
-  }
-}
-
-describe 'the server-sent reload event', {
-  it 'is a Blob so Cro can stream it', {
-    expect(Blogin::Server::reload-event() ~~ Blob).to.be-truthy;
-  }
-
-  it 'is formatted as an SSE data line', {
-    expect(Blogin::Server::reload-event().decode('utf-8')).to.eq("data: reload\n\n");
+  it 'ignores fetch errors so a paused server does not throw', {
+    expect(Blogin::Server::reload-script.contains('.catch(')).to.be-truthy;
   }
 }
 
@@ -40,17 +30,15 @@ describe 'injecting the reload client', {
   }
 }
 
-describe 'the reload channel', {
-  it 'delivers a notification to a subscriber', {
+describe 'the reload channel version', {
+  it 'starts at zero', {
+    expect(Blogin::Server::ReloadChannel.new.version).to.eq(0);
+  }
+
+  it 'bumps the version on notify', {
     my $channel = Blogin::Server::ReloadChannel.new;
-
-    my @received;
-    my $tap = $channel.Supply.tap({ @received.push($_) });
-
     $channel.notify;
-    $tap.close;
-
-    expect(@received.elems).to.eq(1);
+    expect($channel.version).to.eq(1);
   }
 }
 
@@ -67,7 +55,7 @@ describe 'the served response', {
 
   it 'injects the reload client into an html page when reload is on', {
     my %response = Blogin::Server::render-response('/posts/hello', out(), inject => True);
-    expect(%response<body>.contains('EventSource("/__blogin-reload")')).to.be-truthy;
+    expect(%response<body>.contains('fetch("/__blogin-reload")')).to.be-truthy;
   }
 
   it 'does not inject the client when reload is off', {
@@ -86,21 +74,7 @@ describe 'the served response', {
   }
 }
 
-describe 'the server-sent event stream', {
-  it 'emits one reload Blob per rebuild notification', {
-    my $channel = Blogin::Server::ReloadChannel.new;
-
-    my @events;
-    my $tap = Blogin::Server::reload-events($channel).tap({ @events.push($_) });
-
-    $channel.notify;
-    $tap.close;
-
-    expect(@events.elems == 1 && @events[0] ~~ Blob).to.be-truthy;
-  }
-}
-
-describe 'a rebuild pushing a reload', {
+describe 'a rebuild bumping the reload version', {
   it 'runs the rebuild', {
     my $channel = Blogin::Server::ReloadChannel.new;
 
@@ -110,27 +84,19 @@ describe 'a rebuild pushing a reload', {
     expect($ran).to.be-truthy;
   }
 
-  it 'pushes a reload to a connected client after the rebuild', {
+  it 'bumps the version so polling clients reload', {
     my $channel = Blogin::Server::ReloadChannel.new;
-
-    my @received;
-    my $tap = $channel.Supply.tap({ @received.push($_) });
 
     Blogin::Server::rebuild-and-reload($channel, { True });
-    $tap.close;
 
-    expect(@received.elems).to.eq(1);
+    expect($channel.version).to.eq(1);
   }
 
-  it 'does not push a reload when the rebuild fails', {
+  it 'does not bump the version when the rebuild fails', {
     my $channel = Blogin::Server::ReloadChannel.new;
 
-    my @received;
-    my $tap = $channel.Supply.tap({ @received.push($_) });
-
     try Blogin::Server::rebuild-and-reload($channel, { die 'boom' });
-    $tap.close;
 
-    expect(@received.elems).to.eq(0);
+    expect($channel.version).to.eq(0);
   }
 }
