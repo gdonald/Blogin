@@ -1,5 +1,6 @@
 {
   "base-url": "https://e.com",
+  "clean-urls": true,
   "home-section": "posts",
   "languages": ["en", "fr"],
   "language-config": { "en": { "title": "My Site" }, "fr": { "title": "Mon Site" } }

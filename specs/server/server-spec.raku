@@ -111,7 +111,7 @@ describe 'a config change is applied on the next build', {
   after-each { nuke(proj()) }
 
   sub build-with(Str $framework) {
-    proj().add('blogin.json').spurt(qq/\{ "css-framework": "$framework" \}/);
+    proj().add('blogin.json').spurt(qq/\{ "css-framework": "$framework", "clean-urls": true \}/);
 
     my $config = Blogin::Config.load(proj().add('blogin.json'));
 

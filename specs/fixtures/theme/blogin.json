@@ -1,1 +1,1 @@
-{ "theme": "acme", "home-section": "posts" }
+{ "theme": "acme", "home-section": "posts", "clean-urls": true }

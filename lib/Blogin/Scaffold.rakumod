@@ -11,10 +11,31 @@ sub blogin-json(Str $framework --> Str) {
   \{
     "title": "My Blogin Site",
     "base-url": "https://example.com",
+    "author": "",
+    "output-dir": "public",
     "home-section": "posts",
-    "clean-urls": true,
+    "clean-urls": false,
     "css-framework": "$framework",
-    "page-size": 10
+    "page-size": 10,
+    "highlight": false,
+    "summary-length": 200,
+    "reading-wpm": 200,
+    "related-count": 5,
+    "taxonomies": ["tags"],
+    "feed-formats": ["atom"],
+    "robots": true,
+    "minify": false,
+    "fingerprint": false,
+    "image-widths": [],
+    "search": true,
+    "search-text-length": 2000,
+    "search-cap": 10,
+    "languages": [],
+    "language-config": \{\},
+    "theme": "",
+    "plugins": [],
+    "debug": false,
+    "sections": \{\}
   \}
   JSON
 }

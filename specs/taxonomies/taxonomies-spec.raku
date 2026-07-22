@@ -153,6 +153,6 @@ describe 'taxonomies flowing from config build options', {
   after-each { nuke(out()) }
 
   it 'builds the categories taxonomy through the config options', {
-    expect(out().add('categories/news.html').e).to.be-truthy;
+    expect(out().add('categories/news/index.html').e).to.be-truthy;
   }
 }

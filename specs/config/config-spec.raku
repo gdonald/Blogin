@@ -52,8 +52,8 @@ describe 'config defaults', {
     expect(config().output-dir).to.eq('public');
   }
 
-  it 'defaults clean-urls to true', {
-    expect(config().clean-urls).to.be-truthy;
+  it 'defaults clean-urls to false so it works on any static host', {
+    expect(config().clean-urls).to.be-falsy;
   }
 
   it 'defaults the css framework to none', {

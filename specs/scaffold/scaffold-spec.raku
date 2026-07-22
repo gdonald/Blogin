@@ -68,7 +68,21 @@ describe 'the scaffold builds', {
       out => out(),
       log => Blogin::Log.new(:level('quiet')),
     );
-    expect(out().add('posts/hello-world.html').e).to.be-truthy;
+    expect(out().add('posts/hello-world/index.html').e).to.be-truthy;
+  }
+
+  it 'defaults the generated config to directory-index urls', {
+    expect(Blogin::Config.load(dir().add('blogin.json')).clean-urls).to.be-falsy;
+  }
+
+  it 'lists every option in the generated config', {
+    my $json = dir().add('blogin.json').slurp;
+    my @keys = <title base-url author output-dir home-section clean-urls css-framework
+                page-size highlight summary-length reading-wpm related-count taxonomies
+                feed-formats robots minify fingerprint image-widths search
+                search-text-length search-cap languages language-config theme plugins
+                debug sections>;
+    expect(@keys.grep({ !$json.contains("\"$_\"") }).elems).to.eq(0);
   }
 
   it 'links a stylesheet that resolves to an emitted file', {
@@ -213,6 +227,6 @@ describe 'per-section date visibility', {
       home-section => 'posts',
       sections     => %( posts => %( show-dates => False ) ),
     )));
-    expect(out().add('posts/hello-world.html').slurp.contains('2026-07-20')).to.be-falsy;
+    expect(out().add('posts/hello-world/index.html').slurp.contains('2026-07-20')).to.be-falsy;
   }
 }
