@@ -12,6 +12,8 @@ token inline {
   || <link>
   || <reflink>
   || <autolink>
+  || <mathdisplay>
+  || <mathinline>
   || <strong>
   || <emph>
   || <strike>
@@ -25,6 +27,10 @@ token footref { '[^' $<label>=(<[\w-]>+) ']' }
 token reflink {
   '[' $<text>=(<-[\]]>+) ']' '[' $<label>=(<-[\]]>*) ']'
 }
+
+token mathdisplay { '$$' $<tex>=[ <-[$]>+ ] '$$' }
+
+token mathinline { '$' <!before <[ \s \d $ ]>> $<tex>=[ <-[ $ \n ]>+? ] <!after \s> '$' }
 
 token esc { '\\' $<char>=(<[ \\ \` \* _ \~ \[ \] \( \) \# \+ \- \. \! \< \> ]>) }
 
@@ -71,6 +77,6 @@ token hardbreak { [ ' ' ** 2..* | '\\' ] \n }
 token softbreak { \n }
 
 token text {
-  || [ <!before <hardbreak>> <-[ \\ \` \* _ \~ \[ \! \< \n ]> ]+
+  || [ <!before <hardbreak>> <-[ \\ \` \* _ \~ \[ \! \< \$ \n ]> ]+
   || .
 }

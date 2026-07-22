@@ -50,10 +50,19 @@ method TOP($/) {
 
 method inline($/) {
   my $child = $<esc> // $<code> // $<image> // $<footref> // $<link> // $<reflink>
-           // $<autolink> // $<strong> // $<emph> // $<strike> // $<hardbreak>
+           // $<autolink> // $<mathdisplay> // $<mathinline>
+           // $<strong> // $<emph> // $<strike> // $<hardbreak>
            // $<softbreak> // $<text>;
 
   make $child.made;
+}
+
+method mathdisplay($/) {
+  make Math.new(display => True, tex => ~$<tex>);
+}
+
+method mathinline($/) {
+  make Math.new(display => False, tex => ~$<tex>);
 }
 
 method footref($/) {

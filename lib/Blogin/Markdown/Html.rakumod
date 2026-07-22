@@ -140,16 +140,27 @@ class Blogin::Markdown::Html {
       }
 
       when CodeBlock {
-        my $language = $node.info.chars ?? "language-{ $node.info }" !! '';
-        my $extra    = $.framework.class-for('code-block');
-        my $plain    = $.highlight && $node.info.chars && !Blogin::Highlight::supports($node.info) ?? 'hl-plain' !! '';
-        my $class    = ($language, $plain, $extra).grep(*.chars).join(' ');
+        my $info = $node.info.lc;
 
-        $!html ~= '<pre><code' ~ self!class-attr($class) ~ '>';
-        $!html ~= $.highlight
-          ?? Blogin::Highlight::highlight($node.text, $node.info)
-          !! html-escape($node.text);
-        $!html ~= "</code></pre>\n";
+        if $info eq 'mermaid' {
+          $!html ~= '<pre class="mermaid">' ~ html-escape($node.text) ~ "</pre>\n";
+        }
+        elsif $info eq 'math' {
+          $!html ~= '<div class="math math-display">' ~ html-escape($node.text.trim) ~ "</div>\n";
+        }
+        else {
+          my $language = $node.info.chars ?? "language-{ $node.info }" !! '';
+          my $extra    = $.framework.class-for('code-block');
+          my $plain    = $.highlight && $node.info.chars && !Blogin::Highlight::supports($node.info) ?? 'hl-plain' !! '';
+          my $class    = ($language, $plain, $extra).grep(*.chars).join(' ');
+
+          $!html ~= '<pre><code' ~ self!class-attr($class) ~ '>';
+          $!html ~= $.highlight
+            ?? Blogin::Highlight::highlight($node.text, $node.info)
+            !! html-escape($node.text);
+          $!html ~= "</code></pre>\n";
+        }
+
         $!text ~= $node.text ~ "\n";
       }
 
@@ -326,6 +337,12 @@ class Blogin::Markdown::Html {
           $!html ~= html-escape("[^{ $node.label }]");
           $!text ~= "[^{ $node.label }]";
         }
+      }
+
+      when Math {
+        my $class = $node.display ?? 'math math-display' !! 'math math-inline';
+        $!html ~= "<span class=\"$class\">" ~ html-escape($node.tex) ~ '</span>';
+        $!text ~= $node.tex;
       }
 
       when SoftBreak {

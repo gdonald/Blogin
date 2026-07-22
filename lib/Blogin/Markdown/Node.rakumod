@@ -115,3 +115,8 @@ class Shortcode does Node is export {
   has     %.args;
   has Str $.raw;
 }
+
+class Math does Node is export {
+  has Bool $.display = False;
+  has Str  $.tex;
+}
