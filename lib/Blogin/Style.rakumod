@@ -80,6 +80,61 @@ dl dd {
 dl dd:last-child {
   margin-bottom: 0;
 }
+
+.blogin-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  line-height: 0;
+}
+
+.blogin-theme-toggle svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.blogin-theme-toggle .icon-moon {
+  fill: currentColor;
+}
+
+.blogin-theme-toggle .icon-sun {
+  display: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+[data-theme="dark"] .blogin-theme-toggle .icon-moon {
+  display: none;
+}
+
+[data-theme="dark"] .blogin-theme-toggle .icon-sun {
+  display: inline;
+}
+
+[data-theme="dark"] pre {
+  background: #161b22;
+}
+
+[data-theme="dark"] .hl-keyword { color: #ff7b72; }
+[data-theme="dark"] .hl-string { color: #a5d6ff; }
+[data-theme="dark"] .hl-number { color: #79c0ff; }
+[data-theme="dark"] .hl-comment { color: #8b949e; }
+
+[data-theme="dark"] .anchor {
+  color: #6e7681;
+}
+
+[data-theme="dark"] dl {
+  border-color: #30363d;
+  background: #161b22;
+}
 CSS
 
 our sub content-css(--> Str) is export {

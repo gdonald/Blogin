@@ -130,6 +130,34 @@ describe 'the section heading', {
   }
 }
 
+describe 'the color theme controls', {
+  let(:view, { Blogin::Layout::ListView.new });
+
+  it 'applies a stored or preferred theme early', {
+    expect(view().theme-script.contains("setAttribute('data-theme'")).to.be-truthy;
+  }
+
+  it 'exposes a global toggle function', {
+    expect(view().theme-script.contains('window.bloginToggleTheme')).to.be-truthy;
+  }
+
+  it 'sets the bootstrap theme attribute alongside the generic one', {
+    expect(view().theme-script.contains("data-bs-theme")).to.be-truthy;
+  }
+
+  it 'renders a toggle button wired to the toggle function', {
+    expect(view().theme-toggle.contains('class="blogin-theme-toggle"') && view().theme-toggle.contains('onclick="bloginToggleTheme()"')).to.be-truthy;
+  }
+
+  it 'gives the toggle a moon and a sun icon', {
+    expect(view().theme-toggle.contains('icon-moon') && view().theme-toggle.contains('icon-sun')).to.be-truthy;
+  }
+
+  it 'labels the toggle for assistive technology', {
+    expect(view().theme-toggle.contains('aria-label="Toggle color theme"')).to.be-truthy;
+  }
+}
+
 describe 'the heading of a listing view', {
   it 'uses an explicit heading when given', {
     expect(Blogin::Layout::ListView.new(heading => 'raku').heading).to.eq('raku');

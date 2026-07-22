@@ -67,6 +67,7 @@ sub base-haml(--> Str) {
       != framework-stylesheet-tag
       %link{rel: 'stylesheet', href: '/assets/css/blogin.css'}
       %link{rel: 'stylesheet', href: '/assets/css/style.css'}
+      != theme-script
     %body
       - if has-header
         != debug-open('partial: header')
@@ -147,6 +148,7 @@ sub header-haml(--> Str) {
   %header
     %a.brand{href: '/'}= $brand
     != render(:partial<nav>)
+    != theme-toggle
   HAML
 }
 
@@ -213,6 +215,7 @@ sub bootstrap-base-haml(--> Str) {
       != framework-stylesheet-tag
       %link{rel: 'stylesheet', href: '/assets/css/blogin.css'}
       %link{rel: 'stylesheet', href: '/assets/css/style.css'}
+      != theme-script
     %body.d-flex.flex-column.min-vh-100
       - if has-header
         != debug-open('partial: header')
@@ -244,6 +247,8 @@ sub bootstrap-header-haml(--> Str) {
         %span.navbar-toggler-icon
       #topnav.collapse.navbar-collapse
         != render(:partial<nav>)
+        %span.navbar-nav.ms-auto
+          != theme-toggle
   HAML
 }
 
@@ -303,8 +308,34 @@ sub bootstrap-entry-haml(--> Str) {
   HAML
 }
 
-sub style-css(--> Str) {
-  '';
+sub style-css(Str $framework --> Str) {
+  return '' unless $framework eq 'none';
+
+  q:to/CSS/;
+  :root {
+    --blogin-bg: #ffffff;
+    --blogin-fg: #1a1d24;
+    --blogin-link: #0d6efd;
+    --blogin-border: #e5e7eb;
+  }
+
+  [data-theme="dark"] {
+    --blogin-bg: #0d1117;
+    --blogin-fg: #e6edf3;
+    --blogin-link: #58a6ff;
+    --blogin-border: #30363d;
+  }
+
+  body {
+    margin: 0;
+    background: var(--blogin-bg);
+    color: var(--blogin-fg);
+  }
+
+  a { color: var(--blogin-link); }
+
+  header, footer { border-color: var(--blogin-border); }
+  CSS
 }
 
 sub post-stub(Str $title, Str $date --> Str) {
@@ -354,7 +385,7 @@ sub scaffold-files(Str $framework, Str $date) {
     'layouts/_sidebar.haml'                => sidebar-haml(),
     'layouts/_footer.haml'                 => footer-haml(),
     'layouts/_search.haml'                 => search-haml(),
-    'assets/css/style.css'                 => style-css(),
+    'assets/css/style.css'                 => style-css($framework),
     ;
 
   if $framework eq 'bootstrap5' {

@@ -1,2 +1,3 @@
 .behave-failures
 docs-src/public/
+.fezignore

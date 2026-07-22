@@ -110,6 +110,26 @@ describe 'the scaffold builds', {
     expect(out().add('feed.xml').e && out().add('rss.xml').e).to.be-truthy;
   }
 
+  it 'renders a theme toggle in the header', {
+    build-scaffold;
+    expect(out().add('index.html').slurp.contains('class="blogin-theme-toggle"')).to.be-truthy;
+  }
+
+  it 'inlines the early theme script', {
+    build-scaffold;
+    expect(out().add('index.html').slurp.contains('window.bloginToggleTheme')).to.be-truthy;
+  }
+
+  it 'generates dark-mode styles in blogin.css', {
+    build-scaffold;
+    expect(out().add('assets/css/blogin.css').slurp.contains('[data-theme="dark"]')).to.be-truthy;
+  }
+
+  it 'themes the body of a plain site through style.css', {
+    build-scaffold;
+    expect(out().add('assets/css/style.css').slurp.contains('[data-theme="dark"]')).to.be-truthy;
+  }
+
   it 'links a stylesheet that resolves to an emitted file', {
     build(
       src => dir().add('content'),
@@ -209,6 +229,10 @@ describe 'framework selection', {
 
     it 'links the feeds from the footer', {
       expect(out().add('index.html').slurp.contains("href='/feed.xml'")).to.be-truthy;
+    }
+
+    it 'renders a theme toggle in the navbar', {
+      expect(out().add('index.html').slurp.contains('class="blogin-theme-toggle"')).to.be-truthy;
     }
   }
 

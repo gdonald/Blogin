@@ -1,12 +1,17 @@
 {
   "name": "Blogin",
   "description": "A static blog generator written in Raku",
-  "version": "0.0.1",
+  "version": "0.9.0",
   "api": "1",
   "perl": "6.d",
   "authors": ["Greg Donald"],
   "auth": "zef:gdonald",
-  "depends": ["Template::HAML:auth<zef:gdonald>", "JSON::Fast", "YAMLish", "Cro::HTTP"],
+  "depends": [
+    "Template::HAML:auth<zef:gdonald>",
+    "JSON::Fast",
+    "YAMLish",
+    "Cro::HTTP"
+  ],
   "build-depends": [],
   "test-depends": ["BDD::Behave:auth<zef:gdonald>", "META6", "URI", "XML"],
   "provides": {
