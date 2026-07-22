@@ -247,7 +247,7 @@ sub bootstrap-header-haml(--> Str) {
         %span.navbar-toggler-icon
       #topnav.collapse.navbar-collapse
         != render(:partial<nav>)
-        %span.navbar-nav.ms-auto
+        .d-flex.ms-lg-auto.mt-2.mt-lg-0
           != theme-toggle
   HAML
 }
@@ -335,6 +335,17 @@ sub style-css(Str $framework --> Str) {
   a { color: var(--blogin-link); }
 
   header, footer { border-color: var(--blogin-border); }
+
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 1rem;
+  }
+
+  header .blogin-theme-toggle {
+    margin-left: auto;
+  }
   CSS
 }
 

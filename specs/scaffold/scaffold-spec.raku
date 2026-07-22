@@ -130,6 +130,11 @@ describe 'the scaffold builds', {
     expect(out().add('assets/css/style.css').slurp.contains('[data-theme="dark"]')).to.be-truthy;
   }
 
+  it 'lets the plain header wrap the toggle on small screens', {
+    build-scaffold;
+    expect(out().add('assets/css/style.css').slurp.contains('flex-wrap')).to.be-truthy;
+  }
+
   it 'links a stylesheet that resolves to an emitted file', {
     build(
       src => dir().add('content'),
@@ -233,6 +238,10 @@ describe 'framework selection', {
 
     it 'renders a theme toggle in the navbar', {
       expect(out().add('index.html').slurp.contains('class="blogin-theme-toggle"')).to.be-truthy;
+    }
+
+    it 'drops the theme toggle to its own line on small screens', {
+      expect(out().add('index.html').slurp.contains('ms-lg-auto')).to.be-truthy;
     }
   }
 
