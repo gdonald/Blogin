@@ -22,7 +22,7 @@ sub blogin-json(Str $framework --> Str) {
     "reading-wpm": 200,
     "related-count": 5,
     "taxonomies": ["tags"],
-    "feed-formats": ["atom"],
+    "feed-formats": ["atom", "rss"],
     "robots": true,
     "minify": false,
     "fingerprint": false,
@@ -181,7 +181,12 @@ sub sidebar-haml(--> Str) {
 sub footer-haml(--> Str) {
   q:to/HAML/;
   %footer
-    %p Built with Blogin.
+    %p
+      Built with
+      %a{href: 'https://blogin.dev'} Blogin
+    %nav.feeds
+      %a{href: '/feed.xml'} Atom
+      %a{href: '/rss.xml'} RSS
   HAML
 }
 
@@ -269,8 +274,13 @@ sub bootstrap-sidebar-haml(--> Str) {
 sub bootstrap-footer-haml(--> Str) {
   q:to/HAML/;
   %footer.border-top.py-3.mt-auto
-    .container
-      %p.text-body-secondary.mb-0 Built with Blogin.
+    .container.d-flex.flex-wrap.justify-content-between.gap-2
+      %p.text-body-secondary.mb-0
+        Built with
+        %a.link-secondary{href: 'https://blogin.dev'} Blogin
+      %nav.d-flex.gap-3
+        %a.link-secondary{href: '/feed.xml'} Atom
+        %a.link-secondary{href: '/rss.xml'} RSS
   HAML
 }
 

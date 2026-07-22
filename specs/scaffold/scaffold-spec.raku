@@ -51,6 +51,15 @@ describe 'the scaffold builds', {
     nuke(out());
   }
 
+  sub build-scaffold {
+    build(
+      src => dir().add('content'),
+      config => Blogin::Config.load(dir().add('blogin.json')),
+      out => out(),
+      log => Blogin::Log.new(:level('quiet')),
+    );
+  }
+
   it 'produces a home index page', {
     build(
       src => dir().add('content'),
@@ -83,6 +92,22 @@ describe 'the scaffold builds', {
                 search-text-length search-cap languages language-config theme plugins
                 debug sections>;
     expect(@keys.grep({ !$json.contains("\"$_\"") }).elems).to.eq(0);
+  }
+
+  it 'links to blogin.dev in the footer', {
+    build-scaffold;
+    expect(out().add('index.html').slurp.contains("href='https://blogin.dev'")).to.be-truthy;
+  }
+
+  it 'links the atom and rss feeds in the footer', {
+    build-scaffold;
+    my $page = out().add('index.html').slurp;
+    expect($page.contains("href='/feed.xml'") && $page.contains("href='/rss.xml'")).to.be-truthy;
+  }
+
+  it 'emits the feeds the footer links to', {
+    build-scaffold;
+    expect(out().add('feed.xml').e && out().add('rss.xml').e).to.be-truthy;
   }
 
   it 'links a stylesheet that resolves to an emitted file', {
@@ -180,6 +205,10 @@ describe 'framework selection', {
 
     it 'links the emitted search stylesheet from the widget', {
       expect(out().add('index.html').slurp.contains('/assets/css/search.css')).to.be-truthy;
+    }
+
+    it 'links the feeds from the footer', {
+      expect(out().add('index.html').slurp.contains("href='/feed.xml'")).to.be-truthy;
     }
   }
 
