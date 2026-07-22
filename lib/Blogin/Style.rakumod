@@ -135,6 +135,38 @@ dl dd:last-child {
   border-color: #30363d;
   background: #161b22;
 }
+
+.navbar-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.navbar-search {
+  width: 100%;
+}
+
+@media (min-width: 992px) {
+  .navbar-tools {
+    flex-direction: row;
+    align-items: center;
+    width: auto;
+    margin-top: 0;
+    margin-left: auto;
+  }
+
+  .navbar-search {
+    width: 24rem;
+    max-width: 90vw;
+  }
+
+  .navbar-toggle-slot {
+    order: 2;
+  }
+}
 CSS
 
 our sub content-css(--> Str) is export {

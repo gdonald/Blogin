@@ -73,14 +73,10 @@ sub base-haml(--> Str) {
         != debug-open('partial: header')
         != render(:partial<header>, :locals(%( brand => site-title )))
         != debug-close('partial: header')
-      .layout
-        - if has-sidebar
-          %aside
-            != render(:partial<sidebar>)
-        %main
-          != debug-open(template-label)
-          = yield
-          != debug-close(template-label)
+      %main
+        != debug-open(template-label)
+        = yield
+        != debug-close(template-label)
       - if has-footer
         != debug-open('partial: footer')
         != render(:partial<footer>)
@@ -148,7 +144,11 @@ sub header-haml(--> Str) {
   %header
     %a.brand{href: '/'}= $brand
     != render(:partial<nav>)
-    != theme-toggle
+    .navbar-tools
+      .navbar-search
+        != render(:partial<search>)
+      .navbar-toggle-slot
+        != theme-toggle
   HAML
 }
 
@@ -170,13 +170,6 @@ sub nav-item-haml(--> Str) {
     - if $node.children.elems
       %ul
         != render(:partial<nav-item>, :collection($node.children), :as<node>)
-  HAML
-}
-
-sub sidebar-haml(--> Str) {
-  q:to/HAML/;
-  %section.sidebar
-    != render(:partial<search>)
   HAML
 }
 
@@ -221,15 +214,10 @@ sub bootstrap-base-haml(--> Str) {
         != debug-open('partial: header')
         != render(:partial<header>, :locals(%( brand => site-title )))
         != debug-close('partial: header')
-      .container.my-4.flex-grow-1
-        .row.g-4
-          %main.col-lg-8
-            != debug-open(template-label)
-            = yield
-            != debug-close(template-label)
-          - if has-sidebar
-            %aside.col-lg-4
-              != render(:partial<sidebar>)
+      %main.container.my-4.flex-grow-1
+        != debug-open(template-label)
+        = yield
+        != debug-close(template-label)
       - if has-footer
         != debug-open('partial: footer')
         != render(:partial<footer>)
@@ -240,15 +228,18 @@ sub bootstrap-base-haml(--> Str) {
 
 sub bootstrap-header-haml(--> Str) {
   q:to/HAML/;
-  %nav.navbar.navbar-expand-lg.navbar-dark.bg-dark
+  %nav.navbar.navbar-expand-lg.bg-body-tertiary.border-bottom
     .container
       %a.navbar-brand{href: '/'}= $brand
       %button.navbar-toggler{type: 'button', 'data-bs-toggle' => 'collapse', 'data-bs-target' => '#topnav', 'aria-controls' => 'topnav', 'aria-expanded' => 'false', 'aria-label' => 'Toggle navigation'}
         %span.navbar-toggler-icon
       #topnav.collapse.navbar-collapse
         != render(:partial<nav>)
-        .d-flex.ms-lg-auto.mt-2.mt-lg-0
-          != theme-toggle
+        .navbar-tools
+          .navbar-search
+            != render(:partial<search>)
+          .navbar-toggle-slot
+            != theme-toggle
   HAML
 }
 
@@ -266,13 +257,6 @@ sub bootstrap-nav-item-haml(--> Str) {
       %a.nav-link.active{href: "#{$node.url}"}= $node.label
     - else
       %a.nav-link{href: "#{$node.url}"}= $node.label
-  HAML
-}
-
-sub bootstrap-sidebar-haml(--> Str) {
-  q:to/HAML/;
-  %section
-    != render(:partial<search>)
   HAML
 }
 
@@ -342,10 +326,6 @@ sub style-css(Str $framework --> Str) {
     align-items: center;
     gap: 0.5rem 1rem;
   }
-
-  header .blogin-theme-toggle {
-    margin-left: auto;
-  }
   CSS
 }
 
@@ -393,7 +373,6 @@ sub scaffold-files(Str $framework, Str $date) {
     'layouts/_header.haml'                 => header-haml(),
     'layouts/_nav.haml'                    => nav-haml(),
     'layouts/_nav-item.haml'               => nav-item-haml(),
-    'layouts/_sidebar.haml'                => sidebar-haml(),
     'layouts/_footer.haml'                 => footer-haml(),
     'layouts/_search.haml'                 => search-haml(),
     'assets/css/style.css'                 => style-css($framework),
@@ -406,7 +385,6 @@ sub scaffold-files(Str $framework, Str $date) {
     %files{'layouts/_header.haml'}   = bootstrap-header-haml();
     %files{'layouts/_nav.haml'}      = bootstrap-nav-haml();
     %files{'layouts/_nav-item.haml'} = bootstrap-nav-item-haml();
-    %files{'layouts/_sidebar.haml'}  = bootstrap-sidebar-haml();
     %files{'layouts/_footer.haml'}   = bootstrap-footer-haml();
   }
 

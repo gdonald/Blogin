@@ -22,7 +22,7 @@ describe 'scaffolding a site', {
   }
 
   it 'writes the canonical layouts', {
-    my @layouts = <base show index _header _sidebar _footer _nav _search>;
+    my @layouts = <base show index _header _footer _nav _search>;
     expect(@layouts.map({ dir().add("layouts/$_.haml").e }).all.so).to.be-truthy;
   }
 
@@ -123,6 +123,17 @@ describe 'the scaffold builds', {
   it 'generates dark-mode styles in blogin.css', {
     build-scaffold;
     expect(out().add('assets/css/blogin.css').slurp.contains('[data-theme="dark"]')).to.be-truthy;
+  }
+
+  it 'puts the search in the header, not a sidebar', {
+    build-scaffold;
+    my $html = out().add('index.html').slurp;
+    expect($html.contains('navbar-search') && !$html.contains('<aside')).to.be-truthy;
+  }
+
+  it 'stacks the navbar search and toggle through blogin.css', {
+    build-scaffold;
+    expect(out().add('assets/css/blogin.css').slurp.contains('.navbar-tools')).to.be-truthy;
   }
 
   it 'themes the body of a plain site through style.css', {
@@ -240,8 +251,18 @@ describe 'framework selection', {
       expect(out().add('index.html').slurp.contains('class="blogin-theme-toggle"')).to.be-truthy;
     }
 
-    it 'drops the theme toggle to its own line on small screens', {
-      expect(out().add('index.html').slurp.contains('ms-lg-auto')).to.be-truthy;
+    it 'puts the search in the navbar', {
+      my $html = out().add('index.html').slurp;
+      expect($html.contains('navbar-search') && $html.contains('data-blogin-search')).to.be-truthy;
+    }
+
+    it 'groups the search and toggle so they stack on small screens', {
+      my $html = out().add('index.html').slurp;
+      expect($html.contains('navbar-tools') && $html.contains('navbar-toggle-slot')).to.be-truthy;
+    }
+
+    it 'adapts the navbar to the color theme instead of forcing dark', {
+      expect(out().add('index.html').slurp.contains('bg-body-tertiary')).to.be-truthy;
     }
   }
 
