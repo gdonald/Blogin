@@ -1,0 +1,9 @@
+%section
+  %h1= heading
+  - for posts -> $entry
+    %article.summary
+      %a{href: "#{$entry<url>}"}= $entry<title>
+      - if index-dates
+        %span.date= $entry<date>
+      %p.desc= $entry<description>
+  != pagination-html

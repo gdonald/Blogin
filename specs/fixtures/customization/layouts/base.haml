@@ -1,0 +1,12 @@
+!!! 5
+%html
+  %head
+    %title= site-title
+    != head-meta
+  %body
+    != render(:partial<header>, :locals(%( brand => site-title )))
+    != render(:partial<nav>)
+    %main
+      = yield
+    %footer
+      %p.tagline= data<site><tagline>

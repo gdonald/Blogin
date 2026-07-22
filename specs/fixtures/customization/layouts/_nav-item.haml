@@ -1,0 +1,5 @@
+%li
+  - if nav-current($node)
+    %a.current{href: "#{$node.url}"}= $node.label
+  - else
+    %a{href: "#{$node.url}"}= $node.label

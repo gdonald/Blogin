@@ -1,0 +1,18 @@
+%article
+  %h1= title
+  - if show-dates
+    %p.meta= "#{date} · #{reading-time} min read"
+  - if has-toc
+    %nav.toc
+      != toc-html
+  != body
+  - if has-tags
+    %nav.tags
+      - for tags -> $tag
+        %a{href: "#{$tag<url>}"}= $tag<name>
+!= post-nav-html
+- if has-related
+  %nav.related
+    %h2 Related
+    %ul
+      != render(:partial<entry>, :collection(related), :as<entry>)
