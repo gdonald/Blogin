@@ -142,7 +142,7 @@ class ChromeView does Template::HAML::HelpersRole {
       function apply(m) { root.setAttribute('data-theme', m); root.setAttribute('data-bs-theme', m); }
       function pref() {
         try { var s = localStorage.getItem(KEY); if (s === 'light' || s === 'dark') return s; } catch (e) {}
-        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        return 'light';
       }
       apply(pref());
       window.bloginToggleTheme = function () {

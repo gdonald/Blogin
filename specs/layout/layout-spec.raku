@@ -141,6 +141,10 @@ describe 'the color theme controls', {
     expect(view().theme-script.contains('window.bloginToggleTheme')).to.be-truthy;
   }
 
+  it 'defaults to light when no choice is stored', {
+    expect(view().theme-script.contains("return 'light'") && !view().theme-script.contains('prefers-color-scheme')).to.be-truthy;
+  }
+
   it 'sets the bootstrap theme attribute alongside the generic one', {
     expect(view().theme-script.contains("data-bs-theme")).to.be-truthy;
   }
