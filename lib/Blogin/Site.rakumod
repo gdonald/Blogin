@@ -434,7 +434,7 @@ sub build-taxonomy(
   my @written;
   return @written unless %term-posts;
 
-  my @term-templates  = ($name, $name.subst(/ 's' $ /, ''), 'term', 'index').unique;
+  my @term-templates  = ($name.subst(/ 's' $ /, ''), 'term', $name, 'index').unique;
   my @index-templates = ($name, 'index').unique;
 
   for %term-posts.keys.sort -> $term {
@@ -447,7 +447,8 @@ sub build-taxonomy(
     my @entries = @sorted.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :$url, :%site, :%data, :@nav, :@entries, templates => @term-templates, :$debug, :$framework, :$theme-layouts,
+      :$layouts, :$url, :%site, :%data, :@nav, :@entries, templates => @term-templates,
+      heading => $term, :$debug, :$framework, :$theme-layouts,
     );
 
     $writer.write($out-file, $html);
@@ -467,7 +468,8 @@ sub build-taxonomy(
   my $index-url  = $clean-urls ?? "$url-prefix/$name" !! "$url-prefix/$name/";
 
   my $html = Blogin::Layout::render-listing(
-    :$layouts, url => $index-url, :%site, :%data, :@nav, entries => @term-entries, templates => @index-templates, :$debug, :$framework, :$theme-layouts,
+    :$layouts, url => $index-url, :%site, :%data, :@nav, entries => @term-entries, templates => @index-templates,
+    heading => Blogin::Slug::humanize($name), :$debug, :$framework, :$theme-layouts,
   );
 
   $writer.write($index-file, $html);

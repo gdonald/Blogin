@@ -130,6 +130,20 @@ describe 'the section heading', {
   }
 }
 
+describe 'the heading of a listing view', {
+  it 'uses an explicit heading when given', {
+    expect(Blogin::Layout::ListView.new(heading => 'raku').heading).to.eq('raku');
+  }
+
+  it 'falls back to the section label without an explicit heading', {
+    expect(Blogin::Layout::ListView.new(section => 'guide').heading).to.eq('Guide');
+  }
+
+  it 'titles the page with the explicit heading', {
+    expect(Blogin::Layout::ListView.new(heading => 'raku', site => %( title => 'S' )).meta-title).to.eq('raku');
+  }
+}
+
 describe 'per-section layout resolution', {
   it 'uses the section override when present', {
     expect(render('E', 'b', section => 'essays').contains("<article class='essay'>")).to.be-truthy;

@@ -42,6 +42,17 @@ describe 'per-tag pages', {
     build(out());
     expect(out().add('tags/raku.html').slurp.contains("class='tag'")).to.be-truthy;
   }
+
+  it 'heads a tag page with the term name', {
+    build(out());
+    expect(out().add('tags/raku.html').slurp.contains('<h1>raku</h1>')).to.be-truthy;
+  }
+
+  it 'renders a term page through the singular layout, not the index layout', {
+    build(out());
+    my $html = out().add('tags/raku.html').slurp;
+    expect($html.contains("class='tag'") && !$html.contains('tag-cloud')).to.be-truthy;
+  }
 }
 
 describe 'tags on a post page', {
@@ -80,5 +91,15 @@ describe 'the tag index', {
   it 'links each tag to its page', {
     build(out());
     expect(out().add('tags.html').slurp.contains("href='/tags/raku'")).to.be-truthy;
+  }
+
+  it 'heads the index with the humanized taxonomy name', {
+    build(out());
+    expect(out().add('tags.html').slurp.contains('<h1>Tags</h1>')).to.be-truthy;
+  }
+
+  it 'renders the index through the plural layout', {
+    build(out());
+    expect(out().add('tags.html').slurp.contains('tag-cloud')).to.be-truthy;
   }
 }

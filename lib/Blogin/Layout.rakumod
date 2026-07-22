@@ -205,8 +205,15 @@ class ListView is ChromeView is export {
   has Str  $.prev-url = '';
   has Str  $.next-url = '';
   has Bool $.index-dates = True;
+  has Str  $.heading = '';
+
+  method heading(--> Str) {
+    $!heading.chars ?? $!heading !! self.section-label;
+  }
 
   method meta-title(--> Str) {
+    return $!heading if $!heading.chars;
+
     $.section.chars ?? self.section-label !! self.site-title;
   }
 
@@ -411,6 +418,7 @@ our sub render-listing(
   Str   :$framework = 'none',
         :@templates = ['index'],
   Bool  :$index-dates = True,
+  Str   :$heading = '',
         :$theme-layouts = Nil,
   --> Str
 ) is export {
@@ -438,6 +446,7 @@ our sub render-listing(
     :$next-url,
     :$debug,
     :$index-dates,
+    :$heading,
     framework => Blogin::Framework::profile($framework),
     has-header  => partial-exists(@paths, 'header'),
     has-sidebar => partial-exists(@paths, 'sidebar'),

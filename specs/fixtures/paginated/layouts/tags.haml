@@ -1,0 +1,4 @@
+%section.tag-cloud
+  %h1= heading
+  - for posts -> $term
+    %a{href: "#{$term<url>}"}= $term<title>

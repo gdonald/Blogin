@@ -126,7 +126,7 @@ sub not-found-haml(--> Str) {
 sub index-haml(--> Str) {
   q:to/HAML/;
   %section.listing
-    %h1= section-label
+    %h1= heading
     %ul
       != render(:partial<entry>, :collection(posts), :as<entry>)
     != pagination-html
@@ -277,7 +277,7 @@ sub bootstrap-footer-haml(--> Str) {
 sub bootstrap-index-haml(--> Str) {
   q:to/HAML/;
   %section
-    %h1.mb-4= section-label
+    %h1.mb-4= heading
     .list-group
       != render(:partial<entry>, :collection(posts), :as<entry>)
     != pagination-html
