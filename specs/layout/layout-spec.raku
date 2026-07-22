@@ -96,6 +96,24 @@ describe 'adjacent post links on a post view', {
   }
 }
 
+describe 'the tags of a post view', {
+  let(:tagged, {
+    Blogin::Layout::View.new(tags => [ %( name => 'raku', url => '/tags/raku/' ), %( name => 'web', url => '/tags/web/' ) ])
+  });
+
+  it 'reports that it has tags when some are present', {
+    expect(tagged().has-tags).to.be-truthy;
+  }
+
+  it 'exposes each tag link for the layout to render', {
+    expect(tagged().tags.map(*<name>).join(',')).to.eq('raku,web');
+  }
+
+  it 'reports no tags when none are present', {
+    expect(Blogin::Layout::View.new.has-tags).to.be-falsy;
+  }
+}
+
 describe 'the section heading', {
   it 'title-cases a single-segment section', {
     expect(Blogin::Layout::ListView.new(section => 'guide').section-label).to.eq('Guide');

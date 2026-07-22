@@ -98,6 +98,12 @@ sub show-haml(--> Str) {
       %nav.toc
         != toc-html
     != body
+    - if has-tags
+      %nav.tags
+        %ul
+          - for tags -> $tag
+            %li
+              %a{href: "#{$tag<url>}"}= $tag<name>
   != post-nav-html
   - if has-related
     %nav.related

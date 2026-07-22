@@ -44,6 +44,23 @@ describe 'per-tag pages', {
   }
 }
 
+describe 'tags on a post page', {
+  let(:out, { temp-dir('posttags') });
+
+  after-each { nuke(out()) }
+
+  it 'renders each of the post tags as a link', {
+    build(out());
+    my $html = out().add('posts/alpha.html').slurp;
+    expect($html.contains("href='/tags/raku'") && $html.contains("href='/tags/web'")).to.be-truthy;
+  }
+
+  it 'labels each tag link with the tag name', {
+    build(out());
+    expect(out().add('posts/alpha.html').slurp.contains('>raku<')).to.be-truthy;
+  }
+}
+
 describe 'the tag index', {
   let(:out, { temp-dir('tagindex') });
 

@@ -143,6 +143,7 @@ class View is ChromeView is export {
   has Int  $.word-count = 0;
   has Int  $.reading-time = 0;
   has      @.related;
+  has      @.tags;
   has Bool $.show-dates = True;
   has Str  $.prev-url = '';
   has Str  $.prev-title = '';
@@ -166,6 +167,9 @@ class View is ChromeView is export {
   method reading-time { $!reading-time }
   method related      { @!related }
   method has-related(--> Bool) { @!related.elems.so }
+
+  method tags         { @!tags }
+  method has-tags(--> Bool) { @!tags.elems.so }
 
   method post-nav-html {
     return '' unless $!prev-url.chars || $!next-url.chars;
@@ -310,6 +314,7 @@ our sub render-with-layout(
   Int   :$word-count = 0,
   Int   :$reading-time = 0,
         :@related = [],
+        :@tags = [],
         :@languages = [],
   Str   :$prev-url = '',
   Str   :$prev-title = '',
@@ -343,6 +348,7 @@ our sub render-with-layout(
     :$word-count,
     :$reading-time,
     :@related,
+    :@tags,
     :$debug,
     :$show-dates,
     :$prev-url,
@@ -372,6 +378,7 @@ our sub render-post(
   Bool  :$debug = False,
   Bool  :$show-dates = True,
   Str   :$summary = '',
+        :@tags = [],
   Str   :$prev-url = '',
   Str   :$prev-title = '',
   Str   :$next-url = '',
@@ -383,7 +390,7 @@ our sub render-post(
 
   render-with-layout(
     :$post, :$body-html, :$layouts, :%site, :%data, :$section, :$url, :@nav, :$debug, :$framework, :$show-dates,
-    :$summary, :$prev-url, :$prev-title, :$next-url, :$next-title, :@templates,
+    :$summary, :@tags, :$prev-url, :$prev-title, :$next-url, :$next-title, :@templates,
   );
 }
 

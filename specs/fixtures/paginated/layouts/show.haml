@@ -1,4 +1,8 @@
 %article
   %h1= title
   != body
+  - if has-tags
+    %nav.post-tags
+      - for tags -> $tag
+        %a{href: "#{$tag<url>}"}= $tag<name>
 != post-nav-html

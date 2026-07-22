@@ -301,6 +301,22 @@ sub entry-of(%page, Str :$base = '') {
   );
 }
 
+# The post's tags as { name, url } links to their term pages, matching the URL
+# scheme build-taxonomy writes. Empty when the tags taxonomy is not active, so
+# a layout never links to pages the build did not produce.
+sub post-tag-links($post, Bool :$active!, Bool :$clean-urls!, Str :$url-prefix = '') {
+  return [] unless $active;
+
+  $post.terms('tags').map(-> $term {
+    my $slug = Blogin::Slug::slugify($term);
+
+    %(
+      name => $term,
+      url  => ($clean-urls ?? "$url-prefix/tags/$slug" !! "$url-prefix/tags/$slug/"),
+    )
+  }).Array;
+}
+
 sub listing-url(Str $section, Int $page-num, Bool :$at-root, Bool :$clean-urls, Str :$url-prefix = '') {
   my $base = $at-root ?? '' !! $section;
 
@@ -788,6 +804,8 @@ our sub build(
 
   my @ordered = @pages.sort({ -.<post>.body.chars });
 
+  my $tags-active = so 'tags' eq any(@tax-names);
+
   my $haml-lock = Lock.new;
 
   my @written = @ordered.hyper(:degree($jobs max 1), :batch(1)).map(-> $page {
@@ -824,6 +842,8 @@ our sub build(
     my $prev = %prev-of{$page<url>};
     my $next = %next-of{$page<url>};
 
+    my @tag-links = post-tag-links($page<post>, active => $tags-active, :$clean-urls, :$url-prefix);
+
     my $html = $haml-lock.protect({
       Blogin::Layout::render-with-layout(
         post      => $page<post>,
@@ -843,6 +863,7 @@ our sub build(
         word-count => $words,
         reading-time => $reading-time,
         related    => $page<related>,
+        tags       => @tag-links,
         languages  => post-switcher($page<trans-key>),
         theme-layouts => $theme-layouts,
         prev-url   => ($prev ?? $prev<url> !! ''),
