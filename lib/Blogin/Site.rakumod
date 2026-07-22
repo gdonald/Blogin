@@ -331,7 +331,7 @@ sub write-section-listing(
   Bool :$at-root = False,
   IO::Path:D :$out!, IO() :$layouts!, :%site, :%data, :@languages, :@nav, Bool :$clean-urls!,
   Bool :$debug!, Int :$page-size!, Writer :$writer!, Str :$framework!, Str :$url-prefix = '',
-  :@templates = ['index'],
+  :@templates = ['index'], :$theme-layouts = Nil,
   Bool :$index-dates = True,
 ) {
   my @written;
@@ -353,7 +353,7 @@ sub write-section-listing(
     my $html = Blogin::Layout::render-listing(
       :$layouts, :$section, :$url, :%site, :%data, :@languages, :@nav, :@entries, :@templates,
       page-number => $page-num, total-pages => $total,
-      :$prev-url, :$next-url, :$debug, :$framework, :$index-dates,
+      :$prev-url, :$next-url, :$debug, :$framework, :$index-dates, :$theme-layouts,
     );
 
     $writer.write($out-file, $html);
@@ -366,7 +366,7 @@ sub write-section-listing(
 sub build-listings(
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%sections,
   Bool :$clean-urls!, Bool :$debug!, Int :$page-size!, Str :$home-section!,
-  Writer :$writer!, Str :$framework!, :&data-for!, Str :$url-prefix = '', :&section-switcher!,
+  Writer :$writer!, Str :$framework!, :&data-for!, Str :$url-prefix = '', :&section-switcher!, :$theme-layouts = Nil,
   --> Array
 ) {
   my sub page-size-for(Str $section) {
@@ -384,7 +384,7 @@ sub build-listings(
     @written.append: write-section-listing(
       $section, newest-first(%by-section{$section}),
       :$out, :$layouts, :%site, data => data-for($section), languages => section-switcher($section),
-      :@nav, :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix,
+      :@nav, :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix, :$theme-layouts,
       page-size => page-size-for($section),
       index-dates => index-dates-for($section),
     );
@@ -394,7 +394,7 @@ sub build-listings(
     @written.append: write-section-listing(
       $home-section, newest-first(%by-section{$home-section}),
       :at-root, :$out, :$layouts, :%site, data => data-for($home-section), languages => section-switcher(''),
-      :@nav, :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix,
+      :@nav, :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix, :$theme-layouts,
       page-size => page-size-for($home-section),
       index-dates => index-dates-for($home-section),
       templates => ['home', 'index'],
@@ -407,7 +407,7 @@ sub build-listings(
 sub build-taxonomy(
   Str $name,
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site, :%data,
-  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, Str :$url-prefix = '',
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, Str :$url-prefix = '', :$theme-layouts = Nil,
   --> Array
 ) {
   my %term-posts;
@@ -431,7 +431,7 @@ sub build-taxonomy(
     my @entries = @sorted.map({ entry-of($_) });
 
     my $html = Blogin::Layout::render-listing(
-      :$layouts, :$url, :%site, :%data, :@nav, :@entries, templates => @term-templates, :$debug, :$framework,
+      :$layouts, :$url, :%site, :%data, :@nav, :@entries, templates => @term-templates, :$debug, :$framework, :$theme-layouts,
     );
 
     $writer.write($out-file, $html);
@@ -451,7 +451,7 @@ sub build-taxonomy(
   my $index-url  = $clean-urls ?? "$url-prefix/$name" !! "$url-prefix/$name/";
 
   my $html = Blogin::Layout::render-listing(
-    :$layouts, url => $index-url, :%site, :%data, :@nav, entries => @term-entries, templates => @index-templates, :$debug, :$framework,
+    :$layouts, url => $index-url, :%site, :%data, :@nav, entries => @term-entries, templates => @index-templates, :$debug, :$framework, :$theme-layouts,
   );
 
   $writer.write($index-file, $html);
@@ -463,7 +463,7 @@ sub build-taxonomy(
 sub build-taxonomies(
   @taxonomies,
   :@pages, :@nav, IO::Path:D :$out!, IO() :$layouts!, :%site,
-  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, :&data-for!, Str :$url-prefix = '',
+  Bool :$clean-urls!, Bool :$debug!, Writer :$writer!, Str :$framework!, :&data-for!, Str :$url-prefix = '', :$theme-layouts = Nil,
   --> Array
 ) {
   my %data = data-for('');
@@ -473,7 +473,7 @@ sub build-taxonomies(
   for @taxonomies -> $name {
     @written.append: build-taxonomy(
       $name, :@pages, :@nav, :$out, :$layouts, :%site, :%data,
-      :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix,
+      :$clean-urls, :$debug, :$writer, :$framework, :$url-prefix, :$theme-layouts,
     );
   }
 
@@ -665,6 +665,9 @@ our sub build(
         :@languages = [],
   Str   :$current-language = '',
         :%lang-paths = {},
+        :$theme-layouts = Nil,
+        :$theme-static = Nil,
+        :$theme-assets = Nil,
   Bool  :$future = False,
   Bool  :$force = False,
   --> BuildResult
@@ -841,6 +844,7 @@ our sub build(
         reading-time => $reading-time,
         related    => $page<related>,
         languages  => post-switcher($page<trans-key>),
+        theme-layouts => $theme-layouts,
         prev-url   => ($prev ?? $prev<url> !! ''),
         prev-title => ($prev ?? $prev<post>.title !! ''),
         next-url   => ($next ?? $next<url> !! ''),
@@ -854,12 +858,12 @@ our sub build(
 
   my @listings = build-listings(
     :@pages, :@nav, :$out, :$layouts, :%site, :%sections, :$clean-urls, :$debug,
-    :$page-size, :$home-section, :$writer, :$framework, :&data-for, :$url-prefix, :&section-switcher,
+    :$page-size, :$home-section, :$writer, :$framework, :&data-for, :$url-prefix, :&section-switcher, :$theme-layouts,
   );
 
   @listings.append: build-taxonomies(
     @taxonomies.map({ $_ ~~ Str ?? $_ !! |$_ }),
-    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer, :$framework, :&data-for, :$url-prefix,
+    :@pages, :@nav, :$out, :$layouts, :%site, :$clean-urls, :$debug, :$writer, :$framework, :&data-for, :$url-prefix, :$theme-layouts,
   );
 
   if @pages.elems {
@@ -889,12 +893,13 @@ our sub build(
     @listings.push: $style-file;
 
     my $not-found  = $out.add('404.html');
-    my $has-layout = $layouts.add('404.haml').e || $layouts.add('404.html.haml').e;
+    my $has-layout = $layouts.add('404.haml').e || $layouts.add('404.html.haml').e
+      || ($theme-layouts.defined && ($theme-layouts.IO.add('404.haml').e || $theme-layouts.IO.add('404.html.haml').e));
 
     my $not-found-html = $has-layout
       ?? Blogin::Layout::render-listing(
            :$layouts, section => '', url => '/404', :%site, data => data-for(''), :@nav,
-           entries => [], templates => ['404'], :$debug, :$framework,
+           entries => [], templates => ['404'], :$debug, :$framework, :$theme-layouts,
          )
       !! default-not-found-html();
 
@@ -913,7 +918,9 @@ our sub build(
     }
   }
 
+  copy-static($theme-static, $out, $writer) if $theme-static.defined && $theme-static.IO.d;
   copy-static($static, $out, $writer) if $static.d;
+  copy-static($theme-assets, $out.add('assets'), $writer) if $theme-assets.defined && $theme-assets.IO.d;
   copy-static($assets, $out.add('assets'), $writer) if $assets.d;
 
   $writer.prune($out);

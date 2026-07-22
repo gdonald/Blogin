@@ -28,6 +28,8 @@ has      @.taxonomies         = ['tags'];
 has      @.feed-formats       = ['atom'];
 has      @.languages          = [];
 has      %.language-config;
+has Str  $.theme              = '';
+has      @.plugins            = [];
 has      %.sections;
 
 my sub want-str($value, Str $key) {
@@ -134,6 +136,8 @@ method from-data(Blogin::Config:U: %data --> Blogin::Config) {
   %args<feed-formats>      := want-feed-formats($_)                with %data<feed-formats>;
   %args<languages>         := want-str-list($_, 'languages')       with %data<languages>;
   %args<language-config>    = want-language-config($_)             with %data<language-config>;
+  %args<theme>              = want-str($_,  'theme')               with %data<theme>;
+  %args<plugins>           := want-str-list($_, 'plugins')         with %data<plugins>;
   %args<sections>      = validate-sections($_)          with %data<sections>;
 
   self.new(|%args);

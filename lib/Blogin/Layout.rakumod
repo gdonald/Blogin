@@ -240,7 +240,7 @@ sub partial-exists(@paths, Str $name --> Bool) {
   False;
 }
 
-sub layout-search-paths(IO() $layouts, Str $section --> Array) {
+sub paths-in(IO() $layouts, Str $section --> Array) {
   my @paths;
 
   if $section.chars {
@@ -252,6 +252,16 @@ sub layout-search-paths(IO() $layouts, Str $section --> Array) {
   }
 
   @paths.push($layouts.Str);
+  @paths;
+}
+
+# Local layouts first, then the theme's layouts, so a local file overrides the
+# theme's file by file.
+sub layout-search-paths(IO() $layouts, Str $section, $theme-layouts = Nil --> Array) {
+  my @paths = paths-in($layouts, $section);
+
+  @paths.append(paths-in($theme-layouts, $section)) if $theme-layouts.defined && $theme-layouts.IO.d;
+
   @paths;
 }
 
@@ -306,9 +316,10 @@ our sub render-with-layout(
   Str   :$next-url = '',
   Str   :$next-title = '',
         :@templates = ['show'],
+        :$theme-layouts = Nil,
   --> Str
 ) is export {
-  my @paths = layout-search-paths($layouts, $section);
+  my @paths = layout-search-paths($layouts, $section, $theme-layouts);
 
   my $template = @templates.first({ template-exists(@paths, $_) });
 
@@ -393,9 +404,10 @@ our sub render-listing(
   Str   :$framework = 'none',
         :@templates = ['index'],
   Bool  :$index-dates = True,
+        :$theme-layouts = Nil,
   --> Str
 ) is export {
-  my @paths = layout-search-paths($layouts, $section);
+  my @paths = layout-search-paths($layouts, $section, $theme-layouts);
 
   my $template = @templates.first({ template-exists(@paths, $_) });
 

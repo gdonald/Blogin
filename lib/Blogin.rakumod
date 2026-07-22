@@ -27,20 +27,47 @@ our sub build(
     return True;
   }
 
+  my ($theme-layouts, $theme-static, $theme-assets) = theme-dirs($src, $config);
+
   my $result = Blogin::Site::build(
     content => $src,
     out     => $out-dir,
     debug   => ($debug // $config.debug),
     |$config.build-options,
+    :$theme-layouts, :$theme-static, :$theme-assets,
     :$drafts,
     :$future,
     :$jobs,
     :$force,
   );
 
+  run-plugins($config, $out-dir, $result);
+
   $log.verbose("wrote { $result.written.elems } pages to { $out-dir }");
 
   True;
+}
+
+# A theme lives under themes/<name>/ with its own layouts, static, and assets,
+# used as fallbacks behind the site's own files.
+sub theme-dirs(IO() $src, Blogin::Config $config) {
+  return (Nil, Nil, Nil) unless $config.theme.chars;
+
+  my $root = $src.parent.add('themes').add($config.theme);
+
+  ($root.add('layouts'), $root.add('static'), $root.add('assets'));
+}
+
+# Each plugin module exposes `our sub blogin-emit(%context)` and may write extra
+# output. %context has the output dir, the rendered pages, and the config.
+sub run-plugins(Blogin::Config $config, IO() $out, $result) {
+  for $config.plugins -> $name {
+    require ::($name);
+
+    my &hook = ::($name).WHO<&blogin-emit>;
+
+    hook(%( out => $out, pages => $result.rendered, config => $config )) if &hook;
+  }
 }
 
 sub root-redirect-html(Str $target --> Str) {
@@ -69,6 +96,8 @@ sub build-languages(
   my @langs = $config.languages;
   my $root  = $src.parent;
 
+  my ($theme-layouts, $theme-static, $theme-assets) = theme-dirs($src, $config);
+
   my %lang-paths = @langs.map(-> $code {
     $code => Blogin::Site::url-paths($src.add($code), :$drafts, :$future)
   }).hash;
@@ -78,7 +107,7 @@ sub build-languages(
     my %overrides = ($config.language-config{$code} // %()).hash;
     %site<title> = %overrides<title> if %overrides<title>:exists;
 
-    Blogin::Site::build(
+    my $result = Blogin::Site::build(
       content => $src.add($code),
       out     => $out-dir.add($code),
       layouts => $root.add('layouts'),
@@ -89,12 +118,15 @@ sub build-languages(
       debug   => ($debug // $config.debug),
       |$config.build-options,
       :%site,
+      :$theme-layouts, :$theme-static, :$theme-assets,
       url-prefix       => "/$code",
       languages        => @langs,
       current-language => $code,
       lang-paths       => %lang-paths,
       :$drafts, :$future, :$jobs, :$force,
     );
+
+    run-plugins($config, $out-dir.add($code), $result);
   }
 
   $out-dir.mkdir;
