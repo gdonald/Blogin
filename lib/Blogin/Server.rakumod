@@ -29,26 +29,56 @@ our sub content-type-for(IO::Path:D $file --> Str) is export {
 
 constant RELOAD-PATH = '/__blogin-reload';
 
-# A build version bumped on each rebuild. The preview page polls it and reloads
-# when it changes. Polling avoids a long-lived connection, so a browser that has
-# gone away leaves no socket for the server to write to.
+# A build version bumped on each rebuild. The preview page long-polls it: the
+# request parks until the version changes or the wait times out, so the held
+# connection sits idle rather than being written to. A browser that navigates
+# away closes an idle socket, which the server is never mid-write on, so no
+# "closed socket" noise.
 class ReloadChannel is export {
-  has Int $.version = 0;
+  has Int  $.version = 0;
+  has Lock $!lock = Lock.new;
+  has      $!next-change = Promise.new;
+  has      $!next-vow;
+
+  submethod TWEAK { $!next-vow = $!next-change.vow; }
 
   method notify(--> Nil) {
-    $!version++;
+    $!lock.protect({
+      $!version++;
+      my $vow = $!next-vow;
+      $!next-change = Promise.new;
+      $!next-vow    = $!next-change.vow;
+      $vow.keep($!version);
+    });
+  }
+
+  # Return the current version once it differs from what the caller last saw, or
+  # after $timeout seconds, whichever comes first.
+  method wait-for-change(Int() $known, Real :$timeout = 25 --> Int) {
+    my $change;
+
+    $!lock.protect({
+      return $!version if $!version != $known;
+      $change = $!next-change;
+    });
+
+    await Promise.anyof($change, Promise.in($timeout));
+    $!version;
   }
 }
 
 our sub reload-script(Str $path = RELOAD-PATH --> Str) is export {
   '<script>(function () {' ~
     'var known = null;' ~
-    'setInterval(function () {' ~
-      "fetch(\"$path\").then(function (r) \{ return r.text(); \}).then(function (v) \{" ~
-        'if (known === null) { known = v; }' ~
+    'function poll() {' ~
+      'var url = ' ~ "\"$path\"" ~ ' + (known === null ? "" : "?v=" + encodeURIComponent(known));' ~
+      'fetch(url).then(function (r) { return r.text(); }).then(function (v) {' ~
+        'if (known === null) { known = v; poll(); }' ~
         'else if (v !== known) { location.reload(); }' ~
-      '}).catch(function () {});' ~
-    '}, 1000);' ~
+        'else { poll(); }' ~
+      '}).catch(function () { setTimeout(poll, 1000); });' ~
+    '}' ~
+    'poll();' ~
   '})();</script>';
 }
 
@@ -117,8 +147,10 @@ sub make-app(IO() $root, Bool :$clean-urls = True, ReloadChannel :$reload) {
   route {
     if $reload.defined {
       get -> '__blogin-reload' {
+        my $known = (request.query-value('v') // -1).Int;
+        my $current = $reload.wait-for-change($known);
         header 'Cache-Control', 'no-cache';
-        content 'text/plain', $reload.version.Str;
+        content 'text/plain', $current.Str;
       }
     }
 

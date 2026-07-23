@@ -7,15 +7,19 @@ use Blogin::Site;
 
 describe 'the reload client script', {
   it 'polls the reload endpoint', {
-    expect(Blogin::Server::reload-script.contains('fetch("/__blogin-reload")')).to.be-truthy;
+    expect(Blogin::Server::reload-script.contains('/__blogin-reload') && Blogin::Server::reload-script.contains('fetch(')).to.be-truthy;
+  }
+
+  it 'sends the last known version so the request can park', {
+    expect(Blogin::Server::reload-script.contains('?v=')).to.be-truthy;
   }
 
   it 'reloads the page when the version changes', {
     expect(Blogin::Server::reload-script.contains('location.reload()')).to.be-truthy;
   }
 
-  it 'ignores fetch errors so a paused server does not throw', {
-    expect(Blogin::Server::reload-script.contains('.catch(')).to.be-truthy;
+  it 'reconnects after a failed request so a paused server recovers', {
+    expect(Blogin::Server::reload-script.contains('.catch(') && Blogin::Server::reload-script.contains('setTimeout(poll')).to.be-truthy;
   }
 }
 
@@ -42,6 +46,28 @@ describe 'the reload channel version', {
   }
 }
 
+describe 'parking a reload request until a change', {
+  it 'returns at once when the version already moved past the known one', {
+    my $channel = Blogin::Server::ReloadChannel.new;
+    $channel.notify;
+    expect($channel.wait-for-change(0, timeout => 10)).to.eq(1);
+  }
+
+  it 'wakes a parked waiter when a change arrives', {
+    my $channel = Blogin::Server::ReloadChannel.new;
+
+    my $parked = start $channel.wait-for-change(0, timeout => 10);
+    $channel.notify;
+
+    expect(await $parked).to.eq(1);
+  }
+
+  it 'returns the current version when the wait times out', {
+    my $channel = Blogin::Server::ReloadChannel.new;
+    expect($channel.wait-for-change(0, timeout => 0.1)).to.eq(0);
+  }
+}
+
 describe 'the served response', {
   my $BASIC = 'specs/fixtures/basic'.IO;
 
@@ -55,7 +81,7 @@ describe 'the served response', {
 
   it 'injects the reload client into an html page when reload is on', {
     my %response = Blogin::Server::render-response('/posts/hello', out(), inject => True);
-    expect(%response<body>.contains('fetch("/__blogin-reload")')).to.be-truthy;
+    expect(%response<body>.contains('/__blogin-reload')).to.be-truthy;
   }
 
   it 'does not inject the client when reload is off', {
