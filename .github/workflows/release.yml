@@ -77,6 +77,11 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
+
+      # Attestation signs with a short-lived certificate issued to this
+      # workflow's identity, so there is no long-lived private key anywhere.
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
 
@@ -109,6 +114,29 @@ jobs:
           echo "ok: $reported"
         shell: bash
 
+      # One file covering every binary, so verifying a download is one command
+      # against one signed manifest rather than three separate checks.
+      - name: Write a combined SHA256SUMS
+        run: |
+          cd dist
+          rm -f SHA256SUMS
+          sha256sum blogin-macos-universal blogin-linux-x86_64 blogin-linux-arm64 > SHA256SUMS
+          cat SHA256SUMS
+
+      # Signs each binary, and the manifest that names all three. What this
+      # proves is not only that the bytes are unchanged, which the checksums
+      # already cover, but that they were built by this workflow, in this
+      # repository, from this commit. A checksum anyone can regenerate after
+      # replacing a file. This they cannot.
+      - name: Attest the binaries
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/blogin-macos-universal
+            dist/blogin-linux-x86_64
+            dist/blogin-linux-arm64
+            dist/SHA256SUMS
+
       # The notes are the changelog's own section, so what GitHub shows and what
       # the file says are the same words.
       - name: Publish the release
@@ -120,6 +148,7 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" \
             --title "${GITHUB_REF_NAME}" \
             --notes-file notes.md \
+            dist/SHA256SUMS \
             dist/blogin-macos-universal dist/blogin-macos-universal.sha256 \
             dist/blogin-linux-x86_64 dist/blogin-linux-x86_64.sha256 \
             dist/blogin-linux-arm64 dist/blogin-linux-arm64.sha256
@@ -170,11 +199,19 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
 
-          if git diff --quiet; then
+          # Staged first, then compared. `git diff` on its own ignores untracked
+          # files, so on the first release, when Formula/blogin.rb is new rather
+          # than changed, it would report nothing to do and never push.
+          git add Formula/blogin.rb
+
+          if git diff --cached --quiet; then
             echo "the tap already has this formula"
             exit 0
           fi
 
-          git add Formula/blogin.rb
           git commit -m "blogin ${GITHUB_REF_NAME}"
-          git push
+
+          # HEAD rather than a branch name, since a repository with no commits
+          # yet has an unborn branch whose name is whatever the remote defaults
+          # to.
+          git push -u origin HEAD

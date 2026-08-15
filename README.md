@@ -63,6 +63,28 @@ sudo mv blogin-linux-x86_64 /usr/local/bin/blogin
 skipping Homebrew. Fetch it with `curl` rather than a browser, since a browser
 download is quarantined and macOS then refuses to run an unsigned binary.
 
+### Verifying a download
+
+Every release carries a `.sha256` per binary and a combined `SHA256SUMS`, which
+catch a damaged download:
+
+```bash
+sha256sum -c SHA256SUMS
+```
+
+Each binary is also signed, which is a different question: not whether the bytes
+arrived intact, but whether they came from here. A checksum can be regenerated
+by anyone who replaces the file. A signature cannot.
+
+```bash
+gh attestation verify blogin-linux-x86_64 --repo gdonald/Blogin
+```
+
+That checks a signature made by this repository's release workflow, recorded in
+a public transparency log. There is no key to fetch first and no fingerprint to
+confirm with anyone, because the identity being signed for is the workflow and
+the commit rather than a person.
+
 Windows has no native build. WSL2 is Linux, so install the Linux binary there.
 [blogin.dev](https://blogin.dev/guide/getting-started/) covers each platform.
 
