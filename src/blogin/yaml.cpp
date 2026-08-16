@@ -516,7 +516,13 @@ int depth_ = 0;
 
   // Deep enough for any data file, shallow enough that building and unwinding
   // the nested Value cannot overflow a worker thread's stack.
-  static constexpr int max_depth = 64;
+  //
+  // Half the JSON parser's limit, because data read here is written as JSON on
+  // the way to the search index and one level here can become two there: a
+  // sequence of mappings is one block to this parser and an array holding an
+  // object to that one. Matching the two numbers instead would let a file parse
+  // and then fail to read back. Real data files nest fewer than ten levels.
+  static constexpr int max_depth = 32;
 
   std::size_t position_ = 0;
 };

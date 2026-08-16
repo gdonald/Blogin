@@ -1,5 +1,6 @@
 #include <string>
 
+#include "json.h"
 #include "support/spec.h"
 #include "value.h"
 #include "yaml.h"
@@ -371,6 +372,53 @@ SPEC {
 
       spec::it("refuses nesting past the limit rather than crashing", [=] {
         expect(blogin::parse_yaml(nested(400)).error().message).to_contain("nested too deeply");
+      });
+
+      // Found by the fuzzer. Data files are written as JSON on the way to the
+      // search index, so anything read here has to survive being written there
+      // and read back. A sequence of mappings is the shape that strains it:
+      // one level here becomes two there, an array holding an object, so the
+      // two limits cannot be the same number.
+      spec::context("the deepest file it accepts", [=] {
+        // Asking the parser where its limit is, rather than naming a number
+        // here that would drift the moment the limit moved.
+        const auto deepest_accepted = [](const auto& build) {
+          int deepest = 0;
+
+          for (int depth = 1; depth <= 500; ++depth) {
+            if (!blogin::parse_yaml(build(depth))) {
+              break;
+            }
+
+            deepest = depth;
+          }
+
+          return deepest;
+        };
+
+        const auto sequence_of_mappings = [](int depth) {
+          std::string out;
+
+          for (int level = 0; level < depth; ++level) {
+            out += std::string(static_cast<std::size_t>(level) * 2, ' ') + "- k:\n";
+          }
+
+          return out;
+        };
+
+        spec::it("can be written as JSON and read back", [=] {
+          const auto source = sequence_of_mappings(deepest_accepted(sequence_of_mappings));
+          const auto written = blogin::to_json(blogin::parse_yaml(source).value());
+
+          expect(blogin::parse_json(written).has_value()).to_be_true();
+        });
+
+        spec::it("can be written as JSON and read back when it is all mappings", [=] {
+          const auto source = nested(deepest_accepted(nested));
+          const auto written = blogin::to_json(blogin::parse_yaml(source).value());
+
+          expect(blogin::parse_json(written).has_value()).to_be_true();
+        });
       });
     });
   });

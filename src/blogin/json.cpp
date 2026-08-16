@@ -96,13 +96,23 @@ private:
       return fail("unexpected end of input");
     }
 
-    if (++depth_ > max_depth) {
+    // Only an object or an array nests, so only those cost a level. Charging a
+    // scalar for one would make the limit depend on whether the innermost value
+    // happened to be a scalar, and a data file nested to the limit YAML allows
+    // would serialize to JSON this parser then refused to read back.
+    const bool nests = peek() == '{' || peek() == '[';
+
+    if (nests && ++depth_ > max_depth) {
+      --depth_;
+
       return fail("nested too deeply");
     }
 
     std::expected<Value, ParseError> result = parse_value_inner();
 
-    --depth_;
+    if (nests) {
+      --depth_;
+    }
 
     return result;
   }
@@ -456,6 +466,10 @@ private:
   // Deep enough for any configuration or data file, shallow enough that
   // building and unwinding the nested Value cannot overflow a worker thread's
   // stack. Real documents nest fewer than ten levels.
+  //
+  // Twice the YAML parser's limit, which is what lets anything read there be
+  // written here and read back. Raising this instead would push a worker
+  // thread's stack past what it has under ThreadSanitizer.
   static constexpr int max_depth = 64;
 
   std::string_view text_;
