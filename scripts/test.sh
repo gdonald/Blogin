@@ -185,12 +185,20 @@ stage_coverage_linux() {
     # The container's build tree is a docker volume rather than a directory in
     # the working tree, so a file left there is not on the host afterwards. The
     # lcov export is copied to the mounted tree, which is where CI reads it.
+    # Two edits on the way out.
+    #
     # Paths come out absolute and rooted at the container's mount point, which
     # names no file a coverage service can find in the repository. Stripping the
     # prefix leaves them relative to the tree they came from.
+    #
+    # Branch records are dropped so the published number is the line coverage
+    # this script gates on. A service reading them counts a line whose branches
+    # were not all taken as partly covered, which is a third number, neither the
+    # line coverage nor the branch coverage, and it matches no floor here.
+    # Branch coverage is still checked, by coverage.sh, against its own floor.
     mkdir -p build
-    sed 's|^SF:/workspace/|SF:|' $container_build_root/coverage/coverage.lcov \
-      > build/coverage-linux.lcov
+    sed -e 's|^SF:/workspace/|SF:|' -e '/^BR[DFH]/d' \
+      $container_build_root/coverage/coverage.lcov > build/coverage-linux.lcov
   "
 }
 
