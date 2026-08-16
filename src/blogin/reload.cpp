@@ -227,6 +227,7 @@ std::string inject(std::string_view html, std::string_view script) {
 Config preview_config(Config config) {
   config.minify = false;
   config.fingerprint = false;
+  config.output_dir = preview_output_dir;
 
   return config;
 }

@@ -21,7 +21,7 @@ blogin init myblog        # write a complete site into an empty directory
 cd myblog
 blogin new "First Post"   # a dated file with front matter filled in
 blogin serve              # http://127.0.0.1:3000, rebuilding as you edit
-blogin build              # write the site to public/
+blogin build              # write the site to public/, ready to deploy
 ```
 
 A rebuild only does the work the change requires. When nothing changed, nothing

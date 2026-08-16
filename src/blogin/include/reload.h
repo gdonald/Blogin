@@ -34,11 +34,23 @@ std::string client_script(std::int64_t version, std::string_view session);
 // none.
 std::string inject(std::string_view html, std::string_view script);
 
+// Where a preview is built. Not the configured output directory, because a
+// preview and a release disagree about what belongs in it: a preview is
+// unminified and unfingerprinted, and it carries its own build state, so
+// sharing one tree leaves whichever ran last in place. That is a deploy of
+// unminified assets when the last writer was the server.
+//
+// Hidden, so it stays out of the way and the watcher already passes over it.
+inline constexpr std::string_view preview_output_dir = ".blogin-preview";
+
 // Fingerprinting and minification make production output cacheable, and both
 // fight a preview: fingerprinting renames every asset on each rebuild, so a page
 // already open points at files the rebuild just deleted, and there is no stable
 // name left to swap a stylesheet under. A preview turns both off, which also
 // takes back the time they cost on every save.
+//
+// It also builds somewhere else, so serving a site never writes the directory
+// that gets deployed.
 Config preview_config(Config config);
 
 // Version, session, and the connected pages, shared by the socket threads.

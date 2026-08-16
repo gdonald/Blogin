@@ -9,6 +9,7 @@
 #include "assets.h"
 #include "config.h"
 #include "files.h"
+#include "reload.h"
 #include "site.h"
 #include "support/spec.h"
 
@@ -316,6 +317,62 @@ SPEC {
         blogin::build(options);
 
         expect(read(options.output / "assets" / "js" / "app.js")).to_eq("const value = 1");
+      });
+    });
+
+    // A preview and a release disagree about what belongs in an output tree,
+    // and they used to share one. Serving a site would rewrite the directory
+    // about to be deployed, unminified and unfingerprinted, and the two builds
+    // would read each other's state and carry names across.
+    spec::context("previewing", [] {
+      const auto preview_options = [](const std::filesystem::path& root) {
+        const auto config = blogin::Config::load(root / "blogin.json").value();
+
+        return blogin::BuildOptions::around(root / "content", blogin::reload::preview_config(config));
+      };
+
+      spec::it("builds somewhere other than the configured output", [=] {
+        const std::filesystem::path root = build_site(true, true);
+
+        expect(preview_options(root).output).not_to_eq(options_for(root).output);
+      });
+
+      spec::it("leaves the configured output alone", [=] {
+        const std::filesystem::path root = build_site(true, true);
+
+        blogin::build(preview_options(root));
+
+        expect(std::filesystem::exists(options_for(root).output)).to_be_false();
+      });
+
+      spec::it("writes the preview where it says it does", [=] {
+        const std::filesystem::path root = build_site(true, true);
+        const blogin::BuildOptions options = preview_options(root);
+
+        blogin::build(options);
+
+        expect(std::filesystem::exists(options.output / "hello" / "index.html")).to_be_true();
+      });
+
+      spec::it("keeps its own build state, so neither build reads the other's", [=] {
+        const std::filesystem::path root = build_site(true, true);
+        const blogin::BuildOptions options = preview_options(root);
+
+        blogin::build(options);
+
+        expect(std::filesystem::exists(options.output / ".blogin-state.json")).to_be_true();
+      });
+
+      // What the mixed tree looked like from the outside: a release build had
+      // hashed every asset, then a preview rewrote some of them under their
+      // plain names and left the rest hashed.
+      spec::it("does not fingerprint what a release build already hashed", [=] {
+        const std::filesystem::path root = build_site(true, true);
+
+        blogin::build(options_for(root));
+        blogin::build(preview_options(root));
+
+        expect(named_like(preview_options(root).output / "assets" / "css", "styles.")).to_eq("styles.css");
       });
     });
   });

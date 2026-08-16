@@ -10,12 +10,13 @@ Blogin does rather than what changed.
 - `blogin build` renders a content tree to static HTML. A rebuild does only the
   work the change requires and lands byte-identical to a build from scratch.
 - `blogin serve` previews the site on loopback and rebuilds as you edit, with
-  the open page reloading itself over a WebSocket.
+  the open page reloading itself over a WebSocket. It builds into
+  `.blogin-preview/`, so serving never writes the directory you deploy.
 - `blogin init` scaffolds a site that builds with nothing to fill in first,
   against `none`, `bootstrap5`, `pico`, or `bulma`.
 - `blogin new` writes a post with its front matter filled in.
-- `blogin clean` removes the output tree and refuses any target outside the
-  site.
+- `blogin clean` removes both trees a build can write and refuses any target
+  outside the site. Naming one with `--out` makes it the only target.
 - Every option has a long and a one-letter spelling, and short options combine
   as `-fv`. `blogin --version` reports the version it was built from.
 

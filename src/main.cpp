@@ -172,17 +172,40 @@ int run_clean(const blogin::cli::Command& command) {
     return fail(config.error());
   }
 
-  const std::filesystem::path target =
-    command.output.has_value() ? std::filesystem::path(*command.output)
-                               : blogin::BuildOptions::around(command.content, *config).output;
+  // A named target is the only one, since asking for one directory and getting
+  // another emptied as well is not what was asked for.
+  if (command.output.has_value()) {
+    const std::filesystem::path target(*command.output);
 
-  auto removed = blogin::clean(target, root);
+    auto removed = blogin::clean(target, root);
 
-  if (!removed) {
-    return fail(removed.error().message);
+    if (!removed) {
+      return fail(removed.error().message);
+    }
+
+    std::cout << "cleaned " << target.string() << " (" << *removed << " files)\n";
+
+    return 0;
   }
 
-  std::cout << "cleaned " << target.string() << " (" << *removed << " files)\n";
+  // Otherwise both trees a build can write: the configured output and the one
+  // the preview server uses. Leaving the preview behind would mean a cleaned
+  // site still had a stale copy of itself on disk.
+  const std::filesystem::path output = blogin::BuildOptions::around(command.content, *config).output;
+
+  for (const std::filesystem::path& target : {output, root / blogin::reload::preview_output_dir}) {
+    if (!std::filesystem::exists(target)) {
+      continue;
+    }
+
+    auto removed = blogin::clean(target, root);
+
+    if (!removed) {
+      return fail(removed.error().message);
+    }
+
+    std::cout << "cleaned " << target.string() << " (" << *removed << " files)\n";
+  }
 
   return 0;
 }
