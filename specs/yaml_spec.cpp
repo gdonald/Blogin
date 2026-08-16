@@ -350,5 +350,28 @@ SPEC {
         expect(error_of("a: &anchor value")).to_contain("anchors");
       });
     });
+
+    // The same shape the fuzzer found in the expression parser. Every nesting
+    // level recurses, so a file indented deeply enough exhausted the stack
+    // before the limit went in.
+    spec::context("nesting", [] {
+      const auto nested = [](int depth) {
+        std::string out;
+
+        for (int level = 0; level < depth; ++level) {
+          out += std::string(static_cast<std::size_t>(level) * 2, ' ') + "k:\n";
+        }
+
+        return out;
+      };
+
+      spec::it("reads what a data file would plausibly hold", [=] {
+        expect(blogin::parse_yaml(nested(10)).has_value()).to_be_true();
+      });
+
+      spec::it("refuses nesting past the limit rather than crashing", [=] {
+        expect(blogin::parse_yaml(nested(400)).error().message).to_contain("nested too deeply");
+      });
+    });
   });
 }

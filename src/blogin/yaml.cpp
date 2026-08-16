@@ -274,7 +274,28 @@ public:
   }
 
 private:
+  // Every nesting level in a data file comes back through here, so counting the
+  // trips down bounds the recursion. Without it, a file indented tens of
+  // thousands of levels deep exhausts the stack, which is a crash rather than
+  // the line number this parser promises. JSON has had the same guard.
   std::expected<Value, ParseError> parse_block(std::size_t indent) {
+    if (++depth_ > max_depth) {
+      --depth_;
+
+      const std::size_t line_number =
+        position_ < lines_.size() ? lines_[position_].number : lines_.size();
+
+      return std::unexpected(ParseError{"nested too deeply", line_number, 1});
+    }
+
+    std::expected<Value, ParseError> result = parse_block_inner(indent);
+
+    --depth_;
+
+    return result;
+  }
+
+  std::expected<Value, ParseError> parse_block_inner(std::size_t indent) {
     if (position_ >= lines_.size()) {
       return Value();
     }
@@ -491,6 +512,12 @@ private:
   }
 
   std::vector<Line> lines_;
+int depth_ = 0;
+
+  // Deep enough for any data file, shallow enough that building and unwinding
+  // the nested Value cannot overflow a worker thread's stack.
+  static constexpr int max_depth = 64;
+
   std::size_t position_ = 0;
 };
 

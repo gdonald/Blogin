@@ -530,5 +530,33 @@ SPEC {
         expect(parsed.error().line).to_eq(std::size_t{14});
       });
     });
+
+    // Found by the fuzzer. Every way back to the top of the grammar recurses,
+    // so input nested deeply enough exhausted the stack before the limit went
+    // in. A refusal is an error message. A stack overflow is a crash.
+    spec::context("nesting", [] {
+      const auto nested = [](int depth) {
+        return std::string(static_cast<std::size_t>(depth), '(') + "1" +
+               std::string(static_cast<std::size_t>(depth), ')');
+      };
+
+      spec::it("reads what a layout would plausibly write", [=] {
+        expect(evaluate(nested(20)).as_integer()).to_eq(std::int64_t{1});
+      });
+
+      spec::it("refuses nesting past the limit rather than crashing", [=] {
+        expect(error_of(nested(5000))).to_contain("nested too deeply");
+      });
+
+      spec::it("says what the limit is", [=] {
+        expect(error_of(nested(5000))).to_contain("64");
+      });
+
+      // The evaluator walks the tree the same way the parser built it, so a
+      // tree the parser refuses is one the evaluator never sees.
+      spec::it("refuses before a tree that deep exists", [=] {
+        expect(blogin::expression::parse(nested(5000)).has_value()).to_be_false();
+      });
+    });
   });
 }

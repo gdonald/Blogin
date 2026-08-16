@@ -24,6 +24,9 @@ bool is_digit(char character) {
 
 class Parser {
 public:
+  // Far past anything a layout writes, and far short of what the stack holds.
+  static constexpr int max_depth = 64;
+
   Parser(std::string_view source, std::size_t line, std::size_t column)
     : source_(source), line_(line), base_column_(column) {}
 
@@ -108,7 +111,35 @@ private:
     return std::string(source_.substr(start, position_ - start));
   }
 
+  // Every way back to the top of the grammar comes through here: a
+  // parenthesised group, a call argument, a map value, a block. Counting the
+  // trips down is what stops input like 20,000 open parens from recursing until
+  // the stack runs out, which is a crash rather than an error message.
+  //
+  // The evaluator walks the tree the same way, so a tree the parser refuses to
+  // build is one the evaluator can never be handed.
+  class Depth {
+  public:
+    explicit Depth(Parser& parser) : parser_(parser) { ++parser_.depth_; }
+
+    ~Depth() { --parser_.depth_; }
+
+    Depth(const Depth&) = delete;
+    Depth& operator=(const Depth&) = delete;
+
+    bool too_deep() const { return parser_.depth_ > max_depth; }
+
+  private:
+    Parser& parser_;
+  };
+
   std::expected<std::unique_ptr<Node>, ParseError> parse_or() {
+    const Depth depth(*this);
+
+    if (depth.too_deep()) {
+      return fail(std::format("nested too deeply, past {} levels", max_depth));
+    }
+
     auto left = parse_and();
 
     if (!left) {
@@ -682,6 +713,7 @@ private:
     return node;
   }
 
+  int depth_ = 0;
   std::string_view source_;
   std::size_t position_ = 0;
   std::size_t line_ = 1;
