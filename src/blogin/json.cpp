@@ -463,20 +463,13 @@ private:
     return Value(*number);
   }
 
-  // Deep enough for any configuration or data file, shallow enough that
-  // building and unwinding the nested Value cannot overflow a worker thread's
-  // stack. Real documents nest fewer than ten levels.
-  //
-  // Twice the YAML parser's limit, which is what lets anything read there be
-  // written here and read back. Raising this instead would push a worker
-  // thread's stack past what it has under ThreadSanitizer.
-  static constexpr int max_depth = 64;
+  static constexpr std::size_t max_depth = max_json_depth;
 
   std::string_view text_;
   std::size_t position_ = 0;
   std::size_t line_ = 1;
   std::size_t column_ = 1;
-  int depth_ = 0;
+  std::size_t depth_ = 0;
 };
 
 void append_indent(std::string& out, int depth) {

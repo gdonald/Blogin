@@ -20,6 +20,16 @@ struct ParseError {
   std::string describe(std::string_view path) const;
 };
 
+// The deepest nesting of objects and arrays parse_json accepts. Deep enough for
+// any configuration or data file, shallow enough that building and unwinding the
+// nested Value cannot overflow a worker thread's stack. Real documents nest
+// fewer than ten levels.
+//
+// Anything written as JSON has to stay inside this to be read back, so the YAML
+// parser checks what it built against it rather than carrying a second number
+// that could drift.
+inline constexpr std::size_t max_json_depth = 64;
+
 std::expected<Value, ParseError> parse_json(std::string_view text);
 
 enum class JsonStyle {

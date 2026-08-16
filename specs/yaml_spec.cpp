@@ -374,11 +374,12 @@ SPEC {
         expect(blogin::parse_yaml(nested(400)).error().message).to_contain("nested too deeply");
       });
 
-      // Found by the fuzzer. Data files are written as JSON on the way to the
-      // search index, so anything read here has to survive being written there
-      // and read back. A sequence of mappings is the shape that strains it:
-      // one level here becomes two there, an array holding an object, so the
-      // two limits cannot be the same number.
+      // Found by the fuzzer, twice. Data files are written as JSON on the way
+      // to the search index, so anything read here has to survive being written
+      // there and read back. How many levels of JSON a level here becomes
+      // depends on the shape: a mapping is one, a sequence of mappings is two,
+      // an array holding an object. So the shapes below each reach the limit at
+      // a different indentation, and every one of them has to round-trip.
       spec::context("the deepest file it accepts", [=] {
         // Asking the parser where its limit is, rather than naming a number
         // here that would drift the moment the limit moved.
@@ -396,28 +397,47 @@ SPEC {
           return deepest;
         };
 
-        const auto sequence_of_mappings = [](int depth) {
+        const auto round_trips = [=](const auto& build) {
+          const auto source = build(deepest_accepted(build));
+          const auto parsed = blogin::parse_yaml(source);
+
+          return parsed && blogin::parse_json(blogin::to_json(*parsed)).has_value();
+        };
+
+        const auto indent = [](int level) { return std::string(static_cast<std::size_t>(level) * 2, ' '); };
+
+        const auto sequence_of_mappings = [=](int depth) {
           std::string out;
 
           for (int level = 0; level < depth; ++level) {
-            out += std::string(static_cast<std::size_t>(level) * 2, ' ') + "- k:\n";
+            out += indent(level) + "- k:\n";
           }
 
           return out;
         };
 
-        spec::it("can be written as JSON and read back", [=] {
-          const auto source = sequence_of_mappings(deepest_accepted(sequence_of_mappings));
-          const auto written = blogin::to_json(blogin::parse_yaml(source).value());
+        // What the fuzzer landed on: neither shape alone, which is why a fixed
+        // ratio between the two limits held for both of those and not for this.
+        const auto mappings_and_sequences = [=](int depth) {
+          std::string out;
 
-          expect(blogin::parse_json(written).has_value()).to_be_true();
+          for (int level = 0; level < depth; ++level) {
+            out += indent(level) + (level % 2 == 0 ? "- k:\n" : "k:\n");
+          }
+
+          return out;
+        };
+
+        spec::it("can be written as JSON and read back when it is a sequence of mappings", [=] {
+          expect(round_trips(sequence_of_mappings)).to_be_true();
         });
 
         spec::it("can be written as JSON and read back when it is all mappings", [=] {
-          const auto source = nested(deepest_accepted(nested));
-          const auto written = blogin::to_json(blogin::parse_yaml(source).value());
+          expect(round_trips(nested)).to_be_true();
+        });
 
-          expect(blogin::parse_json(written).has_value()).to_be_true();
+        spec::it("can be written as JSON and read back when it mixes the two", [=] {
+          expect(round_trips(mappings_and_sequences)).to_be_true();
         });
       });
     });

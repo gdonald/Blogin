@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <charconv>
 #include <optional>
+#include <utility>
 #include <vector>
 
+#include "json.h"
 #include "text.h"
 
 namespace blogin {
@@ -517,22 +519,78 @@ int depth_ = 0;
   // Deep enough for any data file, shallow enough that building and unwinding
   // the nested Value cannot overflow a worker thread's stack.
   //
-  // Half the JSON parser's limit, because data read here is written as JSON on
-  // the way to the search index and one level here can become two there: a
-  // sequence of mappings is one block to this parser and an array holding an
-  // object to that one. Matching the two numbers instead would let a file parse
-  // and then fail to read back. Real data files nest fewer than ten levels.
-  static constexpr int max_depth = 32;
+  // Deep enough for any data file, shallow enough that building and unwinding
+  // the nested Value cannot overflow a worker thread's stack. Real data files
+  // nest fewer than ten levels.
+  //
+  // This bounds the recursion, not the value it builds. One block here can
+  // produce more than one container, so what came back is measured separately
+  // once it exists.
+  static constexpr int max_depth = 64;
 
   std::size_t position_ = 0;
 };
+
+// How deeply the containers in a parsed value nest, walked with an explicit
+// stack so that measuring a deep value cannot itself overflow.
+//
+// This is what the JSON parser counts, and it is not what the block counter
+// above counts: `- k:` is one block here and an array holding an object there,
+// so a file can stay inside the recursion limit and still describe a value
+// nested past what JSON reads back. The shapes that do this are irregular
+// enough that no fixed ratio between the two limits holds, so the value is
+// measured rather than predicted.
+std::size_t container_depth(const Value& root) {
+  std::vector<std::pair<const Value*, std::size_t>> pending{{&root, 1}};
+  std::size_t deepest = 0;
+
+  while (!pending.empty()) {
+    const auto [value, depth] = pending.back();
+
+    pending.pop_back();
+
+    if (!value->is_object() && !value->is_array()) {
+      continue;
+    }
+
+    deepest = std::max(deepest, depth);
+
+    if (value->is_object()) {
+      for (const auto& [name, child] : value->members()) {
+        pending.emplace_back(&child, depth + 1);
+      }
+
+      continue;
+    }
+
+    for (std::size_t index = 0; index < value->size(); ++index) {
+      pending.emplace_back(&value->at(index), depth + 1);
+    }
+  }
+
+  return deepest;
+}
 
 }  // namespace
 
 std::expected<Value, ParseError> parse_yaml(std::string_view text) {
   Parser parser(significant_lines(text));
 
-  return parser.parse();
+  auto parsed = parser.parse();
+
+  if (!parsed) {
+    return parsed;
+  }
+
+  // Data files are written as JSON on the way to the search index, so a value
+  // this parser accepts has to be one that parser reads back. Refusing here is
+  // an error naming the file. Letting it through is a build that writes an
+  // index nothing can load.
+  if (container_depth(*parsed) > max_json_depth) {
+    return std::unexpected(ParseError{"nested too deeply", significant_lines(text).size(), 1});
+  }
+
+  return parsed;
 }
 
 }  // namespace blogin
