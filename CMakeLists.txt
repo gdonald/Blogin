@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(blogin
-  VERSION 0.9.0
+  VERSION 0.9.1
   DESCRIPTION "An insanely fast static site generator written in C++"
   LANGUAGES CXX
 )

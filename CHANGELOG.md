@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.9.1
+
+No functional changes.
+
+- Every GitHub Actions workflow runs read-only by default, and each action is
+  pinned to a commit rather than a tag that can be moved.
+- The development container pins its base image by digest and every package by
+  version, so a Linux build compiles against the same toolchain each time.
+- Static analysis through CodeQL, a published coverage figure, and an OpenSSF
+  Scorecard run, alongside the sanitizers, clang-tidy, and fuzzing already here.
+- Release binaries carry their build provenance attestation on the release
+  itself, so a signature can be checked beside the file it covers.
+- A security policy, at SECURITY.md.
+
 ## 0.9.0
 
 The first release. Everything below is new, so this section describes what
