@@ -1,7 +1,8 @@
 name: CI
 
 # Every job below runs one stage of scripts/test.sh, which is also what runs
-# before a commit. The stage is the single definition of what the check is, so
+# before a commit. The macOS job is a matrix, so it is one runner per stage
+# rather than one runner for all four. The stage is the single definition of what the check is, so
 # the two cannot drift: `./scripts/test.sh` locally covers everything here
 # except fuzzing.
 #
@@ -21,29 +22,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # One runner per stage, the same as every other job here. Run in one job they
+  # were four full builds in a row on a fresh machine, and `dist` is two of them
+  # on its own since it builds both architectures. Split, the wall clock is the
+  # slowest stage rather than the sum.
+  #
+  # fail-fast is off so one failing stage does not cancel the others. Learning
+  # about every failure in one run beats learning about them one push at a time.
   macos:
-    name: macOS
+    name: macOS ${{ matrix.stage }}
     runs-on: macos-15
+    strategy:
+      fail-fast: false
+      matrix:
+        stage:
+          # Debug build, then the whole spec suite.
+          - specs
+          # One build carrying AddressSanitizer, UndefinedBehaviorSanitizer, and
+          # the integer, bounds, and nullability checks. Both the specs and the
+          # binary itself run against it.
+          - sanitize
+          - thread
+          # Universal, so this one compiles arm64 and x86_64.
+          - dist
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Ninja
         run: brew install ninja
 
-      - name: Build and test
-        run: ./scripts/test.sh specs
-
-      # One build carrying AddressSanitizer, UndefinedBehaviorSanitizer, and the
-      # integer, bounds, and nullability checks. Both the specs and the binary
-      # itself run against it.
-      - name: Build and test under the sanitizers
-        run: ./scripts/test.sh sanitize
-
-      - name: Build and test with ThreadSanitizer
-        run: ./scripts/test.sh thread
-
-      - name: Build the distribution binary and check it runs alone
-        run: ./scripts/test.sh dist
+      - name: Run the stage
+        run: ./scripts/test.sh ${{ matrix.stage }}
 
   linux:
     name: Linux
