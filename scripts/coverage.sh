@@ -89,6 +89,15 @@ if ! python3 -c "import sys; sys.exit(0 if float('$branch_coverage') >= float('$
   below=1
 fi
 
+# The same measurement in the format a coverage service reads, written beside
+# the profile rather than uploaded from here. Nothing local needs it, and it
+# costs one export, so CI has a file to hand over without a second run.
+# shellcheck disable=SC2086
+$cov export "$build_dir/blogin_specs" \
+  -instr-profile="$build_dir/blogin.profdata" \
+  -format=lcov \
+  $sources > "$build_dir/coverage.lcov"
+
 # Both are reported before either fails, so one run says everything that is
 # wrong rather than hiding the second number behind the first.
 if [[ "$below" -ne 0 ]]; then

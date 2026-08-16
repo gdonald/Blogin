@@ -1,0 +1,59 @@
+name: Scorecard
+
+# OpenSSF Scorecard rates a repository's supply chain: whether releases are
+# signed, whether the code is fuzzed, whether actions are pinned, whether the
+# default branch is protected. It reads the repository rather than the code, so
+# it says nothing clang-tidy or the sanitizers already say.
+#
+# Weekly rather than per push, because the things it measures change with the
+# repository's settings and workflows rather than with a commit.
+
+on:
+  branch_protection_rule:
+  schedule:
+    - cron: '0 5 * * 1'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Analyze
+    runs-on: ubuntu-24.04
+    permissions:
+      # Uploading the result to the code scanning tab.
+      security-events: write
+
+      # Signing the result, so the badge reports a run that can be traced back
+      # to this workflow rather than an assertion anybody could publish.
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Run the analysis
+        uses: ossf/scorecard-action@v2
+        with:
+          results_file: results.sarif
+          results_format: sarif
+
+          # What lets the badge read the result. It publishes the score, not the
+          # code, and only for a public repository.
+          publish_results: true
+
+      # Kept for the run, since the code scanning tab holds the findings and
+      # this holds the file they came from.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scorecard-results
+          path: results.sarif
+          retention-days: 5
+
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif

@@ -181,6 +181,16 @@ stage_coverage_linux() {
   in_container "
     export CC=clang CXX=clang++
     BLOGIN_COVERAGE_BUILD_DIR=$container_build_root/coverage ./scripts/coverage.sh
+
+    # The container's build tree is a docker volume rather than a directory in
+    # the working tree, so a file left there is not on the host afterwards. The
+    # lcov export is copied to the mounted tree, which is where CI reads it.
+    # Paths come out absolute and rooted at the container's mount point, which
+    # names no file a coverage service can find in the repository. Stripping the
+    # prefix leaves them relative to the tree they came from.
+    mkdir -p build
+    sed 's|^SF:/workspace/|SF:|' $container_build_root/coverage/coverage.lcov \
+      > build/coverage-linux.lcov
   "
 }
 

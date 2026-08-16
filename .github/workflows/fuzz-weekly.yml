@@ -1,4 +1,4 @@
-name: Fuzz weekly
+name: Fuzz
 
 # Thirty seconds per target on a pull request finds the input that breaks
 # immediately. A minute per target on a schedule reaches a little further, and

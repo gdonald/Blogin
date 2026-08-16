@@ -110,6 +110,10 @@ jobs:
   coverage-linux:
     name: Coverage (Linux)
     runs-on: ubuntu-24.04
+    # At the job level so the upload step can test for the token in its `if`. A
+    # step cannot read the env it declares itself.
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -118,6 +122,18 @@ jobs:
       # that holds.
       - name: Report coverage
         run: ./scripts/test.sh coverage-linux
+
+      # One platform uploads, so the number on the badge is one measurement
+      # rather than two overlaid. Linux is the one that runs everywhere.
+      #
+      # Skipped without the token rather than failing, so a fork's pull request
+      # is not red for a secret it cannot have.
+      - name: Publish coverage
+        if: env.CODECOV_TOKEN != ''
+        uses: codecov/codecov-action@v5
+        with:
+          files: build/coverage-linux.lcov
+          fail_ci_if_error: true
 
   # The one check scripts/test.sh leaves out. Replay is the gate: every
   # checked-in corpus and every regression input, through every target,

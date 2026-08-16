@@ -1,5 +1,14 @@
 # Blogin
 
+[![CI](https://github.com/gdonald/Blogin/actions/workflows/ci.yml/badge.svg)](https://github.com/gdonald/Blogin/actions/workflows/ci.yml)
+[![Fuzz](https://github.com/gdonald/Blogin/actions/workflows/fuzz-weekly.yml/badge.svg)](https://github.com/gdonald/Blogin/actions/workflows/fuzz-weekly.yml)
+[![Release](https://img.shields.io/github/v/release/gdonald/Blogin)](https://github.com/gdonald/Blogin/releases/latest)
+[![License](https://img.shields.io/github/license/gdonald/Blogin)](LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/gdonald/Blogin/total)](https://github.com/gdonald/Blogin/releases)
+[![C++23](https://img.shields.io/badge/C%2B%2B-23-blue)](https://en.cppreference.com/w/cpp/23)
+[![Coverage](https://codecov.io/gh/gdonald/Blogin/branch/main/graph/badge.svg)](https://codecov.io/gh/gdonald/Blogin)
+[![Scorecard](https://api.scorecard.dev/projects/github.com/gdonald/Blogin/badge)](https://scorecard.dev/viewer/?uri=github.com/gdonald/Blogin)
+
 An insanely fast static site generator written in C++.
 
 Point it at a directory of Markdown and it writes a directory of HTML you can
