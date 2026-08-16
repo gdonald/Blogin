@@ -227,7 +227,7 @@ deciding anything, so a slower machine waits longer and still passes. The suite
 runs clean on two cores.
 
 `scripts/coverage.sh` reports line and branch coverage and fails below a floor,
-on macOS and in the Debian container both. `scripts/uncovered.py` lists the
+on macOS and in the Debian container both. `scripts/uncovered.sh` lists the
 lines behind the number, which is what says whether one is a missing spec or a
 path a test cannot reach.
 
@@ -299,7 +299,7 @@ Everything a change needs, in the order you would reach for them:
 | `scripts/test.sh`           | Everything CI checks except fuzzing. Run before a commit                   |
 | `scripts/tidy.sh`           | clang-tidy over every translation unit, failing on any finding             |
 | `scripts/coverage.sh`       | Coverage report, failing below a floor                                     |
-| `scripts/uncovered.py`      | The lines behind the coverage number, per file                             |
+| `scripts/uncovered.sh`      | The lines behind the coverage number, per file                             |
 | `scripts/fuzz.sh`           | Replay the fuzz corpus, explore for new inputs, or minimize what was found |
 | `scripts/sanitize-cli.sh`   | Drive the binary itself under the sanitizers, build through serve          |
 | `scripts/test-linux.sh`     | Build and test on Linux in the Debian container                            |
