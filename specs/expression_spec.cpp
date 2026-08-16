@@ -557,6 +557,30 @@ SPEC {
       spec::it("refuses before a tree that deep exists", [=] {
         expect(blogin::expression::parse(nested(5000)).has_value()).to_be_false();
       });
+
+      // Found by the fuzzer after the guard above went in. A prefix operator
+      // recurses without passing the top of the grammar, so the counter never
+      // moved and a run of them still exhausted the stack.
+      spec::context("a run of prefix operators", [] {
+        spec::it("reads what a layout would plausibly write", [] {
+          expect(evaluate("!!true").as_boolean()).to_be_true();
+        });
+
+        spec::it("refuses a run past the limit rather than crashing", [] {
+          expect(error_of(std::string(5000, '!') + "true"))
+              .to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a spelled-out run past the limit", [] {
+          std::string source;
+
+          for (int written = 0; written < 5000; ++written) {
+            source += "not ";
+          }
+
+          expect(error_of(source + "true")).to_contain("nested too deeply");
+        });
+      });
     });
   });
 }

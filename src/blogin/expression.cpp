@@ -268,6 +268,15 @@ private:
   }
 
   std::expected<std::unique_ptr<Node>, ParseError> parse_unary() {
+    // A prefix operator recurses into this function directly rather than back
+    // through the top of the grammar, so the counter parse_or keeps does not
+    // move for a run of them and this needs its own guard.
+    const Depth depth(*this);
+
+    if (depth.too_deep()) {
+      return fail(std::format("nested too deeply, past {} levels", max_depth));
+    }
+
     if (consume("!") || consume("not")) {
       auto operand = parse_unary();
 
