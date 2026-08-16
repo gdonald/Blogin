@@ -36,13 +36,25 @@ jobs:
           # only security, since a use-after-free is a bug either way.
           queries: security-and-quality
 
+      # Every other Linux job builds in the Debian container, which carries a
+      # current clang from apt.llvm.org. CodeQL has to watch the compiler run,
+      # which it cannot do through docker, so this job builds on the runner. The
+      # runner's clang is 18 and has no <expected>, so GCC 14 is what builds
+      # here. It is a toolchain CI already covers, in the gcc job.
+      - name: Install GCC 14
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-14 gcc-14
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
+
       # CodeQL watches a real compile rather than parsing the source, so it
-      # needs the build it would analyze. The release preset is the one that
-      # compiles everything the binary ships.
+      # needs the build it would analyze. This preset compiles everything the
+      # binary ships.
       - name: Build
         run: |
-          cmake --preset release
-          cmake --build build/release -j"$(nproc)"
+          cmake --preset gcc-release
+          cmake --build build/gcc-release -j"$(nproc)"
 
       - name: Analyze
         uses: github/codeql-action/analyze@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3
