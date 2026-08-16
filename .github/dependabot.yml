@@ -20,3 +20,13 @@ updates:
       actions:
         patterns:
           - '*'
+
+  # The development container's base image, pinned by digest so a moved tag
+  # cannot change what the Linux jobs build against. This is what moves the pin
+  # forward when Debian publishes a new one.
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'Update'

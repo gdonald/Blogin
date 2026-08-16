@@ -309,6 +309,7 @@ Everything a change needs, in the order you would reach for them:
 | `scripts/tidy.sh`           | clang-tidy over every translation unit, failing on any finding             |
 | `scripts/coverage.sh`       | Coverage report, failing below a floor                                     |
 | `scripts/uncovered.sh`      | The lines behind the coverage number, per file                             |
+| `scripts/repin-container.sh` | Move the container's pinned package versions and base image forward       |
 | `scripts/fuzz.sh`           | Replay the fuzz corpus, explore for new inputs, or minimize what was found |
 | `scripts/sanitize-cli.sh`   | Drive the binary itself under the sanitizers, build through serve          |
 | `scripts/test-linux.sh`     | Build and test on Linux in the Debian container                            |
