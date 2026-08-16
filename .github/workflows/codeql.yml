@@ -1,0 +1,48 @@
+name: CodeQL
+
+# Static analysis over the C++ sources. clang-tidy already fails the build on
+# every finding it has, and the two overlap, but CodeQL reasons across function
+# and file boundaries where clang-tidy reasons within one translation unit. It
+# is also the check a reader looks for when asking whether the code is scanned.
+#
+# Weekly plus on push to main, rather than on every pull request, because a
+# build of the whole tree runs here and CI already covers a push.
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-24.04
+    permissions:
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3
+        with:
+          languages: c-cpp
+
+          # The default queries plus the ones covering correctness rather than
+          # only security, since a use-after-free is a bug either way.
+          queries: security-and-quality
+
+      # CodeQL watches a real compile rather than parsing the source, so it
+      # needs the build it would analyze. The release preset is the one that
+      # compiles everything the binary ships.
+      - name: Build
+        run: |
+          cmake --preset release
+          cmake --build build/release -j"$(nproc)"
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@f3712979fa5f215279b101dd0a2e3bdfb4353324 # v3

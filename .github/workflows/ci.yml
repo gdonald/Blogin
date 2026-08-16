@@ -21,6 +21,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only by default. A job that needs to write says so itself, so a new job
+# cannot quietly inherit the ability to push, release, or comment.
+permissions: read-all
+
 jobs:
   # One runner per stage, the same as every other job here. Run in one job they
   # were four full builds in a row on a fresh machine, and `dist` is two of them
@@ -46,7 +50,7 @@ jobs:
           # Universal, so this one compiles arm64 and x86_64.
           - dist
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Ninja
         run: brew install ninja
@@ -58,7 +62,7 @@ jobs:
     name: Linux
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Build and test in the Debian container
         run: ./scripts/test.sh linux
@@ -67,7 +71,7 @@ jobs:
     name: Linux distribution binary
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Build statically and check it
         run: ./scripts/test.sh linux-static
@@ -76,7 +80,7 @@ jobs:
     name: GCC
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # Blogin ships built by clang. This job is a second opinion: GCC reports
       # shadowing and conversions clang accepts, and it builds against libstdc++
@@ -90,7 +94,7 @@ jobs:
     name: clang-tidy
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Check every translation unit
         run: ./scripts/test.sh tidy
@@ -99,7 +103,7 @@ jobs:
     name: Coverage (macOS)
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Install Ninja
         run: brew install ninja
@@ -115,7 +119,7 @@ jobs:
     env:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # The same floor on both platforms. Code reached only on one of them is
       # covered there and not here, so a number that holds on both is a number
@@ -130,7 +134,7 @@ jobs:
       # is not red for a secret it cannot have.
       - name: Publish coverage
         if: env.CODECOV_TOKEN != ''
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
         with:
           files: build/coverage-linux.lcov
           fail_ci_if_error: true
@@ -144,7 +148,7 @@ jobs:
     name: Fuzz
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Replay the corpus, then explore briefly
         run: |
@@ -157,7 +161,7 @@ jobs:
 
       - name: Keep whatever crashed
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: fuzz-artifacts
           path: fuzz/artifacts/

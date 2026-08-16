@@ -1,0 +1,22 @@
+version: 2
+
+# The only dependencies this repository has are the actions its workflows run.
+# There is nothing to update in the build itself: no package manager, no
+# lockfile, and no third-party source in the tree.
+#
+# Actions are pinned by commit hash, which is what stops a tag being moved under
+# a workflow that trusts it. A pinned hash also never updates on its own, so
+# this is what notices when one of them has a newer release.
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'Update'
+    groups:
+      # One pull request for the lot rather than one per action, since they are
+      # reviewed together and nothing here pins a version for a reason.
+      actions:
+        patterns:
+          - '*'

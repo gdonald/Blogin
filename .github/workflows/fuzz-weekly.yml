@@ -23,6 +23,10 @@ concurrency:
   group: fuzz-weekly
   cancel-in-progress: false
 
+# Read-only by default. A job that needs to write says so itself, so a new job
+# cannot quietly inherit the ability to push, release, or comment.
+permissions: read-all
+
 jobs:
   fuzz:
     name: ${{ matrix.target }}
@@ -44,12 +48,12 @@ jobs:
           - websocket
           - text
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # restore-keys means a run starts from the most recent cache for this
       # target even when today's key does not exist yet.
       - name: Restore the accumulated corpus
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: fuzz/corpus/${{ matrix.target }}
           key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
@@ -70,7 +74,7 @@ jobs:
 
       - name: Keep whatever crashed
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: fuzz-artifacts-${{ matrix.target }}
           path: fuzz/artifacts/
@@ -81,7 +85,7 @@ jobs:
       # regression inputs, both of which a person put there on purpose.
       - name: Keep the corpus it grew
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: fuzz-corpus-${{ matrix.target }}
           path: fuzz/corpus/${{ matrix.target }}
