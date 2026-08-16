@@ -162,6 +162,11 @@ jobs:
     needs: publish
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/v')
+    # Attaching the formula to the release is a write, and a job gets the
+    # read-only default until it says otherwise. The token here reaches this
+    # repository only, which is why pushing to the tap uses one of its own.
+    permissions:
+      contents: write
     # At the job level so the push step can test for the token in its `if`. A
     # step cannot read the env it declares itself.
     env:
