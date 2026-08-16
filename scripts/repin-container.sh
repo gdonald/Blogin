@@ -44,7 +44,11 @@ sed -e 's/^FROM debian@sha256:.*/FROM debian:trixie/' \
 
 echo "==> building unpinned, to see what apt resolves"
 
-docker build -q -t blogin-repin -f "$work/Dockerfile" docker > /dev/null
+# Without --no-cache docker reuses the layer from the last build, apt never
+# runs, and the versions read back are the ones already pinned. That reports
+# "already current" no matter what the archive holds, which is the one answer
+# this script must never give wrongly.
+docker build --no-cache -q -t blogin-repin -f "$work/Dockerfile" docker > /dev/null
 
 debian_packages=(ca-certificates cmake curl g++ git gnupg imagemagick make ninja-build python3)
 
