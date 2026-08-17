@@ -40,8 +40,6 @@ public:
     skip_spaces();
 
     if (position_ < source_.size()) {
-      // Assignment is refused by name rather than as a stray character, since
-      // that is what somebody who wrote it was trying to do.
       if (source_[position_] == '=') {
         return fail("assignment is not supported");
       }
@@ -113,8 +111,7 @@ private:
 
   // Every way back to the top of the grammar comes through here: a
   // parenthesised group, a call argument, a map value, a block. Counting the
-  // trips down is what stops input like 20,000 open parens from recursing until
-  // the stack runs out, which is a crash rather than an error message.
+  // trips down bounds the recursion.
   //
   // The evaluator walks the tree the same way, so a tree the parser refuses to
   // build is one the evaluator can never be handed.
@@ -268,9 +265,8 @@ private:
   }
 
   std::expected<std::unique_ptr<Node>, ParseError> parse_unary() {
-    // A prefix operator recurses into this function directly rather than back
-    // through the top of the grammar, so the counter parse_or keeps does not
-    // move for a run of them and this needs its own guard.
+    // A prefix operator recurses into this function directly, never through the
+    // top of the grammar, so parse_or's counter does not move for a run of them.
     const Depth depth(*this);
 
     if (depth.too_deep()) {
@@ -472,7 +468,7 @@ private:
       return node;
     }
 
-    // A bare :name is the name itself, which is how :as<entry> degenerates.
+    // A bare :name is the name itself, so :as<entry> degenerates to it.
     auto literal = make(NodeKind::literal_string);
     literal->text = name;
     node->target = std::move(literal);
@@ -748,8 +744,6 @@ std::unexpected<ParseError> error_at(const Node& node, std::string message) {
 }
 
 bool same_value(const Value& left, const Value& right) {
-  // Comparing a number against a string is almost always a template mistake
-  // rather than an intent, but returning false is friendlier than refusing.
   if (left.is_string() || right.is_string()) {
     return left.is_string() && right.is_string() && left.as_string() == right.as_string();
   }
@@ -847,7 +841,6 @@ std::expected<Value, ParseError> evaluate(const Node& node, ViewContext& context
     }
 
     case NodeKind::name: {
-      // A local shadows a view name, which is how a loop variable works.
       if (const Value* local = context.lookup_local(node.text)) {
         return *local;
       }
@@ -1012,8 +1005,7 @@ std::expected<Value, ParseError> evaluate(const Node& node, ViewContext& context
 
       const std::string& name = node.target->text;
 
-      // A member call on a value, such as $node.children.elems, is a read
-      // rather than a call into the view.
+      // A member call on a value, such as $node.children.elems, is a read.
       if (node.target->kind == NodeKind::member && node.arguments.empty()) {
         return evaluate(*node.target, context);
       }

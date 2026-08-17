@@ -37,7 +37,7 @@ SPEC {
       });
 
       // A post with one bad byte should still build, so malformed input counts
-      // the byte and moves on rather than rejecting the document.
+      // the byte and moves on, never rejecting the document.
       spec::it("counts a stray continuation byte as one character", [] {
         expect(blogin::text::char_length("\x80\x80")).to_eq(std::size_t{2});
       });
@@ -172,7 +172,7 @@ SPEC {
     // JSON numbers, YAML scalars, a post's `order`, and a number written in a
     // template all arrive here. `std::from_chars` over a double would be the
     // obvious way to read one, and libc++ marks it unavailable below macOS 26,
-    // which is why this exists at all.
+    // which is the reason it exists.
     spec::context("reading a number", [] {
       const auto read = [](std::string_view text) {
         return blogin::text::to_double(text).value_or(-1.0);

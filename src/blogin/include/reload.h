@@ -18,7 +18,7 @@ std::string hello_message(std::int64_t version, std::string_view session);
 
 std::string change_message(std::int64_t version, const std::vector<std::string>& paths);
 
-// A failed rebuild is pushed too, so the error reaches the page rather than
+// A failed rebuild is pushed too, so the error reaches the page and not only
 // only the terminal the page's author is not looking at.
 std::string failure_message(std::int64_t version, std::string_view detail, std::string_view file,
                             std::size_t line);
@@ -34,23 +34,14 @@ std::string client_script(std::int64_t version, std::string_view session);
 // none.
 std::string inject(std::string_view html, std::string_view script);
 
-// Where a preview is built. Not the configured output directory, because a
-// preview and a release disagree about what belongs in it: a preview is
-// unminified and unfingerprinted, and it carries its own build state, so
-// sharing one tree leaves whichever ran last in place. That is a deploy of
-// unminified assets when the last writer was the server.
-//
-// Hidden, so it stays out of the way and the watcher already passes over it.
+// Where a preview is built. Not the configured output directory: a preview is
+// unminified and unfingerprinted and keeps its own build state, so sharing one
+// tree would leave whichever ran last in the directory that gets deployed.
 inline constexpr std::string_view preview_output_dir = ".blogin-preview";
 
-// Fingerprinting and minification make production output cacheable, and both
-// fight a preview: fingerprinting renames every asset on each rebuild, so a page
-// already open points at files the rebuild just deleted, and there is no stable
-// name left to swap a stylesheet under. A preview turns both off, which also
-// takes back the time they cost on every save.
-//
-// It also builds somewhere else, so serving a site never writes the directory
-// that gets deployed.
+// A preview turns off fingerprinting and minification. Fingerprinting renames
+// every asset on each rebuild, leaving an open page pointing at files that
+// rebuild deleted, with no stable name to swap a stylesheet under.
 Config preview_config(Config config);
 
 // Version, session, and the connected pages, shared by the socket threads.

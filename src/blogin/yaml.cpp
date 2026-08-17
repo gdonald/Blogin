@@ -19,7 +19,7 @@ struct Line {
 };
 
 // A comment runs from an unquoted # to the end of the line. Inside quotes a #
-// is just a character, which is why this cannot be a plain find.
+// is a character, so this cannot be a plain find.
 std::string_view strip_comment(std::string_view line) {
   char quote = '\0';
 
@@ -276,10 +276,8 @@ public:
   }
 
 private:
-  // Every nesting level in a data file comes back through here, so counting the
-  // trips down bounds the recursion. Without it, a file indented tens of
-  // thousands of levels deep exhausts the stack, which is a crash rather than
-  // the line number this parser promises. JSON has had the same guard.
+  // Counting the trips down bounds the recursion, so a deeply indented file is
+  // an error naming the line.
   std::expected<Value, ParseError> parse_block(std::size_t indent) {
     if (++depth_ > max_depth) {
       --depth_;
@@ -532,14 +530,11 @@ int depth_ = 0;
 };
 
 // How deeply the containers in a parsed value nest, walked with an explicit
-// stack so that measuring a deep value cannot itself overflow.
+// stack so measuring cannot itself overflow.
 //
 // This is what the JSON parser counts, and it is not what the block counter
-// above counts: `- k:` is one block here and an array holding an object there,
-// so a file can stay inside the recursion limit and still describe a value
-// nested past what JSON reads back. The shapes that do this are irregular
-// enough that no fixed ratio between the two limits holds, so the value is
-// measured rather than predicted.
+// above counts: `- k:` is one block here and an array holding an object there.
+// No fixed ratio between the two holds, so the value is measured.
 std::size_t container_depth(const Value& root) {
   std::vector<std::pair<const Value*, std::size_t>> pending{{&root, 1}};
   std::size_t deepest = 0;

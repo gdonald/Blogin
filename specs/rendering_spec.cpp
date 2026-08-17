@@ -264,6 +264,16 @@ SPEC {
         .not_to_contain("figcaption");
     });
 
+    // Anything after the last name is not an argument, so scanning stops there
+    // rather than looping on characters that can never start one.
+    spec::it("stops at trailing punctuation after the last argument", [] {
+      expect(blogin::shortcode::parse_arguments(R"(id="abc" !!!)").size()).to_eq(std::size_t{1});
+    });
+
+    spec::it("still reads the argument before trailing punctuation", [] {
+      expect(blogin::shortcode::parse_arguments(R"(id="abc" !!!)")[0].value).to_eq("abc");
+    });
+
     spec::it("keeps an argument written with spaces around the equals", [] {
       expect(blogin::shortcode::parse_arguments("id = \"abc\"")[0].value).to_eq("abc");
     });
@@ -453,9 +463,32 @@ SPEC {
 
       expect(blogin::toc::render(blogin::toc::build(unsafe))).to_contain("a &lt; b");
     });
+
+    spec::it("escapes a quote in a heading title", [] {
+      const std::vector<blogin::Heading> quoted{{1, R"(say "hi")", "say-hi"}};
+
+      expect(blogin::toc::render(blogin::toc::build(quoted))).to_contain("say &quot;hi&quot;");
+    });
+
+    spec::it("escapes an ampersand in a heading title", [] {
+      const std::vector<blogin::Heading> ampersand{{1, "this & that", "this-that"}};
+
+      expect(blogin::toc::render(blogin::toc::build(ampersand))).to_contain("this &amp; that");
+    });
+
+    // A deeper heading with nothing above it has no parent to nest under.
+    spec::it("keeps a heading that starts deeper than the first level", [] {
+      const std::vector<blogin::Heading> deep{{3, "orphan", "orphan"}};
+
+      expect(blogin::toc::build(deep).size()).to_eq(std::size_t{1});
+    });
   });
 
   spec::describe("the content stylesheet", [] {
+    spec::it("escapes markup inside highlighted code", [] {
+      expect(blogin::highlight::render("a & b < c", "rust")).to_contain("&amp;");
+    });
+
     spec::it("styles highlighting", [] { expect(std::string(blogin::style::content_css())).to_contain(".hl-keyword"); });
 
     spec::it("styles heading anchors", [] {

@@ -502,7 +502,7 @@ void write(std::string& out, const Value& value, JsonStyle style, bool sorted_ke
 
       // A negative zero formats as "-0", which reads back as the integer 0 and
       // writes out as "0". JSON draws no distinction between the two zeroes, so
-      // normalizing here is what makes writing a value twice produce the same
+      // normalizing here makes writing a value twice produce the same
       // bytes twice. Builds that cache and compare their output depend on that.
       out += std::format("{}", number == 0.0 ? 0.0 : number);
       return;

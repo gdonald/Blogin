@@ -22,11 +22,9 @@ namespace blogin {
 //
 // An arena is not thread safe. Each thread owns one.
 //
-// Under AddressSanitizer the blocks are poisoned and each allocation is
-// unpoisoned to its exact size, with a gap left between neighbours. A read or
-// write that leaves a node then reports instead of silently landing in the next
-// one, and a pointer used after reset() reports as well. Without the sanitizer
-// none of that is compiled and the layout is a plain bump.
+// Under AddressSanitizer each allocation is unpoisoned to its exact size with a
+// gap between neighbours, so an overrun into the next node reports. Without it
+// the layout is a plain bump.
 class Arena {
 public:
   static constexpr std::size_t default_block_size = 64UZ * 1024;
@@ -39,7 +37,7 @@ public:
 
   Arena(Arena&&) noexcept = default;
 
-  // Written out rather than defaulted because the blocks being replaced carry
+  // Written out, not defaulted, because the blocks being replaced carry
   // poison this arena applied, and it has to come off before they are freed.
   Arena& operator=(Arena&& other) noexcept {
     if (this != &other) {
@@ -80,7 +78,7 @@ public:
     unpoison_memory(result, size);
 
     // The next allocation starts past a poisoned gap, so a write running off
-    // the end of this one lands in the gap rather than in the next node. The
+    // the end of this one lands in the gap, not in the next node. The
     // gap is zero bytes wide without the sanitizer.
     used_ = std::min(used_ + redzone, block.size);
 
@@ -124,7 +122,7 @@ public:
     used_ = 0;
 
     // The retained block goes back to poisoned, so a pointer from before the
-    // reset reports rather than reading storage the next parse has taken over.
+    // reset reports, instead of reading storage the next parse has taken over.
     if (!blocks_.empty()) {
       poison_memory(blocks_.back().data.get(), blocks_.back().size);
     }
@@ -141,7 +139,7 @@ private:
   };
 
   // Bytes left poisoned between neighbouring allocations. Wide enough to catch
-  // the overrun of a pointer or a couple of fields, which is what an off-by-one
+  // the overrun of a pointer or a couple of fields, the size an off-by-one
   // in a parser produces.
   static constexpr std::size_t redzone = sanitizer_enabled ? 16UZ : 0UZ;
 

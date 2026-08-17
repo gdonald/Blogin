@@ -125,7 +125,7 @@ std::string nearest_key_hint(std::string_view unknown) {
     }
   }
 
-  // Far enough away and a suggestion is noise rather than help.
+  // Far enough away and a suggestion is noise.
   if (best_distance > 3 || best.empty()) {
     return {};
   }

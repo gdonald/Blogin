@@ -25,7 +25,7 @@ struct Attribute {
   std::string name;
   Interpolated value;
 
-  // {disabled: true} writes a bare attribute rather than one with a value.
+  // {disabled: true} writes a bare attribute, with no value.
   bool boolean_shorthand = false;
 };
 
@@ -99,7 +99,7 @@ private:
 };
 
 // Where a partial comes from. The engine renders it, and finding it is the
-// caller's business, since where templates live belongs to a site rather than
+// caller's business, since where templates live belongs to a site, not
 // to the engine.
 using PartialLookup = std::function<const Template*(std::string_view name)>;
 
@@ -114,7 +114,7 @@ public:
   virtual void store(std::string key, std::string html) = 0;
 
   // What a fragment read the last time it rendered, so the next page can work
-  // out its key by resolving those names rather than by rendering it. The site
+  // out its key by resolving those names without rendering it. The site
   // is the compiled block, which is stable for the build: a template is
   // compiled once and never changes afterwards.
   virtual const std::vector<std::string>* reads(const void* site) const = 0;
@@ -122,7 +122,7 @@ public:
   virtual void remember_reads(const void* site, std::vector<std::string> names) = 0;
 
   // A fragment body that had to be rendered. The count of these against the
-  // number of pages is what says whether reuse is working.
+  // number of pages says whether reuse is working.
   virtual void note_render() = 0;
 };
 

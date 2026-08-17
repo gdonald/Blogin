@@ -23,7 +23,7 @@ ViewContext sample_context() {
 
 // The surface a layout reads from. Everything the expression language resolves
 // goes through here, and what a fragment read is recorded here too, which is
-// what lets a cache key be derived rather than declared.
+// what lets a cache key be derived instead of declared.
 SPEC {
   spec::describe("the view context", [] {
     spec::context("names", [] {
@@ -37,6 +37,19 @@ SPEC {
 
       spec::it("offers nothing it was never given", [] {
         expect(sample_context().has("subtitle")).to_be_false();
+      });
+
+      spec::it("suggests a name close to the one asked for", [] {
+        expect(sample_context().nearest("titel")).to_contain("did you mean 'title'");
+      });
+
+      // Suggesting back the name that was asked for helps nobody.
+      spec::it("suggests nothing for a name it already has", [] {
+        expect(sample_context().nearest("title")).to_eq("");
+      });
+
+      spec::it("suggests nothing for a name close to none of them", [] {
+        expect(sample_context().nearest("completely-unrelated")).to_eq("");
       });
 
       spec::it("replaces a value set twice rather than keeping both", [] {
@@ -183,7 +196,7 @@ SPEC {
       });
 
       // Resolving the name once now would speak for only one of the two values
-      // the render saw, so this fragment is rendered rather than predicted.
+      // the render saw, so this fragment is rendered, not predicted.
       spec::it("is not replayable when a name came out twice over", [] {
         ViewContext context = sample_context();
 

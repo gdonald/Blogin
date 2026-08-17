@@ -57,12 +57,26 @@ std::string parse_and_render(std::string markdown) {
 
 }  // namespace
 
-// These earn their keep under the sanitizers rather than through their
+// These matter under the sanitizers more than for their
 // assertions. Every node in a parsed tree holds a view into the source buffer,
 // and this walks enough odd input to catch a view that outlives its buffer or a
 // scan that runs off the end.
 SPEC {
   spec::describe("generated input", [] {
+    // The overload that appends, which the benchmark uses and nothing else did.
+    spec::context("rendering into a caller's buffer", [] {
+      spec::it("appends to what is already there", [] {
+        const Source source("hello");
+
+        Arena arena;
+        std::string out = "before:";
+
+        blogin::render_html(out, blogin::parse_markdown(arena, source));
+
+        expect(out).to_contain("before:<p>hello</p>");
+      });
+    });
+
     spec::context("markdown", [] {
       spec::it("parses without reading outside the source buffer", [] {
         std::mt19937 engine(seed);

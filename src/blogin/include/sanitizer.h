@@ -28,8 +28,8 @@
 #endif
 
 // Marks a function whose arithmetic is meant to wrap or to shift bits off the
-// top, which is what a hash function does. The check names are clang's, and
-// naming one GCC does not have is an error there rather than something ignored,
+// top, as a hash function does. The check names are clang's, and naming one
+// GCC does not have is an error there,
 // so the attribute is only written for the compiler that understands it.
 #ifdef __clang__
 #  define BLOGIN_WRAPS_ON_PURPOSE \

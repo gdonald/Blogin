@@ -25,7 +25,7 @@ struct ServeOptions {
   std::string host = "127.0.0.1";
   int port = 3000;
 
-  // Off in a spec, which drives the request path itself rather than waiting for
+  // Off in a spec, which drives the request path itself without waiting for
   // an editor.
   bool watch = true;
 
@@ -102,15 +102,11 @@ private:
   std::unique_ptr<State> state_;
 };
 
-// True when nothing else holds the port. Checked before serving so the message
-// names the problem rather than a failed bind halfway through startup.
-bool port_available(const std::string& host, int port);
-
 // The directory holding the site, given where its content lives.
 //
 // A relative "content" has no parent as far as the filesystem library is
 // concerned, and watching an empty path watches nothing at all, so the answer
-// there is the working directory rather than nowhere.
+// there is the working directory.
 std::filesystem::path site_root(const std::filesystem::path& content);
 
 // How long to coalesce filesystem events, given how long the last rebuild took.

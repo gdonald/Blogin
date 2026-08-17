@@ -27,7 +27,7 @@ struct BuildOptions {
   std::filesystem::path theme_static;
   std::filesystem::path theme_assets;
 
-  // Prefixed onto every url the build produces, which is what puts a language's
+  // Prefixed onto every url the build produces, so a language's
   // pages under /<code>/ without any layout knowing about it.
   std::string url_prefix;
 
@@ -37,7 +37,7 @@ struct BuildOptions {
   std::string current_language;
 
   // Each language's translation keys and the url path each produces, so a page
-  // can link to itself in another language rather than to that language's home.
+  // can link to itself in another language, not to that language's home.
   std::map<std::string, std::map<std::string, std::string>> translations;
 
   Config config;
@@ -68,8 +68,8 @@ struct BuildReport {
   std::size_t skipped = 0;
   std::size_t fragments_reused = 0;
 
-  // Fragment bodies rendered. Against the page count this is what says the
-  // site's chrome was built once rather than once for every page that carries
+  // Fragment bodies rendered. Against the page count it says whether the
+  // site's chrome was built once or once for every page carrying
   // it.
   std::size_t fragments_rendered = 0;
 

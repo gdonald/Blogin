@@ -21,7 +21,7 @@ struct SearchRecord {
 namespace search {
 
 // Weights, mirrored in the emitted script. A title match counts for far more
-// than a body match, which is what makes a short index feel accurate.
+// than a body match, so a short index still ranks well.
 inline constexpr int title_weight = 10;
 inline constexpr int tag_weight = 5;
 inline constexpr int body_weight = 1;

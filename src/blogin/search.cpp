@@ -10,7 +10,7 @@ namespace blogin::search {
 namespace {
 
 // The browser script and this ranking have to agree, so the weights live in the
-// header and are written into the script rather than repeated by hand.
+// header and are written into the script, never repeated by hand.
 constexpr std::string_view search_js = R"JS((function () {
   const WEIGHT = { title: 10, tag: 5, body: 1 };
   const CAP = (typeof BLOGIN_SEARCH_CAP === 'number') ? BLOGIN_SEARCH_CAP : 10;

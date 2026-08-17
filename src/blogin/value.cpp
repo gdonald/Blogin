@@ -1,6 +1,7 @@
 #include "value.h"
 
 #include <algorithm>
+#include <array>
 
 namespace blogin {
 namespace {
@@ -101,10 +102,10 @@ bool Value::truthy() const {
     case Type::array:
       return !std::get<Array>(storage_).empty();
     case Type::object:
-      return !std::get<Object>(storage_).empty();
+      break;
   }
 
-  return false;
+  return !std::get<Object>(storage_).empty();
 }
 
 std::size_t Value::size() const {
@@ -220,24 +221,14 @@ bool operator==(const Value& left, const Value& right) {
 }
 
 std::string_view type_name(Value::Type type) {
-  switch (type) {
-    case Value::Type::null:
-      return "null";
-    case Value::Type::boolean:
-      return "boolean";
-    case Value::Type::integer:
-      return "integer";
-    case Value::Type::number:
-      return "number";
-    case Value::Type::string:
-      return "string";
-    case Value::Type::array:
-      return "array";
-    case Value::Type::object:
-      return "object";
-  }
+  static constexpr std::array<std::string_view, 7> names{
+    "null", "boolean", "integer", "number", "string", "array", "object",
+  };
 
-  return "unknown";
+  static_assert(static_cast<std::size_t>(Value::Type::object) + 1 == names.size(),
+                "a type was added without a name");
+
+  return names[static_cast<std::size_t>(type)];
 }
 
 std::string Value::type_name() const {

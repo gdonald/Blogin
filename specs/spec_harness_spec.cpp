@@ -96,7 +96,7 @@ SPEC {
       expect(true).to_be_false();
     });
 
-    // Reported as pending rather than passing, so an example whose subject the
+    // Reported as pending and never as passing, so an example whose subject the
     // machine cannot provide never claims to have covered anything.
     spec::it("abandons an example that declares itself pending", [] {
       spec::pending("demonstrating the mechanism");

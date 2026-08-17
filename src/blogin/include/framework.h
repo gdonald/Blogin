@@ -11,12 +11,10 @@ namespace blogin {
 // named anywhere in the rendering code.
 class Framework {
 public:
-  static bool known(std::string_view name);
-
   static std::vector<std::string_view> names();
 
   // Throws for a name that is not one of the known profiles, since a typo in
-  // configuration should stop the build rather than silently style nothing.
+  // configuration should stop the build.
   static Framework profile(std::string_view name);
 
   std::string_view name() const { return name_; }

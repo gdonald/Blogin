@@ -55,7 +55,7 @@ public:
   bool is_array() const { return type() == Type::array; }
   bool is_object() const { return type() == Type::object; }
 
-  // A value read as the wrong type yields the fallback rather than throwing.
+  // A value read as the wrong type yields the fallback, never throwing.
   // Callers that care about the difference ask the type first. Callers reading
   // configuration with a default do not want to.
   bool as_boolean(bool fallback = false) const;

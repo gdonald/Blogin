@@ -178,8 +178,6 @@ SPEC {
       spec::it("ignores a document marker", [] { expect(parsed("---\na: 1").size()).to_eq(std::size_t{1}); });
     });
 
-    // Everything outside the subset fails with a line number rather than being
-    // guessed at, so a data file that needs real YAML says so plainly.
     // Every escape a double-quoted scalar understands, and every shape a
     // sequence and a mapping can nest into. Each of these appears in a data
     // file somewhere.
@@ -334,7 +332,7 @@ SPEC {
 
       spec::it("refuses an unknown escape", [] { expect(rejects(R"(a: "b\qc")")).to_be_true(); });
 
-      // Guessing would silently yield the string "- a" rather than a sequence.
+      // The alternative silently yields the string "- a", not a sequence.
       spec::it("refuses a nested sequence packed onto the dash line", [] {
         expect(rejects("outer:\n  - - a\n    - b")).to_be_true();
       });
@@ -353,8 +351,8 @@ SPEC {
     });
 
     // The same shape the fuzzer found in the expression parser. Every nesting
-    // level recurses, so a file indented deeply enough exhausted the stack
-    // before the limit went in.
+    // level recurses, so a deeply indented file has to be refused before the
+    // stack runs out.
     spec::context("nesting", [] {
       const auto nested = [](int depth) {
         std::string out;
@@ -374,15 +372,15 @@ SPEC {
         expect(blogin::parse_yaml(nested(400)).error().message).to_contain("nested too deeply");
       });
 
-      // Found by the fuzzer, twice. Data files are written as JSON on the way
+      // Found by the fuzzer. Data files are written as JSON on the way
       // to the search index, so anything read here has to survive being written
       // there and read back. How many levels of JSON a level here becomes
       // depends on the shape: a mapping is one, a sequence of mappings is two,
       // an array holding an object. So the shapes below each reach the limit at
       // a different indentation, and every one of them has to round-trip.
       spec::context("the deepest file it accepts", [=] {
-        // Asking the parser where its limit is, rather than naming a number
-        // here that would drift the moment the limit moved.
+        // Asking the parser where its limit is, so nothing here drifts when
+        // the limit moves.
         const auto deepest_accepted = [](const auto& build) {
           int deepest = 0;
 
@@ -416,8 +414,8 @@ SPEC {
           return out;
         };
 
-        // What the fuzzer landed on: neither shape alone, which is why a fixed
-        // ratio between the two limits held for both of those and not for this.
+        // What the fuzzer landed on: neither shape alone, so a fixed ratio
+        // between the two limits held for both of those and not for this.
         const auto mappings_and_sequences = [=](int depth) {
           std::string out;
 

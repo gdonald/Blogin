@@ -205,7 +205,7 @@ std::optional<std::filesystem::path> resolve_file(std::string_view url_path,
   }
 
   // A request is not allowed to reach outside what is being served, whatever it
-  // spells. This is checked on the resolved path rather than by looking for
+  // spells. This is checked on the resolved path, not by looking for
   // "..", which a client can encode around.
   const auto within = [&root](const std::filesystem::path& candidate)
     -> std::optional<std::filesystem::path> {

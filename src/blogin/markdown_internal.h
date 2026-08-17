@@ -1,7 +1,7 @@
 #pragma once
 
 // Shared between the block and inline halves of the parser. Not public API, so
-// it sits beside the implementation rather than in the include directory.
+// it sits beside the implementation, not in the include directory.
 
 #include <cstdint>
 #include <string>

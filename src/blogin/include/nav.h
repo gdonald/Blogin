@@ -35,7 +35,7 @@ std::vector<NavNode> build_tree(const std::filesystem::path& content, const Conf
 // The node whose path matches, at any depth, or null.
 const NavNode* find(const std::vector<NavNode>& nodes, std::string_view path);
 
-// True when `section` is the node's own path or lies beneath it, which is what
+// True when `section` is the node's own path or lies beneath it, the test
 // marks the current item in a menu.
 bool is_current(const NavNode& node, std::string_view section);
 

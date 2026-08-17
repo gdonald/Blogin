@@ -165,6 +165,14 @@ SPEC {
       });
     }
 
+    spec::it("falls back to OK for a status it does not name", [] {
+      expect(std::string(blogin::http::reason_for(418))).to_eq("OK");
+    });
+
+    spec::it("skips a blank line between headers", [] {
+      expect(parsed("GET / HTTP/1.1\r\nHost: x\r\n\r\n\r\n").target).to_eq("/");
+    });
+
     spec::it("writes an upgrade without a body or a length", [] {
       blogin::http::Response response;
       response.status = 101;
@@ -239,7 +247,7 @@ SPEC {
       expect(blogin::http::resolve_file("/missing", root).has_value()).to_be_false();
     });
 
-    // Checked on the resolved path rather than by looking for "..", which a
+    // Checked on the resolved path, not by looking for "..", which a
     // client can encode its way around.
     spec::it("refuses to reach outside what is being served", [] {
       const std::filesystem::path root = served_tree();

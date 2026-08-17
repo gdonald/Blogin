@@ -22,8 +22,8 @@ std::expected<Value, ParseError> resolve(const Value& global, const std::filesys
                                          std::string_view section);
 
 // One file, dispatched on its extension. An extension that is neither JSON nor
-// YAML yields nothing rather than an error, so a stray README in data/ is
-// ignored rather than fatal.
+// YAML yields nothing instead of an error, so a stray README in data/ is
+// ignored.
 std::expected<Value, ParseError> load_file(const std::filesystem::path& path);
 
 bool is_data_file(const std::filesystem::path& path);

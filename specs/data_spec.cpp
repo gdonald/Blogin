@@ -33,6 +33,34 @@ SPEC {
     // Shared scratch directories, and loading counts files read.
     spec::serial();
 
+    spec::context("a tree with a symlink and a nested error", [] {
+      spec::it("skips a symlink", [] {
+        const std::filesystem::path tree = make_tree("symlink");
+
+        write(tree / "real.json", R"({"a":1})");
+
+        std::error_code ignored;
+        std::filesystem::create_symlink(tree / "real.json", tree / "linked.json", ignored);
+
+        const auto loaded = blogin::data::load_tree(tree);
+
+        spec::aggregate_failures([&] {
+          expect(loaded.has_value()).to_be_true();
+          expect(loaded->contains("linked")).to_be_false();
+        });
+      });
+
+      // A file that cannot be parsed anywhere in the tree fails the whole load,
+      // naming the file, so a broken data file is not silently absent.
+      spec::it("reports a broken file inside a subdirectory", [] {
+        const std::filesystem::path tree = make_tree("nested-error");
+
+        write(tree / "inner" / "broken.json", "{not json");
+
+        expect(blogin::data::load_tree(tree).has_value()).to_be_false();
+      });
+    });
+
     spec::context("loading a tree", [] {
       auto root = spec::let([] {
         const std::filesystem::path tree = make_tree("loading");

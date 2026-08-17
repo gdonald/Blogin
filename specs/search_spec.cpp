@@ -36,8 +36,8 @@ SPEC {
     });
 
     spec::context("ranking", [] {
-      // A title match counting for ten and a body match for one is what makes a
-      // small index feel accurate rather than arbitrary.
+      // A title match counts for ten and a body match for one, so a small
+      // index still ranks well.
       spec::it("puts a title match above a body match", [] {
         const auto results = blogin::search::rank(corpus(), "grammars");
 

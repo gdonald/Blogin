@@ -1,4 +1,5 @@
 #include <map>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -19,6 +20,44 @@ SPEC {
 
     spec::it("drops the semicolon before a closing brace", [] {
       expect(blogin::assets::minify_css("a { color: red; }")).to_eq("a{color:red}");
+    });
+
+    // The trailing space is dropped where it falls, so a rule ending in one
+    // does not carry it into the output.
+    spec::it("drops a space before a closing brace", [] {
+      expect(blogin::assets::minify_css("a { color: red ; }")).to_eq("a{color:red}");
+    });
+
+    spec::it("drops a space at the very end", [] {
+      expect(blogin::assets::minify_css("a{color:red}   ")).to_eq("a{color:red}");
+    });
+
+    // The minifier writes a pending space only when content follows it, so no
+    // output can end in one. This is the property that lets it hold.
+    spec::it("never ends the output with a space", [] {
+      const std::string alphabet = "ab{}; \n\t:/*,()#.-0";
+
+      std::mt19937 engine(7);
+      std::uniform_int_distribution<std::size_t> pick(0, alphabet.size() - 1);
+      std::uniform_int_distribution<int> length(0, 40);
+
+      std::size_t trailing = 0;
+
+      for (int run = 0; run < 2000; ++run) {
+        std::string input;
+
+        for (int index = 0, size = length(engine); index < size; ++index) {
+          input += alphabet[pick(engine)];
+        }
+
+        for (const std::string& out : {blogin::assets::minify_css(input), blogin::assets::minify_js(input)}) {
+          if (!out.empty() && out.back() == ' ') {
+            ++trailing;
+          }
+        }
+      }
+
+      expect(trailing).to_eq(std::size_t{0});
     });
 
     spec::it("keeps the space a descendant selector depends on", [] {
@@ -205,6 +244,35 @@ SPEC {
       const std::map<std::string, std::string> srcsets{{"/a.jpg", "/a-320.jpg 320w"}};
 
       expect(blogin::assets::add_srcset("<img src=\"/a.jpg", srcsets)).to_eq("<img src=\"/a.jpg");
+    });
+  });
+}
+
+SPEC {
+  spec::describe("measuring an image", [] {
+    spec::it("reads no width when the tool cannot be run", [] {
+      expect(blogin::assets::image_width("any.png", "definitely-not-a-resizer")).to_eq(0);
+    });
+
+    spec::it("reads no width for a file that is not there", [] {
+      const std::string tool = blogin::assets::resizer();
+
+      if (tool.empty()) {
+        spec::pending("no image resizer installed");
+      }
+
+      expect(blogin::assets::image_width("no-such-image.png", tool)).to_eq(0);
+    });
+
+    // A quote in a filename would end the shell's argument early.
+    spec::it("reads no width for a name carrying a quote", [] {
+      const std::string tool = blogin::assets::resizer();
+
+      if (tool.empty()) {
+        spec::pending("no image resizer installed");
+      }
+
+      expect(blogin::assets::image_width("it's not here.png", tool)).to_eq(0);
     });
   });
 }

@@ -67,6 +67,28 @@ SPEC {
       spec::it("leaves an unmatched marker as text", [] { expect(to_html("2 * 3")).to_eq("<p>2 * 3</p>\n"); });
     });
 
+    spec::context("a link destination in angle brackets", [] {
+      spec::it("reads a plain one", [] {
+        expect(to_html("[a](<b>)")).to_contain(R"(href="b")");
+      });
+
+      // Inside the brackets, a backslash escape lets a paren be part of the url.
+      spec::it("reads an escaped punctuation mark inside the brackets", [] {
+        expect(to_html(R"([a](<b\)c>))")).to_contain(R"(href="b)c")");
+      });
+
+      // An unescaped `<` cannot appear in the destination, so this is not one.
+      spec::it("leaves a second opening bracket as text", [] {
+        expect(to_html("[a](<b<c>)")).not_to_contain("href=");
+      });
+    });
+
+    spec::context("a link title on the line after its destination", [] {
+      spec::it("reads the title", [] {
+        expect(to_html("[a](/url\n\"titled\")")).to_contain(R"(title="titled")");
+      });
+    });
+
     spec::context("escaping", [] {
       spec::it("escapes the html special characters", [] {
         expect(to_html("a < b & c > d")).to_eq("<p>a &lt; b &amp; c &gt; d</p>\n");

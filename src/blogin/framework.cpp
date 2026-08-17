@@ -58,7 +58,7 @@ const std::vector<Profile>& profiles() {
      }},
 
     // Bulma does not style bare typography. Headings, lists, blockquotes, and
-    // tables are styled only inside `.content`, which is what the `article`
+    // tables are styled only inside `.content`, the class the `article`
     // slot wraps the rendered body in.
     {"bulma",
      "https://cdn.jsdelivr.net/npm/bulma@1/css/bulma.min.css",
@@ -89,10 +89,6 @@ const Profile* find(std::string_view name) {
 }
 
 }  // namespace
-
-bool Framework::known(std::string_view name) {
-  return find(name) != nullptr;
-}
 
 std::vector<std::string_view> Framework::names() {
   std::vector<std::string_view> out;

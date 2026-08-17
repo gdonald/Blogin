@@ -59,6 +59,17 @@ SPEC {
           .to_be_true();
       });
 
+      // The CLI passes this in, so nothing else exercises it.
+      spec::it("dates a scaffold with today, written the way a filename wants", [] {
+        const std::string today = blogin::scaffold::today();
+
+        spec::aggregate_failures([&] {
+          expect(today.size()).to_eq(std::size_t{10});
+          expect(today[4]).to_eq('-');
+          expect(today[7]).to_eq('-');
+        });
+      });
+
       spec::it("writes the base layout", [] {
         expect(std::filesystem::exists(scaffolded() / "layouts" / "base.haml")).to_be_true();
       });
@@ -79,7 +90,7 @@ SPEC {
         expect(read(scaffolded() / "assets" / "css" / "style.css")).to_contain("--blogin-bg");
       });
 
-      // Somewhere obvious to put them, rather than a guess about where they go.
+      // Somewhere obvious to put them.
       spec::it("makes a place for scripts and images", [] {
         const std::filesystem::path root = scaffolded();
 

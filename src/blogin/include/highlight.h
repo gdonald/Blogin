@@ -7,7 +7,7 @@
 namespace blogin::highlight {
 
 // The languages that get server-side highlighting. A language outside this set
-// renders as escaped text with a class saying so, rather than being guessed at.
+// renders as escaped text with a class saying so.
 std::vector<std::string_view> languages();
 
 bool supports(std::string_view language);

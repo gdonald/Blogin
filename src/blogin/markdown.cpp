@@ -18,11 +18,11 @@ constexpr int code_indent = 4;
 constexpr int max_nesting = 64;
 
 // A tab advances to the next multiple of four, so indentation is counted in
-// columns rather than in bytes.
+// columns, not in bytes.
 //
 // A tab can also straddle the point where indentation stops. When four columns
 // of indentation end halfway through a tab, the columns it still owes belong to
-// the content, which is why `>\t\tfoo` indents its code block by two spaces.
+// the content, so `>\t\tfoo` indents its code block by two spaces.
 // Those owed columns are carried as `pending_spaces` and appear at the front of
 // `rest()`.
 struct Scanner {
@@ -71,7 +71,7 @@ struct Scanner {
 
         if (width > remaining) {
           // The tab crosses the stopping point. What is left of it becomes
-          // content rather than indentation.
+          // content, not indentation.
           pending_spaces = width - remaining;
           column += remaining;
           ++offset;
@@ -854,26 +854,14 @@ private:
   }
 
   Node* add_child(NodeKind kind) {
-    if (tip_ == nullptr) {
-      tip_ = document_;
-    }
-
-    while (tip_ != nullptr && tip_ != document_ && !is_container(tip_)) {
+    while (tip_ != document_ && !is_container(tip_)) {
       close(tip_);
-    }
-
-    if (tip_ == nullptr) {
-      tip_ = document_;
     }
 
     // Only items belong directly to a list. Anything else means the list has
     // ended.
     if (kind != NodeKind::item && tip_->kind == NodeKind::list) {
       close(tip_);
-    }
-
-    if (tip_ == nullptr) {
-      tip_ = document_;
     }
 
     // A blank line inside an item, followed by more content in that item, makes
@@ -925,16 +913,12 @@ private:
       child = open_child(container);
     }
 
-    if (container == nullptr) {
-      container = document_;
-    }
-
     const bool blank = is_blank(scanner.rest());
 
     if (!all_matched) {
       // A paragraph left open by the previous line swallows a continuation that
       // starts no new block, even though the containers around it did not
-      // match. This is what lets a quoted paragraph run past its own marker.
+      // match, so a quoted paragraph can run past its own marker.
       if (tip_ != nullptr && tip_->kind == NodeKind::paragraph && !blank && starts_no_block(scanner)) {
         add_text(tip_, scanner.rest());
 
@@ -949,7 +933,7 @@ private:
     }
 
     // The descent stops on the deepest block that still matched, which for a
-    // code or html block is the block itself rather than one of its children.
+    // code or html block is the block itself, never one of its children.
     if (all_matched && accepts_lines(container) && container->kind != NodeKind::paragraph) {
       tip_ = container;
       add_text(container, scanner.rest());
@@ -1195,7 +1179,7 @@ private:
 
       // A delimiter row beneath a single-line paragraph turns that line into a
       // table header. Checked before the setext underline, since a row of
-      // hyphens with pipes in it is a table rather than a heading.
+      // hyphens with pipes in it is a table, not a heading.
       if (in_paragraph() && rest.contains('|')) {
         const std::string heading_line = content_of(tip_);
 

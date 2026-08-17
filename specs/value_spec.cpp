@@ -1,4 +1,5 @@
 #include <string>
+#include <string_view>
 
 #include "support/spec.h"
 #include "value.h"
@@ -17,6 +18,12 @@ SPEC {
 
       spec::it("holds a number", [] { expect(Value(2.5).as_number()).to_eq(2.5); });
 
+      spec::it("holds a string view", [] {
+        const std::string_view view = "viewed";
+
+        expect(std::string(Value(view).as_string())).to_eq("viewed");
+      });
+
       spec::it("holds a string", [] { expect(std::string(Value("text").as_string())).to_eq("text"); });
 
       spec::it("holds an array", [] { expect(Value::array().is_array()).to_be_true(); });
@@ -33,6 +40,10 @@ SPEC {
 
       spec::it("reads an integer as a number", [] { expect(Value(3).as_number()).to_eq(3.0); });
 
+      spec::it("falls back when the value is not a number at all", [] {
+        expect(Value("text").as_number(1.5)).to_eq(1.5);
+      });
+
       spec::it("reads a number as an integer by truncating", [] {
         expect(Value(3.9).as_integer()).to_eq(std::int64_t{3});
       });
@@ -48,6 +59,10 @@ SPEC {
       spec::it("treats false as false", [] { expect(Value(false).truthy()).to_be_false(); });
 
       spec::it("treats zero as false", [] { expect(Value(0).truthy()).to_be_false(); });
+
+      spec::it("treats a zero number as false", [] { expect(Value(0.0).truthy()).to_be_false(); });
+
+      spec::it("treats a non-zero number as true", [] { expect(Value(2.5).truthy()).to_be_true(); });
 
       spec::it("treats an empty string as false", [] { expect(Value("").truthy()).to_be_false(); });
 

@@ -4,6 +4,8 @@
 
 #include "arena.h"
 #include "sanitizer.h"
+#include <utility>
+
 #include "support/spec.h"
 
 using blogin::Arena;
@@ -148,9 +150,45 @@ SPEC {
       expect(arena.block_count()).to_eq(std::size_t{0});
     });
 
+    // Moving an arena has to take the poison with the blocks, so the assignment
+    // is written out rather than defaulted.
+    spec::context("moving one arena into another", [] {
+      spec::it("carries the blocks across", [] {
+        Arena source;
+        source.allocate(64, alignof(std::max_align_t));
+
+        Arena destination;
+        destination = std::move(source);
+
+        expect(destination.block_count()).to_eq(std::size_t{1});
+      });
+
+      spec::it("carries the byte count across", [] {
+        Arena source;
+        source.allocate(64, alignof(std::max_align_t));
+
+        const std::size_t before = source.bytes_allocated();
+
+        Arena destination;
+        destination = std::move(source);
+
+        expect(destination.bytes_allocated()).to_eq(before);
+      });
+
+      spec::it("leaves an arena moved into itself alone", [] {
+        Arena arena;
+        arena.allocate(64, alignof(std::max_align_t));
+
+        Arena& same = arena;
+        arena = std::move(same);
+
+        expect(arena.block_count()).to_eq(std::size_t{1});
+      });
+    });
+
     // The sanitizer sees one large heap block and nothing about the nodes
     // inside it, so the arena marks the unused bytes itself. These examples ask
-    // whether a byte is poisoned rather than touching it, since touching one
+    // whether a byte is poisoned without touching it, since touching one
     // would abort the run instead of failing the example.
     spec::context("under AddressSanitizer", [] {
       spec::before_each([] {

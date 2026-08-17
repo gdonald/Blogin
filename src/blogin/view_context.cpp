@@ -150,7 +150,7 @@ std::string ViewContext::nearest(std::string_view name) const {
     consider(entry.first);
   }
 
-  // Far enough away and a suggestion is noise rather than help.
+  // Far enough away and a suggestion is noise.
   if (best.empty() || best_distance > 3) {
     return {};
   }
@@ -236,7 +236,7 @@ void ViewContext::record(std::string_view name, const Value& value) const {
 
     // One name, two values, in a single render. Resolving it once against the
     // next page would speak for only one of them, so this fragment is rendered
-    // rather than replayed.
+    // instead of replayed.
     if (seen->second != text) {
       recording.replayable = false;
     }

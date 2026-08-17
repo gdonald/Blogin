@@ -1,16 +1,19 @@
 #include <atomic>
 #include <filesystem>
 #include <fstream>
+#include <regex>
 #include <ios>
 #include <iterator>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "assets.h"
 #include "config.h"
 #include "files.h"
 #include "reload.h"
 #include "site.h"
+#include "text.h"
 #include "support/spec.h"
 
 using spec::expect;
@@ -186,7 +189,7 @@ SPEC {
         expect(blogin::build(options)->written).to_eq(std::size_t{0});
       });
 
-      // An unchanged image should cost a stat rather than a read and a hash,
+      // An unchanged image should cost a stat, never a read and a hash,
       // which on a site carrying photographs is the difference between a
       // rebuild and a full one.
       spec::it("carries an unchanged asset over without reading it", [] {
@@ -242,7 +245,7 @@ SPEC {
     });
 
     // Resizing needs a program this machine may not have. The example says so
-    // rather than passing, since a silent skip claims coverage that never ran.
+    // instead of passing, since a silent skip claims coverage that never ran.
     spec::context("with responsive images requested", [] {
       spec::it("writes a variant for each width below the original and offers them in a srcset", [] {
         if (blogin::assets::resizer().empty()) {
@@ -271,6 +274,107 @@ SPEC {
           expect(named_like(images, "photo-16.")).to_contain(".png");
           expect(page).to_contain("srcset=");
           expect(page).to_contain("8w");
+        });
+      });
+
+      // An unchanged image is not resized again, so the variants it already has
+      // are claimed, not remade. Unclaimed, the writer prunes them, and
+      // the page naming them is not re-rendered either, so its srcset is left
+      // pointing at files the same build deleted.
+      spec::context("on a rebuild that changed nothing", [] {
+        const auto site_with_a_photo = [] {
+          const std::filesystem::path root = build_site(true, true);
+
+          write(root / "blogin.json",
+                R"({"title":"Assets","base-url":"https://example.com","minify":true,)"
+                R"("fingerprint":true,"search":false,"image-widths":[8,16]})");
+
+          write(root / "assets" / "img" / "photo.png", png_32_pixels_wide());
+          write(root / "content" / "hello.md",
+                "---\ntitle: Hello\n---\n![a photo](/assets/img/photo.png)\n");
+
+          return root;
+        };
+
+        spec::it("keeps every variant it wrote the first time", [=] {
+          if (blogin::assets::resizer().empty()) {
+            spec::pending("no image resizer installed");
+          }
+
+          const blogin::BuildOptions options = options_for(site_with_a_photo());
+
+          blogin::build(options);
+          blogin::build(options);
+
+          const std::filesystem::path images = options.output / "assets" / "img";
+
+          spec::aggregate_failures([&] {
+            expect(named_like(images, "photo-8.")).to_contain(".png");
+            expect(named_like(images, "photo-16.")).to_contain(".png");
+          });
+        });
+
+        // A variant deleted from the output tree means the image counts as
+        // changed, so the whole set is written again.
+        spec::it("resizes again when a variant has gone missing", [=] {
+          if (blogin::assets::resizer().empty()) {
+            spec::pending("no image resizer installed");
+          }
+
+          const blogin::BuildOptions options = options_for(site_with_a_photo());
+
+          blogin::build(options);
+
+          const std::filesystem::path images = options.output / "assets" / "img";
+
+          std::filesystem::remove(images / named_like(images, "photo-8."));
+
+          blogin::build(options);
+
+          expect(named_like(images, "photo-8.")).to_contain(".png");
+        });
+
+        // The page is the half that cannot be re-rendered into agreement, so
+        // every name it already carries has to still be on disk.
+        spec::it("leaves every name in the srcset pointing at a file", [=] {
+          if (blogin::assets::resizer().empty()) {
+            spec::pending("no image resizer installed");
+          }
+
+          const blogin::BuildOptions options = options_for(site_with_a_photo());
+
+          blogin::build(options);
+          blogin::build(options);
+
+          const std::string page = read(options.output / "hello" / "index.html");
+
+          // Every asset url the srcset names, taken straight out of the
+          // attribute, not rebuilt from the widths, so the spec checks what
+          // the page says.
+          const std::regex urls(R"RX(/assets/img/[^" ,]+)RX");
+
+          std::size_t named = 0;
+          std::size_t missing = 0;
+
+          const auto srcset = page.find("srcset=\"");
+
+          expect(srcset).not_to_eq(std::string::npos);
+
+          const std::string attribute = page.substr(srcset + 8, page.find('"', srcset + 8) - srcset - 8);
+
+          for (auto it = std::sregex_iterator(attribute.begin(), attribute.end(), urls);
+               it != std::sregex_iterator(); ++it) {
+            ++named;
+
+            if (!std::filesystem::exists(options.output / it->str().substr(1))) {
+              ++missing;
+            }
+          }
+
+          spec::aggregate_failures([&] {
+            expect(named).to_eq(std::size_t{3});
+            expect(missing).to_eq(std::size_t{0});
+          });
         });
       });
 
@@ -320,10 +424,9 @@ SPEC {
       });
     });
 
-    // A preview and a release disagree about what belongs in an output tree,
-    // and they used to share one. Serving a site would rewrite the directory
-    // about to be deployed, unminified and unfingerprinted, and the two builds
-    // would read each other's state and carry names across.
+    // A preview and a release disagree about what belongs in an output tree, so
+    // they do not share one. Sharing would rewrite the directory about to be
+    // deployed, and let each build read the other's state.
     spec::context("previewing", [] {
       const auto preview_options = [](const std::filesystem::path& root) {
         const auto config = blogin::Config::load(root / "blogin.json").value();

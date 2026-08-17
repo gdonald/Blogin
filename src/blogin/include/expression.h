@@ -82,7 +82,7 @@ struct Node {
 };
 
 // Parses one expression. `line` is the template line it came from, so an error
-// points at the layout rather than at the fragment.
+// points at the layout, not at the fragment.
 std::expected<std::unique_ptr<Node>, ParseError> parse(std::string_view source, std::size_t line = 1,
                                                        std::size_t column = 1);
 

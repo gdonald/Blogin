@@ -85,8 +85,8 @@ public:
     address.sin_port = htons(static_cast<uint16_t>(port));
     ::inet_pton(AF_INET, "127.0.0.1", &address.sin_addr);
 
-    // Writing to a socket the server has closed must fail rather than kill the
-    // whole run, which is what an unhandled SIGPIPE does.
+    // Writing to a socket the server has closed must fail. An unhandled
+    // SIGPIPE would kill the whole run.
 #ifdef SO_NOSIGPIPE
     int quiet = 1;
 
@@ -120,7 +120,7 @@ public:
   // which under a sanitizer it often is.
   //
   // The deadline is generous on purpose. It bounds how long a failing example
-  // takes rather than deciding anything, so a slow or loaded machine waits
+  // takes without deciding anything, so a slow or loaded machine waits
   // longer and still passes.
   std::string receive_until(std::string_view marker) const {
     std::string out;
@@ -179,7 +179,7 @@ private:
   mutable bool closed_ = false;
 };
 
-// A watcher that plays a scripted sequence rather than watching anything.
+// A watcher that plays a scripted sequence and touches no filesystem.
 //
 // Coalescing is a decision about a sequence of change notifications, not about
 // how fast a machine can write five files. Driving it from a script asserts
@@ -244,7 +244,7 @@ public:
 
     // Binding happens before the thread starts, so connecting would succeed
     // while the first build is still running. Waiting for the server to say it
-    // is serving is what makes the example independent of how loaded the
+    // is serving keeps the example independent of how loaded the
     // machine is.
     while (!server_.ready()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -268,10 +268,10 @@ public:
 
   const blogin::ServeReport& report() const { return report_; }
 
-  // Waits for the server to have done the work rather than for a length of
+  // Waits for the server to have done the work, never for a length of
   // time. The deadline bounds how long an example that will fail takes to say
   // so, and is not what is being asserted. A loaded machine only makes the wait
-  // longer rather than the example flakier.
+  // longer, and never the example flakier.
   void wait_for(const std::function<bool(const blogin::ServeReport&)>& done) const {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
 
@@ -304,7 +304,7 @@ private:
 };
 
 // Waits for a rebuild to have put something on disk, bounded so a build that
-// never comes fails the example rather than hanging the run.
+// never comes fails the example instead of hanging the run.
 void wait_for_file(const std::filesystem::path& path, std::string_view wanted) {
   const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
 
@@ -329,7 +329,7 @@ void wait_for_file(const std::filesystem::path& path, std::string_view wanted) {
 std::string upgrade_answer(const Client& client) {
   std::string answer;
 
-  // Patient on purpose, and bounded by the clock rather than by a number of
+  // Patient on purpose, and bounded by the clock, not by a number of
   // tries. Eight examples running at once, each with its own server and its own
   // build, means a request can wait a while for a thread. This is a limit on how
   // long a broken server is given before the example gives up, not an assertion
@@ -457,8 +457,8 @@ SPEC {
         expect(client.receive()).to_contain("405 Method Not Allowed");
       });
 
-      // Two requests down one connection, which is what a browser loading a
-      // page and its stylesheet actually does.
+      // Two requests down one connection, the way a browser loads a page and
+      // its stylesheet.
       spec::it("answers a second request on the same connection", [] {
         const std::filesystem::path root = preview_site();
         Running running(options_for(root));
@@ -602,7 +602,7 @@ SPEC {
       });
 
       // A page that reloaded while the server was rebuilding has to be able to
-      // tell that it is behind, which is what the hello carries.
+      // tell that it is behind, which the hello carries.
       spec::it("greets a page with the version and the session", [] {
         const std::filesystem::path root = preview_site();
         Running running(options_for(root));
@@ -690,7 +690,7 @@ SPEC {
     });
   });
 
-  // An edit reaches the page. Asserted as work done rather than as elapsed
+  // An edit reaches the page. Asserted as work done, never as elapsed
   // time, so it means the same on a slow machine.
   spec::describe("the round trip from save to reload", [] {
     spec::it("rebuilds once for one edit", [] {
@@ -758,7 +758,7 @@ SPEC {
     });
 
     // A watcher that reports nothing produces no rebuild and nothing to push.
-    // Asserted from an empty script rather than from a sleep long enough to
+    // Asserted from an empty script, not from a sleep long enough to
     // believe nothing is coming, which a loaded machine makes a lie.
     spec::it("says nothing when nothing changed", [] {
       blogin::ServeOptions options = options_for(preview_site());
@@ -791,7 +791,7 @@ SPEC {
     });
 
     // The client reloads when the version in the page it is running in differs
-    // from the version the socket greets it with, which is how a page served
+    // from the version the socket greets it with, so a page served
     // before a build catches up. So every build has to change what a page is
     // served with: while it does not, each reload produces another page that
     // disagrees, and the tab reloads for as long as it is open.
@@ -815,8 +815,8 @@ SPEC {
     });
   });
 
-  // A failed rebuild used to log to the terminal and leave the page showing
-  // stale content, so the error was found later and out of context.
+  // A failed rebuild reaches the open page and not only the terminal, so
+  // the error is seen where the change was made.
   spec::describe("a build that fails", [] {
     spec::it("counts the failure", [] {
       const std::filesystem::path root = preview_site();

@@ -9,10 +9,9 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$root"
 
-# A ratchet, not a target. Both platforms sit at 96.2%, so the floor is 96: new
-# code that arrives untested fails the build rather than spending the margin an
-# earlier floor left lying around. Move it up again when the number does.
-floor="${BLOGIN_COVERAGE_FLOOR:-96}"
+# A ratchet on the way to 100%, and it sits under whichever platform is lower,
+# since each compiles code the other never sees. Raise it as the number climbs.
+floor="${BLOGIN_COVERAGE_FLOOR:-97.4}"
 
 # Branch coverage is the number that says whether both sides of a condition were
 # taken. A parser can reach every line of a decision and only ever go one way,
@@ -20,10 +19,8 @@ floor="${BLOGIN_COVERAGE_FLOOR:-96}"
 # is lower than the line floor because the metric is stricter, not because it
 # matters less.
 #
-# It sits under both platforms rather than under the higher one: macOS reaches
-# 89.9% and Linux 89.2%, because each covers code the other never compiles. Move
-# it up as the number moves up, the same way the line floor got to 95.
-branch_floor="${BLOGIN_BRANCH_FLOOR:-89}"
+# Branch coverage is stricter, so its floor trails the line floor. Same ratchet.
+branch_floor="${BLOGIN_BRANCH_FLOOR:-90.4}"
 
 # Linux builds into a directory of its own, so a container sharing the working
 # tree does not read a cache macOS wrote.

@@ -112,7 +112,7 @@ Measurement parse_markdown_bench(std::string label, const std::vector<std::strin
   });
 }
 
-// The same work with one arena reused across every post, which is what a real
+// The same work with one arena reused across every post, as a real
 // build does on each worker thread.
 Measurement parse_markdown_reused(std::string label, const std::vector<std::string>& contents) {
   return measure(std::move(label), contents.size(), total_bytes(contents), [&] {

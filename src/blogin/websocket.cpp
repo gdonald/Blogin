@@ -224,7 +224,7 @@ Frame decode_frame(std::string_view buffer) {
   }
 
   // Everything a client sends must be masked. One that is not is a protocol
-  // error rather than something to read anyway.
+  // error.
   if (!masked) {
     frame.state = FrameState::malformed;
 
@@ -239,7 +239,7 @@ Frame decode_frame(std::string_view buffer) {
                                          byte(cursor + 3)};
   cursor += 4;
 
-  // Written as a subtraction rather than as buffer.size() < cursor + length,
+  // Written as a subtraction, not as buffer.size() < cursor + length,
   // because length is whatever the sender put in the 64 bit field and adding it
   // to the cursor wraps: a frame claiming 2^64 - 1 bytes came out looking
   // smaller than the buffer, passed this check, and reached reserve, which

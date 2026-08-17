@@ -62,14 +62,14 @@ struct Config {
   std::vector<SectionConfig> sections;
 
   // Keys blogin.json carried that mean nothing here. Reported so a typo is
-  // visible rather than silently doing nothing.
+  // visible.
   std::vector<std::string> unknown_keys;
 
   const SectionConfig* section(std::string_view name) const;
 
   static std::expected<Config, ParseError> from_value(const Value& value);
 
-  // A missing file yields the defaults, which is what an unconfigured site
+  // A missing file yields the defaults, so an unconfigured site
   // should build with.
   static std::expected<Config, ParseError> load(const std::filesystem::path& path);
 };

@@ -48,7 +48,7 @@ struct Frame {
 };
 
 // Reads one frame from the front of the buffer. A frame from a client must be
-// masked, and one that is not is refused rather than read anyway.
+// masked, and one that is not is refused.
 Frame decode_frame(std::string_view buffer);
 
 }  // namespace blogin::websocket

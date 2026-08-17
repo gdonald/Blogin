@@ -6,6 +6,7 @@
 #include "build.h"
 #include "counters.h"
 #include "support/golden.h"
+#include "build_state.h"
 #include "support/spec.h"
 
 using spec::expect;
@@ -35,6 +36,17 @@ SPEC {
     spec::serial();
 
     auto directory = spec::let([] { return scratch_dir(); });
+
+    // A file the build asks about after it has gone.
+    spec::context("stamping a file that is not there", [=] {
+      spec::it("reads no size", [=] {
+        expect(blogin::file_stamp(directory() / "never-written.md").first).to_eq(std::uintmax_t{0});
+      });
+
+      spec::it("reads no modification time", [=] {
+        expect(blogin::file_stamp(directory() / "never-written.md").second).to_eq(std::int64_t{0});
+      });
+    });
 
     spec::context("from markdown through a template", [=] {
       auto markdown = spec::let([=] { return directory() / "post.md"; });

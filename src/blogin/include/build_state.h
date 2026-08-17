@@ -14,7 +14,7 @@ namespace blogin {
 // whether anything about it changed without reading it.
 //
 // The metadata is here because listings, feeds, and the search index all read
-// it. Without it an unchanged post would still have to be parsed just to learn
+// it. Without it an unchanged post would still have to be parsed to learn
 // its title, and a rebuild would be incremental in name only.
 struct SourceState {
   std::uintmax_t size = 0;
@@ -39,17 +39,17 @@ public:
 
   std::unordered_map<std::string, SourceState> sources;
 
-  // Output that is a function of the posts rather than of any one of them:
+  // Output that is a function of the posts collectively, not of any one:
   // listings, taxonomies, feeds, the sitemap, and the search index. When no post
   // was added, removed, or reparsed, these are what the last build produced, so
-  // they are carried forward rather than rendered again.
+  // they are carried forward without being rendered again.
   std::vector<std::string> derived;
 
   // How many listings produced them, so a carried-forward build still reports
   // what the site contains.
   std::int64_t listings = 0;
 
-  // Files copied through rather than rendered from, keyed by where they land.
+  // Files copied through, not rendered from, keyed by where they land.
   std::unordered_map<std::string, SourceState> copies;
 
   // When the build that wrote this state began.
@@ -66,7 +66,7 @@ public:
   bool settled(const SourceState& source) const { return source.modified < started; }
 };
 
-// The hash a source is remembered by, over its bytes rather than its stamp.
+// The hash a source is remembered by, over its bytes, not its stamp.
 std::string source_hash(const std::filesystem::path& path);
 
 // Now, on the same clock the file stamps use.

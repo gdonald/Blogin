@@ -11,7 +11,6 @@
 namespace blogin::haml {
 namespace {
 
-// Tags that close themselves, so %br writes <br /> rather than an empty pair.
 bool is_void_tag_name(std::string_view tag) {
   static const std::vector<std::string_view> tags{
     "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source",
@@ -65,7 +64,7 @@ public:
 private:
   std::expected<void, ParseError> render_children(const Node& node) {
     // A conditional chain is one decision, so the branches are walked together
-    // rather than each being asked on its own.
+    // instead of each being asked on its own.
     for (std::size_t index = 0; index < node.children.size();) {
       const Node& child = *node.children[index];
 
@@ -229,10 +228,10 @@ private:
         return render_loop(node);
 
       case NodeKind::element:
-        return render_element(node);
+        break;
     }
 
-    return {};
+    return render_element(node);
   }
 
   std::expected<void, ParseError> render_loop(const Node& node) {
@@ -249,8 +248,6 @@ private:
     }
 
     if (!items->is_array()) {
-      // Iterating a scalar is almost always a mistake rather than an empty
-      // result, so it says so.
       return std::unexpected(
         ParseError{std::format("cannot iterate {}", items->type_name()), node.line, 1});
     }
@@ -339,9 +336,6 @@ private:
       }
 
       if (attribute.name == "class") {
-        // An empty value adds nothing rather than a separator, so a class that
-        // resolves to nothing, such as a framework slot the profile leaves
-        // bare, does not leave a trailing space behind a shorthand class.
         if (!value->empty()) {
           classes += classes.empty() ? *value : " " + *value;
         }
@@ -384,8 +378,6 @@ private:
         return std::unexpected(value.error());
       }
 
-      // A false or null attribute is left off rather than written empty, which
-      // is what makes {hidden: shown} read the way it looks.
       if (attribute.value.size() == 1 && attribute.value[0].hole != nullptr) {
         auto evaluated = expression::evaluate(*attribute.value[0].hole, context_);
 
@@ -459,7 +451,7 @@ private:
 
   // Literal text in a template is written as the author wrote it, markup and
   // all. An interpolated value is not the author's markup, so it escapes. In an
-  // attribute the whole result is escaped afterward, which is why the holes are
+  // attribute the whole result is escaped afterward, so the holes are
   // left alone there.
   static std::string escaped_copy(std::string_view value) {
     std::string out;
@@ -643,7 +635,7 @@ private:
 
     // Two fragments that happen to read the same values are still two
     // fragments, so where the fragment is written is part of its key. The
-    // compiled block is what says where: templates are compiled once, so its
+    // compiled block identifies it: templates are compiled once, so its
     // address is stable for the build and unique to this cache-fragment.
     const void* site = &body;
     const std::string prefix = std::format("{:x}|", reinterpret_cast<std::uintptr_t>(site));

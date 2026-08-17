@@ -106,7 +106,7 @@ SPEC {
         expect(std::string(evaluate("title").as_string())).to_eq("Blogin");
       });
 
-      // A typo in a layout should be visible rather than rendering nothing.
+      // A typo in a layout should be visible.
       spec::it("refuses a name the view does not offer", [] {
         expect(error_of("titel")).to_contain("no such name");
       });
@@ -189,7 +189,7 @@ SPEC {
     });
 
     spec::context("boolean operators", [] {
-      // The operators yield the value rather than a boolean, so "a || b" reads
+      // The operators yield the value, not a boolean, so "a || b" reads
       // as a default and "- if a && b" still asks the right question.
       spec::it("ands", [] { expect(evaluate("title && count").truthy()).to_be_true(); });
 
@@ -302,7 +302,7 @@ SPEC {
       });
 
       // Without the colon there is nothing to distinguish it from a block, so it
-      // is one, and the complaint is a block's rather than a map's.
+      // is one, and the complaint is a block's, not a map's.
       spec::it("reads a name with no colon after it as a block", [] {
         expect(error_of("{brand title}")).to_contain("close a block");
       });
@@ -558,9 +558,8 @@ SPEC {
         expect(blogin::expression::parse(nested(5000)).has_value()).to_be_false();
       });
 
-      // Found by the fuzzer after the guard above went in. A prefix operator
-      // recurses without passing the top of the grammar, so the counter never
-      // moved and a run of them still exhausted the stack.
+      // A prefix operator recurses without passing the top of the grammar, so
+      // the counter the guard above keeps does not move for a run of them.
       spec::context("a run of prefix operators", [] {
         spec::it("reads what a layout would plausibly write", [] {
           expect(evaluate("!!true").as_boolean()).to_be_true();

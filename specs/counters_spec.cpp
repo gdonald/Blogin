@@ -8,7 +8,7 @@ using spec::expect;
 
 SPEC {
   spec::describe("work counters", [] {
-    // The counters are process global, which is why these examples cannot share
+    // The counters are process global, so these examples cannot share
     // the process with anything else reading them.
     spec::serial();
 

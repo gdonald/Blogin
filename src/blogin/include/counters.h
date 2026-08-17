@@ -8,7 +8,7 @@
 namespace blogin {
 
 // Named counters of work done: files read, posts parsed, templates
-// compiled, pages rendered. Assertions are made against these rather than
+// compiled, pages rendered. Assertions are made against these, never
 // against elapsed time, which is not reproducible across machines.
 //
 // Cheap enough to leave on in every build.

@@ -10,7 +10,7 @@ namespace blogin::http {
 
 // What a request line and headers said, with the body left where it was.
 //
-// Parsing is separate from the socket so a spec can hand it bytes rather than
+// Parsing is separate from the socket so a spec can hand it bytes without
 // arrange a connection.
 struct Request {
   std::string method;
@@ -18,7 +18,7 @@ struct Request {
   // The target as written, query string and all.
   std::string target;
 
-  // The target with the query removed, which is what resolves to a file.
+  // The target with the query removed, the part that resolves to a file.
   std::string path;
 
   std::string version;
@@ -36,7 +36,7 @@ struct Request {
 };
 
 // Nothing when the buffer does not yet hold a whole request. An unparseable one
-// is reported rather than guessed at.
+// is reported.
 enum class RequestState {
   incomplete,
   ready,
@@ -65,7 +65,7 @@ std::string serialize(const Response& response);
 
 std::string_view reason_for(int status);
 
-// By extension, falling back to octet-stream rather than guessing.
+// By extension, falling back to octet-stream.
 std::string content_type_for(const std::filesystem::path& file);
 
 // The file a request path names, mirroring how a static host rewrites an

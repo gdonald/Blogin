@@ -27,6 +27,10 @@ SPEC {
         expect(Date::parse("20x4-03-17").has_value()).to_be_false();
       });
 
+      spec::it("rejects a component with no digits at all", [] {
+        expect(Date::parse("2024-  -17").has_value()).to_be_false();
+      });
+
       // Rolling 2023-02-30 forward to March would silently move a post. Better
       // to refuse it and let the build say so.
       spec::it("rejects a day the month does not have", [] {

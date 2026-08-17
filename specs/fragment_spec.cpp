@@ -30,7 +30,7 @@ std::string read(const std::filesystem::path& path) {
 //
 // The sidebar is wrapped in cache-fragment under one name, which is an author
 // saying "this comes out the same everywhere". It does not, and the key is
-// derived from what the sidebar read rather than from that name, so the claim
+// derived from what the sidebar read, not from that name, so the claim
 // costs nothing.
 std::filesystem::path site_with_a_current_page_sidebar() {
   const std::filesystem::path root = spec::scratch_directory("fragment");
@@ -79,9 +79,9 @@ std::filesystem::path site_with_a_fixed_sidebar() {
   return root;
 }
 
-// One worker, so a count of renders is exact rather than a race: two threads
+// One worker, so a count of renders is exact and not a race: two threads
 // reaching a fragment before either has finished it both render it, which is
-// correct and bounded by the worker count rather than by the page count.
+// correct and bounded by the worker count, not by the page count.
 blogin::BuildOptions options_for(const std::filesystem::path& root) {
   const auto config = blogin::Config::load(root / "blogin.json").value();
 
@@ -210,7 +210,7 @@ SPEC {
 
       // Threads racing to be the first to render a fragment is the one thing
       // that costs an extra rendering of it, and what it costs is bounded by
-      // the number of workers rather than by the number of pages.
+      // the number of workers, not by the number of pages.
       spec::it("renders it a handful of times with sixteen workers rather than one per page", [] {
         const std::filesystem::path root = corpus_copy("gregdonald.com");
         blogin::BuildOptions options = options_for(root);

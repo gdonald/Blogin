@@ -2,9 +2,9 @@
 
 namespace blogin::view {
 
-// Both of these are assets rather than logic. The script has to run before
+// Both of these are assets, not logic. The script has to run before
 // first paint to avoid a flash of the wrong theme, so it is inlined verbatim
-// rather than assembled.
+// instead of assembled.
 std::string_view theme_script() {
   return R"JS(    <script>
     (function () {

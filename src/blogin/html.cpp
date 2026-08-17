@@ -89,12 +89,8 @@ private:
     }
   }
 
-  void with_class(std::string_view slot, std::string_view extra = {}) {
-    std::string classes(options_.framework.class_for(slot));
-
-    if (!extra.empty()) {
-      classes = classes.empty() ? std::string(extra) : classes + " " + std::string(extra);
-    }
+  void with_class(std::string_view slot) {
+    const std::string_view classes = options_.framework.class_for(slot);
 
     if (classes.empty()) {
       return;

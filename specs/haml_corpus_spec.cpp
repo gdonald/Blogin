@@ -58,8 +58,8 @@ struct Construct {
   // pattern has no such substring. Four fifths of the pattern-and-file pairs
   // here find nothing, and each of those still costs a scan of the whole file,
   // so a find() that rules the file out first is most of the work avoided. A
-  // hint that is not genuinely required would undercount, which is why the
-  // broad patterns carry none rather than a guess.
+  // hint that is not required would undercount, so the broad patterns carry
+  // none.
   std::string required = {};
 };
 
@@ -104,7 +104,7 @@ const std::vector<Construct>& constructs() {
 }
 
 // Compiling a std::regex costs orders of magnitude more than running one, so
-// the patterns are compiled once for the process rather than once per file.
+// the patterns are compiled once for the process, not once per file.
 const std::vector<std::regex>& patterns() {
   static const std::vector<std::regex> compiled = [] {
     std::vector<std::regex> out;
@@ -212,13 +212,13 @@ SPEC {
 
     // Loose compatibility rots unless something enforces it. Adding a
     // construct to a real site should either pass or say what decision is
-    // needed, rather than producing a render bug nobody looks for.
+    // needed, instead of producing a render bug nobody looks for.
     spec::context("the compatibility ledger", [] {
       // Constructing a std::regex fills a cache inside the process-wide
       // ctype<char> facet, and libstdc++ fills it without synchronising. Two of
       // these examples building patterns at once is a data race in the standard
       // library that ThreadSanitizer reports six times. Nothing under src/ uses
-      // std::regex, so the fix belongs here rather than in a suppression file.
+      // std::regex, so the fix belongs here, not in a suppression file.
       spec::serial();
 
       auto used = spec::let([] { return construct_counts(); });
@@ -317,7 +317,7 @@ SPEC {
           blogin::ViewContext context = blogin::view::build(page);
 
           // Listings and posts share their chrome, so the listing names are
-          // added too rather than rendering each layout twice.
+          // added too, without rendering each layout twice.
           blogin::ListingView listing;
           listing.chrome = page.chrome;
           listing.entries = Value::array({tag});
@@ -336,7 +336,7 @@ SPEC {
           options.body = "<p>page body</p>";
 
           // Every directory the site keeps templates in. A layout in `docs/`
-          // is rendered for a post in `docs/<set>`, which is what decides
+          // is rendered for a post in `docs/<set>`, the choice that decides
           // which `docnav` it reaches.
           std::vector<std::string> directories;
 
@@ -351,7 +351,7 @@ SPEC {
           for (const std::string& name : store->names()) {
             const auto separator = name.rfind('/');
 
-            // Where the template lives, which is where the partials it names
+            // Where the template lives, and where the partials it names
             // are looked up from: two sections each have a `docnav` of their
             // own.
             const std::string directory =
@@ -359,7 +359,7 @@ SPEC {
             const std::string leaf =
               separator == std::string::npos ? name : name.substr(separator + 1);
 
-            // A partial is rendered by whatever calls it, which is what gives
+            // A partial is rendered by whatever calls it, which gives
             // it the locals it reads. Rendering one on its own would be asking
             // it a question it was never meant to answer.
             if (leaf.starts_with('_')) {
@@ -427,7 +427,7 @@ SPEC {
       });
     });
 
-    // Earlier search paths win, which is how a site overrides a theme.
+    // Earlier search paths win, so a site overrides a theme.
     spec::it("prefers the first search path that has a template", [] {
       const auto store = blogin::TemplateStore::load({corpus_root() / "blogin.dev" / "layouts",
                                                       corpus_root() / "gregdonald.com" / "layouts"})

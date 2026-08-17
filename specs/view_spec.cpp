@@ -106,6 +106,15 @@ SPEC {
         return blogin::view::head_meta(sample_chrome(), "Hello", "A summary.", "article");
       });
 
+      // A base url written with a trailing slash must not double the separator.
+      spec::it("writes a canonical link when the base url ends in a slash", [] {
+        Chrome chrome = sample_chrome();
+        chrome.site.set("base-url", Value("https://example.com/"));
+
+        expect(blogin::view::head_meta(chrome, "Hello", "", "article"))
+          .to_contain(R"(<link rel="canonical" href="https://example.com/posts/hello"/>)");
+      });
+
       spec::it("writes a canonical link", [=] {
         expect(meta()).to_contain(R"(<link rel="canonical" href="https://example.com/posts/hello"/>)");
       });
@@ -235,7 +244,7 @@ SPEC {
 
     // Every helper a layout can call. Each is given nothing as well as
     // something, since a template calling one with no arguments should get an
-    // empty answer rather than a crash.
+    // empty answer, never a crash.
     spec::context("the functions a layout can call", [] {
       auto context = spec::let([] { return blogin::view::build(sample_page()); });
 
@@ -341,6 +350,16 @@ SPEC {
 
         expect(std::string((*context.function("debug-open"))({{{}, Value("partial: header")}}).as_string()))
           .to_contain("begin partial: header");
+      });
+
+      spec::it("closes the region when debugging is on", [] {
+        PostView page = sample_page();
+        page.chrome.debug = true;
+
+        auto context = blogin::view::build(page);
+
+        expect(std::string((*context.function("debug-close"))({{{}, Value("partial: header")}}).as_string()))
+          .to_contain("end partial: header");
       });
 
       // Interpolated text must not be able to end the comment early.

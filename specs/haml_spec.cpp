@@ -28,6 +28,7 @@ ViewContext sample_context() {
   context.set("published", Value(true));
   context.set("shown", Value(true));
   context.set("hidden", Value(false));
+  context.set("blank", Value(""));
 
   Value tag = Value::object();
   tag.set("name", Value("raku"));
@@ -75,6 +76,15 @@ SPEC {
       spec::it("writes a tag", [] { expect(render("%p")).to_eq("<p></p>\n"); });
 
       spec::it("writes text inside a tag", [] { expect(render("%p hello")).to_eq("<p>hello</p>\n"); });
+
+      spec::it("writes an integer value", [] { expect(render("%p= 42")).to_contain("42"); });
+
+      spec::it("writes a number value", [] { expect(render("%p= 2.5")).to_contain("2.5"); });
+
+      // A list has no string form, so it writes nothing rather than a shape.
+      spec::it("writes nothing for a value that is a list", [] {
+        expect(render("%p= tags")).to_eq("<p></p>\n");
+      });
 
       spec::it("nests by indentation", [] {
         expect(render("%div\n  %p hi")).to_eq("<div>\n<p>hi</p>\n</div>\n");
@@ -128,6 +138,10 @@ SPEC {
 
       spec::it("escapes a value", [] {
         expect(render("%a{title: unsafe}")).to_contain("title=\"a &lt; b\"");
+      });
+
+      spec::it("leaves no trailing space when a class value is empty", [] {
+        expect(render("%p.one{class: blank}")).to_contain("class=\"one\"");
       });
 
       // {hidden: shown} should read the way it looks.
@@ -202,7 +216,7 @@ SPEC {
         expect(render("- for empty -> $x\n  %p item")).to_eq("");
       });
 
-      // Iterating a scalar is a mistake rather than an empty result.
+      // Iterating a scalar is a mistake, not an empty result.
       spec::it("refuses to iterate something that is not a list", [] {
         expect(render("- for title -> $x\n  %p item")).to_contain("cannot iterate");
       });
@@ -321,6 +335,7 @@ SPEC {
         write("_greeting.haml", "%p= title\n");
         write("_local.haml", "%p= $who\n");
         write("_node.haml", "%li\n  = $node<name>\n  - if $node<children>\n    != render(:partial<node>, :collection($node<children>), :as<node>)\n");
+        write("_endless.haml", "!= render(:partial<endless>)\n");
 
         return std::make_shared<blogin::TemplateStore>(
           blogin::TemplateStore::load({root}).value());
@@ -360,6 +375,21 @@ SPEC {
         expect(render("!= render()", options())).to_contain("needs a :partial");
       });
 
+      // A partial that renders itself with no collection to shorten would
+      // recurse until the stack ran out.
+      spec::it("refuses a partial that renders itself without end", [=] {
+        expect(render("!= render(:partial<endless>)", options())).to_contain("nested too deeply");
+      });
+
+      // `!=` is the usual form. `=` escapes what the call returned.
+      spec::it("escapes what an engine call returned", [=] {
+        expect(render("= render(:partial<greeting>)", options())).to_contain("&lt;p&gt;Blogin&lt;/p&gt;");
+      });
+
+      spec::it("refuses a cache-fragment with no block", [=] {
+        expect(render("!= cache-fragment('sidebar')", options())).to_contain("needs a name and a block");
+      });
+
       spec::it("reports a bad name in a partial's collection", [=] {
         expect(render("!= render(:partial<entry>, :collection(nonesuch), :as<entry>)", options()))
           .to_contain("no such name");
@@ -387,7 +417,7 @@ SPEC {
       });
 
       // A page is one render of one compiled template, so reuse across pages is
-      // reuse across renders of the same template rather than of two that
+      // reuse across renders of the same template, not of two that
       // happen to say the same thing.
       const auto render_pages = [](const std::string& source,
                                    const blogin::haml::RenderOptions& render_options,

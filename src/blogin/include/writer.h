@@ -13,7 +13,7 @@ namespace blogin {
 
 // Writes the output tree, skipping what has not changed.
 //
-// Change is decided by a hash carried between builds rather than by reading the
+// Change is decided by a hash carried between builds, not by reading the
 // previous file back off disk, so a build that rewrites nothing does no reading
 // either. Every write goes to a temporary file and is renamed into place, so a
 // build killed partway leaves either the old page or the new one.
@@ -30,7 +30,7 @@ public:
   void write(const std::filesystem::path& path, std::string_view content);
 
   // Applied to every page before it is hashed and written. Fingerprinted asset
-  // urls are substituted here rather than at each of the dozen places a page is
+  // urls are substituted here, not at each of the dozen places a page is
   // produced, so a new kind of page cannot forget to do it.
   //
   // Set once, before any concurrent write, and pure: it is called from every
@@ -44,9 +44,8 @@ public:
   void record(const std::filesystem::path& path);
 
   // Keeps a file the build did not regenerate: it is still expected output, and
-  // its hash carries forward, but nothing is written or read. This is what lets
-  // an incremental build leave a page alone entirely rather than re-rendering it
-  // to discover it did not change.
+  // its hash carries forward, but nothing is written or read, so an incremental
+  // build can leave a page alone without re-rendering it to learn it is the same.
   bool keep(const std::filesystem::path& path);
 
   // Whether keeping that file would succeed, asked without committing to it.
@@ -67,7 +66,7 @@ public:
 
   // Paths produced twice in one build with different content. One of the two
   // results reaches disk and which one is an accident of ordering, so this is
-  // reported rather than resolved. Writing the same bytes twice is harmless and
+  // reported, not resolved. Writing the same bytes twice is harmless and
   // not counted.
   const std::vector<std::string>& collisions() const { return collisions_; }
 

@@ -12,9 +12,9 @@ namespace blogin {
 
 // What a template is allowed to ask for.
 //
-// A layout can only read what the view offers, which is what keeps the
+// A layout can only read what the view offers, which keeps the
 // expression language small: there is no host object graph to wander into. A
-// name the view does not know is an error rather than null, so a typo in a
+// name the view does not know is an error, never null, so a typo in a
 // layout is visible instead of silently rendering nothing.
 class ViewContext {
 public:
@@ -29,7 +29,7 @@ public:
 
   void define(std::string name, Function function);
 
-  // Locals shadow view names, which is how a loop variable works.
+  // Locals shadow view names, so a loop variable takes precedence.
   void set_local(std::string name, Value value);
 
   bool has(std::string_view name) const;
@@ -53,7 +53,7 @@ public:
 
   void restore_locals(std::vector<std::pair<std::string, Value>> locals);
 
-  // Recording what a fragment read is what lets its cache key be derived rather
+  // Recording what a fragment read lets its cache key be derived
   // than declared. A fragment that reads only site-level values produces the
   // same key on every page and is rendered once. One that reads page state
   // produces a different key per page and is rendered per page. Neither the

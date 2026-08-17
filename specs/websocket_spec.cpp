@@ -46,7 +46,7 @@ std::string masked_frame(blogin::websocket::Opcode opcode, std::string_view payl
 }  // namespace
 
 SPEC {
-  // Checked against the published values rather than against itself, since an
+  // Checked against the published values, not against itself, since an
   // implementation that agrees only with its own specs is no use to a browser.
   spec::describe("sha1", [] {
     spec::it("hashes the empty string", [] {
@@ -57,7 +57,7 @@ SPEC {
       expect(hex(blogin::websocket::sha1("abc"))).to_eq("a9993e364706816aba3e25717850c26c9cd0d89d");
     });
 
-    // Long enough to need a second block, which is where the padding is easy to
+    // Long enough to need a second block, where the padding is easy to
     // get wrong.
     spec::it("hashes a message spanning two blocks", [] {
       expect(hex(blogin::websocket::sha1("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")))

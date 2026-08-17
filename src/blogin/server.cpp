@@ -54,8 +54,7 @@ bool send_all(int socket, std::string_view data) {
     const ssize_t written = ::send(socket, data.data() + sent, data.size() - sent, send_flags);
 
     if (written <= 0) {
-      // A page that navigated away closes mid-write, which is ordinary rather
-      // than an error to report.
+      // A page that navigated away closes mid-write, which is ordinary.
       if (written < 0 && errno == EINTR) {
         continue;
       }
@@ -70,29 +69,6 @@ bool send_all(int socket, std::string_view data) {
 }
 
 }  // namespace
-
-bool port_available(const std::string& host, int port) {
-  const int probe = ::socket(AF_INET, SOCK_STREAM, 0);
-
-  if (probe < 0) {
-    return false;
-  }
-
-  int reuse = 1;
-  ::setsockopt(probe, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-
-  sockaddr_in address{};
-  address.sin_family = AF_INET;
-  address.sin_port = htons(static_cast<uint16_t>(port));
-  ::inet_pton(AF_INET, host.c_str(), &address.sin_addr);
-
-  const bool free_to_use =
-    ::bind(probe, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0;
-
-  ::close(probe);
-
-  return free_to_use;
-}
 
 std::filesystem::path site_root(const std::filesystem::path& content) {
   const std::filesystem::path parent = content.parent_path();
@@ -129,11 +105,10 @@ struct Server::State {
   // was current when the page was served.
   //
   // A page reloads itself when the socket greets it with a version other than
-  // the one it is carrying, which is how a page served just before a build
-  // catches up. Injecting one script for the life of the server makes every
-  // page carry the version from before the first build, so the greeting
-  // disagrees with every page it ever greets and the tab reloads for as long as
-  // it is open. It is built again whenever the version has moved.
+  // the one it carries. Injecting one script for the life of the server would
+  // stamp every page with the version from before the first build, so every
+  // greeting disagrees and the tab reloads for as long as it is open. It is
+  // rebuilt whenever the version moves.
   std::shared_ptr<const std::string> client_script() {
     const std::int64_t version = channel.version();
 
@@ -162,13 +137,11 @@ struct Server::State {
   // still running: they are joined before run returns, and their sockets are
   // shut down first so a thread blocked in recv comes back.
   //
-  // A finished one is joined on the way past rather than left until shutdown, so
+  // A finished one is joined on the way past, so
   // a long preview session does not accumulate a thread per page it served.
-  // The socket is closed here rather than by the thread that served it. A
-  // descriptor closed while its entry is still listed is a number the system is
-  // free to hand to the next socket anyone in the process opens, and shutting
-  // that one down at teardown would cut off a connection this server has
-  // nothing to do with.
+  // The socket is closed here, not by the thread that served it. Closed
+  // while still listed, its number can be reused by any socket in the process,
+  // and teardown would then shut down an unrelated connection.
   struct Connection {
     std::thread thread;
     int socket = -1;
@@ -208,8 +181,7 @@ struct Server::State {
   std::mutex report_mutex;
   ServeReport report;
 
-  // The last failure, so a page connecting after a bad build is told about it
-  // rather than showing stale content with no explanation.
+  // The last failure, so a page connecting after a bad build is told about it.
   std::mutex failure_mutex;
   std::string standing_failure;
 
@@ -295,8 +267,8 @@ std::expected<void, ParseError> Server::listen() {
     return std::unexpected(ParseError{"cannot listen on the socket", 1, 1});
   }
 
-  // Asking for port zero means asking the system to choose, which is how a spec
-  // avoids fighting whatever else is running.
+  // Port zero asks the system to choose, so concurrent specs do not fight over
+  // a number.
   sockaddr_in bound{};
   socklen_t length = sizeof(bound);
 
@@ -327,7 +299,7 @@ std::expected<ServeReport, ParseError> Server::run() {
     const auto started = std::chrono::steady_clock::now();
 
     // The whole site, so a preview of a multi-language site serves every
-    // language rather than only the tree the content directory happens to name.
+    // language.
     auto report = build_site(state.options.build);
 
     state.last_build = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -349,8 +321,8 @@ std::expected<ServeReport, ParseError> Server::run() {
       {
         const std::scoped_lock guard(state.failure_mutex);
 
-        // A build error names its own file inside the message, which is what
-        // reaches the overlay.
+        // A build error names its own file inside the message, which the
+        // overlay shows.
         state.standing_failure = state.channel.failure(failure.message, "", failure.line);
       }
 
@@ -521,9 +493,8 @@ std::expected<ServeReport, ParseError> Server::run() {
           // What arrived earlier can already hold the next request, either
           // because the client sent both together or because one read
           // delivered both. Reading again before looking at what is in hand
-          // leaves that request unanswered while the client waits for its
-          // answer, which is a connection that hangs rather than one that
-          // fails.
+          // leaves that request unanswered while the client waits, and the
+          // connection hangs.
           if (parsed.state == http::RequestState::incomplete) {
             char chunk[8192];
             const ssize_t received = ::recv(connection, chunk, sizeof(chunk), 0);
@@ -622,8 +593,8 @@ std::expected<ServeReport, ParseError> Server::run() {
 
           http::Response response;
 
-          // Fetched per page rather than once per server, so a page carries the
-          // version that is current as it is served.
+          // Fetched per page, so a page carries the version current as it is
+          // served.
           const std::shared_ptr<const std::string> script = state.client_script();
 
           if (const auto file = http::resolve_file(request.path, state.options.build.output)) {
@@ -649,7 +620,6 @@ std::expected<ServeReport, ParseError> Server::run() {
 
             std::string serialized = http::serialize(response);
 
-            // The length a GET would have carried, which is what HEAD promises.
             const auto placeholder = serialized.find("Content-Length: 0\r\n");
 
             if (placeholder != std::string::npos) {
@@ -674,9 +644,9 @@ std::expected<ServeReport, ParseError> Server::run() {
         }
       } catch (...) {
         // Nothing this connection can still answer with. Shutting the socket
-        // down ends the page's request rather than leaving it waiting, and it
-        // allocates nothing, which a handler of last resort cannot afford to
-        // do. The descriptor is closed by whoever joins this thread.
+        // down ends the page's request and allocates nothing, which a handler
+        // of last resort cannot afford. The descriptor is closed by whoever
+        // joins this thread.
         ::shutdown(connection, SHUT_RDWR);
       }
 
@@ -700,9 +670,8 @@ std::expected<ServeReport, ParseError> Server::run() {
   }
 
   // A connection thread may be blocked reading from a browser that has said
-  // nothing for a while. Shutting the socket down is what makes that read
-  // return, so the thread can be joined rather than left to outlive the state it
-  // is still reading.
+  // nothing for a while. Shutting the socket down makes that read return, so
+  // the thread can be joined before the state it reads goes away.
   {
     const std::scoped_lock guard(state.connections_mutex);
 

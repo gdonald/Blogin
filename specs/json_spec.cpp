@@ -69,6 +69,42 @@ SPEC {
 
       spec::it("reads a solidus", [] { expect(std::string(parsed(R"("a\/b")").as_string())).to_eq("a/b"); });
 
+      spec::it("reads a backspace", [] { expect(std::string(parsed(R"("a\bb")").as_string())).to_eq("a\bb"); });
+
+      spec::it("reads a form feed", [] { expect(std::string(parsed(R"("a\fb")").as_string())).to_eq("a\fb"); });
+
+      spec::it("reads a carriage return", [] {
+        expect(std::string(parsed(R"("a\rb")").as_string())).to_eq("a\rb");
+      });
+
+      // The literal forms below arrive as UTF-8 already. These arrive as
+      // escapes, so the decoder builds the bytes itself.
+      spec::it("decodes a two-byte code point from an escape", [] {
+        expect(std::string(parsed(R"("\u00e9")").as_string())).to_eq("é");
+      });
+
+      spec::it("decodes an escape written with uppercase hex", [] {
+        expect(std::string(parsed(R"("\u00E9")").as_string())).to_eq("é");
+      });
+
+      spec::it("decodes a three-byte code point from an escape", [] {
+        expect(std::string(parsed(R"("\u20ac")").as_string())).to_eq("€");
+      });
+
+      spec::it("decodes a surrogate pair from escapes", [] {
+        expect(std::string(parsed(R"("\ud83d\ude00")").as_string())).to_eq("\U0001F600");
+      });
+
+      spec::it("rejects a broken escape after a high surrogate", [] {
+        expect(rejects(R"("\ud83d\uZZZZ")")).to_be_true();
+      });
+
+      // A high surrogate with something other than a low one after it is kept
+      // as its own code point instead of failing the document.
+      spec::it("keeps a high surrogate that is not followed by a low one", [] {
+        expect(parse_json(R"("\ud83d\u0041")").has_value()).to_be_true();
+      });
+
       spec::it("reads a basic-plane code point", [] {
         expect(std::string(parsed(R"("é")").as_string())).to_eq("é");
       });
@@ -149,8 +185,18 @@ SPEC {
 
       spec::it("rejects an incomplete unicode escape", [] { expect(rejects(R"("\u00")")).to_be_true(); });
 
+      spec::it("rejects a broken escape inside a key", [] {
+        expect(rejects(R"({"a\qb": 1})")).to_be_true();
+      });
+
+      spec::it("rejects a number too large to hold", [] { expect(rejects("1e999")).to_be_true(); });
+
+      spec::it("reads an exponent written with a sign", [] {
+        expect(parsed("1e+2").as_number()).to_eq(100.0);
+      });
+
       // A deeply nested document would otherwise recurse until the stack runs
-      // out, which is a crash rather than an error message.
+      // out.
       spec::it("rejects a document nested past the depth limit", [] {
         expect(rejects(std::string(500, '[') + std::string(500, ']'))).to_be_true();
       });
@@ -333,9 +379,9 @@ SPEC {
       });
 
       spec::context("a number that reads as a negative zero", [] {
-        // Writing "-0" reads back as the integer zero, which then writes as
-        // "0", so a document emitted twice used to come out different both
-        // times. A build that caches its output and compares it notices.
+        // "-0" reads back as the integer zero, which writes as "0", so writing
+        // it unchanged would make a document differ from itself on a second
+        // pass. A build that compares its cached output notices.
         spec::it("writes it as a plain zero", [] {
           expect(to_json(parsed("[-0.0]"))).to_eq("[0]");
         });

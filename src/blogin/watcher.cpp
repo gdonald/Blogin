@@ -35,7 +35,7 @@ ParseError limit_error(std::size_t wanted, std::string_view knob) {
 
 #ifdef __APPLE__
 
-// FSEvents watches whole trees from one stream, reports writes rather than only
+// FSEvents watches whole trees from one stream, reports writes and not only
 // directory-entry changes, and costs no descriptor per directory. It delivers on
 // a dispatch queue, so there is no run loop to keep turning.
 class FsEventsWatcher final : public Watcher {
@@ -43,10 +43,6 @@ public:
   static std::expected<std::unique_ptr<Watcher>, ParseError> open(
     const std::vector<std::filesystem::path>& roots,
     const std::vector<std::filesystem::path>& excluded) {
-    if (roots.empty()) {
-      return std::unexpected(ParseError{"nothing to watch", 1, 1});
-    }
-
     auto watcher = std::unique_ptr<FsEventsWatcher>(new FsEventsWatcher());
     watcher->watched_ = roots.size();
 
@@ -406,6 +402,13 @@ std::vector<std::filesystem::path> watchable_directories(const std::filesystem::
 std::expected<std::unique_ptr<Watcher>, ParseError> Watcher::watch(
   const std::vector<std::filesystem::path>& roots,
   const std::vector<std::filesystem::path>& excluded) {
+  // Checked here so both backends answer the same way. A watcher over no
+  // directories reports every wait as a timeout, which reads as a preview that
+  // has stopped noticing edits.
+  if (roots.empty()) {
+    return std::unexpected(ParseError{"nothing to watch", 1, 1});
+  }
+
 #ifdef __APPLE__
   return FsEventsWatcher::open(roots, excluded);
 #elifdef __linux__

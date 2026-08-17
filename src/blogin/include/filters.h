@@ -19,7 +19,7 @@ struct Group {
   std::vector<Value> items;
 };
 
-// Groups a list of objects by one field, newest key first, which is what an
+// Groups a list of objects by one field, newest key first, as an
 // archive listing wants.
 std::vector<Group> group_by(const Value& items, std::string_view field);
 

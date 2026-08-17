@@ -79,7 +79,7 @@ private:
     while (position_ < lines_.size() && lines_[position_].indent > indent) {
       const std::size_t child_indent = lines_[position_].indent;
 
-      // A filter takes its block as raw text rather than as HAML.
+      // A filter takes its block as raw text, not as HAML.
       if ((*node)->kind == NodeKind::filter) {
         auto child = std::make_unique<Node>();
         child->kind = NodeKind::text;
@@ -321,7 +321,7 @@ private:
 
     // Anything after the tag on the same line is its only child, and it is
     // either an output expression or plain text. A '/' or a '-' there is a
-    // character in that text rather than the start of a comment or a control
+    // character in that text, not the start of a comment or a control
     // line, which only a line of its own can be.
     Line inline_line = line;
     inline_line.content = rest;
@@ -388,7 +388,7 @@ private:
     return scan + 1;
   }
 
-  // `{data: {year: true}}` writes data-year, which is how the layouts spell a
+  // `{data: {year: true}}` writes data-year, the way the layouts spell a
   // group of related attributes.
   std::expected<void, ParseError> parse_attribute_body(const Line& line, std::string_view body,
                                                        std::string_view prefix, Node& node) {
@@ -508,7 +508,7 @@ private:
       Attribute attribute;
       attribute.name = full_name;
 
-      // A quoted value may carry #{...}, so it is treated as text rather than
+      // A quoted value may carry #{...}, so it is treated as text, not
       // as an expression.
       if (raw.size() >= 2 && (raw.front() == '"' || raw.front() == '\'') && raw.back() == raw.front()) {
         auto parsed = parse_interpolated(line, raw.substr(1, raw.size() - 2));

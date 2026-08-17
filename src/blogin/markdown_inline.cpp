@@ -488,7 +488,7 @@ private:
   }
 
   // $inline$ and $$display$$. A digit straight after the opening dollar means
-  // it is a price rather than mathematics.
+  // it is a price, not mathematics.
   bool scan_math() {
     const bool display = peek(1) == '$';
     const std::size_t marker = display ? 2 : 1;
@@ -997,7 +997,7 @@ private:
       trim_delimiter_node(opener);
       trim_delimiter_node(closer);
 
-      // The wrapper occupies a slot inside the pair rather than being inserted,
+      // The wrapper occupies a slot inside the pair instead of being inserted,
       // so every index already recorded stays valid and an enclosing pair sees
       // this wrapper as one of its own children.
       if (opener.index + 1 < closer.index) {
@@ -1176,7 +1176,7 @@ std::size_t parse_reference_definition(Arena& arena, std::string_view input, Ref
   const std::size_t after_destination = position;
 
   // A title has to be separated from the destination. Without this
-  // "[foo]: <bar>(baz)" would read as a definition rather than as text.
+  // "[foo]: <bar>(baz)" would read as a definition, not as text.
   std::size_t separators = 0;
 
   while (position < input.size() && is_space_or_tab(input[position])) {

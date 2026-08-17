@@ -14,7 +14,7 @@ namespace {
 
 // Every slot the renderer or the view asks a profile for, and what each of the
 // four profiles answers. An empty string means the framework styles that
-// element without a class, which is a decision rather than an omission, so it
+// element without a class, a decision and not an omission, so it
 // is written down and asserted the same as any other.
 //
 // The table is exhaustive on purpose. Sampling a profile proves the sample.
@@ -97,7 +97,7 @@ SPEC {
       expect(names).to_eq(profile_names());
     });
 
-    // A typo in configuration should stop the build rather than style nothing.
+    // A typo in configuration should stop the build.
     spec::context("an unknown name", [] {
       spec::it("is refused", [] {
         try {
@@ -125,7 +125,7 @@ SPEC {
     spec::context("every slot of every profile", [] {
       for (const std::string& profile : profile_names()) {
         // Every mismatch is collected and reported at once, so a profile that
-        // drifted names each slot it drifted on rather than only the first.
+        // drifted names each slot it drifted on, not only the first.
         spec::it("answers each slot the way " + profile + " is documented to", [profile] {
           const Framework framework = Framework::profile(profile);
 
@@ -151,7 +151,7 @@ SPEC {
         });
       }
 
-      // A slot nothing defines reads as empty rather than as an error, which is
+      // A slot nothing defines reads as empty and not as an error, which is
       // what lets the renderer ask for one every profile leaves bare.
       spec::it("answers a slot no profile defines with nothing", [] {
         spec::aggregate_failures([] {
@@ -179,7 +179,7 @@ SPEC {
       });
 
       // Only Bootstrap ships components that need JavaScript, so every other
-      // profile renders an empty script tag rather than loading nothing usefully.
+      // profile renders an empty script tag.
       spec::it("gives no script to the profiles that ship none", [] {
         spec::aggregate_failures([] {
           expect(std::string(Framework::profile("none").script())).to_eq("");
@@ -274,7 +274,7 @@ SPEC {
         expect(body_html("# Title\n", "none")).not_to_contain("<div");
       });
 
-      // An empty document produces an empty body rather than an empty wrapper,
+      // An empty document produces an empty body, not an empty wrapper,
       // so a post with no content does not gain a stray div.
       spec::it("is absent from an empty document", [] {
         expect(body_html("", "bulma")).to_eq("");

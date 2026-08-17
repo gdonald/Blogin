@@ -20,18 +20,15 @@ namespace blogin {
 // reliably enough to act on, so this reports that something happened and leaves
 // the build to work out what.
 //
-// kqueue is the obvious macOS answer and the wrong one: watching a directory
-// reports entries appearing and disappearing, but an editor writing over a file
-// in place changes no directory entry, so most edits go unseen. Watching every
-// file instead costs a descriptor each. FSEvents reports the writes themselves,
-// recursively, from one stream.
+// FSEvents rather than kqueue on macOS: kqueue on a directory misses an editor
+// writing a file in place, and kqueue per file costs a descriptor each.
 class Watcher {
 public:
   // `excluded` is what to ignore inside those directories, which in practice is
   // the output tree: a build writing its own output must not wake the watcher
   // that started it.
   //
-  // Directories created after the watcher starts are picked up too, which is why
+  // Directories created after the watcher starts are picked up too, since
   // a new section appears without a restart.
   static std::expected<std::unique_ptr<Watcher>, ParseError> watch(
     const std::vector<std::filesystem::path>& roots,
@@ -43,11 +40,11 @@ public:
   // changed.
   virtual bool wait(std::chrono::milliseconds timeout) = 0;
 
-  // Makes a blocked wait return. Safe from another thread, which is how a
+  // Makes a blocked wait return. Safe from another thread, so a
   // signal handler stops the server.
   virtual void stop() = 0;
 
-  // How many directories are being watched, which is what runs into the
+  // How many directories are being watched, the number that runs into the
   // per-user limits.
   virtual std::size_t watched() const = 0;
 
@@ -57,15 +54,12 @@ protected:
 
 // Whether a path a recursive watcher delivered is an edit worth rebuilding for.
 //
-// FSEvents watches a whole tree from one stream, so it reports paths the watch
-// list never asked for. Two kinds are not edits: anything the build itself
-// wrote, and anything under a dot directory. A site is usually a git
-// repository, and an editor refreshing `.git/index` would otherwise wake a
-// rebuild every few seconds with nothing to do.
+// A recursive watcher reports paths the watch list never asked for. Two kinds
+// are not edits: anything the build wrote, and anything under a dot directory,
+// so `.git/index` does not wake a rebuild every few seconds.
 //
-// `roots` and `excluded` are canonical paths. Only the part of `path` below a
-// root is examined for dot directories, since the root itself may sit inside
-// one and that says nothing about the file that changed.
+// `roots` and `excluded` are canonical. Only the part of `path` below a root is
+// examined for dot directories, since the root itself may sit inside one.
 bool ignored_change(std::string_view path, const std::vector<std::string>& roots,
                     const std::vector<std::string>& excluded);
 

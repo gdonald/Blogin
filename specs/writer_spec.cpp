@@ -103,7 +103,7 @@ SPEC {
     });
 
     // Two results at one path is an accident of ordering, so it is reported
-    // rather than resolved. Writing the same bytes twice is harmless.
+    // and not resolved. Writing the same bytes twice is harmless.
     spec::context("collisions", [] {
       spec::it("reports a path written twice with different content", [] {
         const std::filesystem::path root = scratch();
@@ -363,7 +363,7 @@ SPEC {
     });
 
     // Every path is built by joining the root, so this is lexical. One that is
-    // not under the root keeps its own name rather than becoming a walk back up
+    // not under the root keeps its own name instead of becoming a walk back up
     // out of the tree.
     spec::it("names a path outside the root by its own name", [] {
       const std::filesystem::path root = scratch();

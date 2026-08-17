@@ -10,7 +10,7 @@ namespace blogin::assets {
 
 // Comments out, whitespace collapsed, and the space around structural
 // punctuation removed. Strings and url() are copied through untouched, since a
-// semicolon or a /* inside one is content rather than syntax.
+// semicolon or a /* inside one is content, not syntax.
 std::string minify_css(std::string_view css);
 
 // Line-oriented and safe against automatic semicolon insertion: blank lines,

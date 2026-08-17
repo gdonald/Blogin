@@ -37,7 +37,7 @@ std::filesystem::path root_of(const std::filesystem::path& content) {
   return content.parent_path().empty() ? "." : content.parent_path();
 }
 
-// Loads the site's configuration and says what is wrong with it rather than
+// Loads the site's configuration and says what is wrong with it, never
 // carrying on with defaults.
 std::expected<blogin::Config, std::string> configuration(const std::filesystem::path& root) {
   const std::filesystem::path path = root / "blogin.json";
@@ -267,7 +267,7 @@ int run_serve(const blogin::cli::Command& command) {
 }  // namespace
 
 // A build that runs out of memory, or a filesystem that answers with an
-// exception, ends with a message and a status rather than with whatever the
+// exception, ends with a message and a status, not with whatever the
 // runtime prints when one escapes.
 int main(int argc, char** argv) {
   try {

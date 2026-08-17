@@ -30,6 +30,31 @@ void touch(const std::filesystem::path& path, std::string_view content = "x") {
 
 SPEC {
   spec::describe("files", [] {
+    spec::context("a tree that is not there", [] {
+      spec::it("lists nothing for a directory that does not exist", [] {
+        expect(blogin::files::all_files(make_tree("absent") / "gone").size()).to_eq(std::size_t{0});
+      });
+
+      spec::it("finds no descendants of a directory that does not exist", [] {
+        expect(blogin::files::descendant_directories(make_tree("absent-dirs") / "gone").size())
+          .to_eq(std::size_t{0});
+      });
+    });
+
+    // A symlink pointing back up the tree would otherwise be walked forever.
+    spec::context("a directory reachable twice", [] {
+      spec::it("walks it once", [] {
+        const std::filesystem::path root = make_tree("loop");
+
+        touch(root / "inner" / "a.md");
+
+        std::error_code ignored;
+        std::filesystem::create_directory_symlink(root, root / "inner" / "back", ignored);
+
+        expect(blogin::files::descendant_directories(root).size()).to_be_less_than(std::size_t{8});
+      });
+    });
+
     // The scratch tree is shared, and the walk touches the global directory
     // counter.
     spec::serial();
@@ -137,7 +162,7 @@ SPEC {
         expect(std::filesystem::exists(root() / "kept")).to_be_true();
       });
 
-      // A configured output path that names a file rather than a directory
+      // A configured output path that names a file, not a directory,
       // reaches here, and removing what the site owner pointed at would be the
       // wrong answer to a typo.
       spec::it("leaves a path that is a file rather than a directory", [=] {
@@ -171,7 +196,7 @@ SPEC {
       });
 
       // Sizing the file first and reading it in one go is the fast path. A path
-      // whose size cannot be measured has to fall back to streaming rather than
+      // whose size cannot be measured has to fall back to streaming instead of
       // resize a string to whatever the failed call left behind.
       spec::it("reads a path whose size cannot be measured", [] {
         const std::filesystem::path device = "/dev/null";

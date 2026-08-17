@@ -85,6 +85,33 @@ SPEC {
         expect(found).to_be_false();
       });
 
+      spec::it("refuses to watch nothing at all", [] {
+        expect(blogin::Watcher::watch({}, {}).error().message).to_contain("nothing to watch");
+      });
+
+      // A root given alongside one of its own parents is redundant, since a
+      // recursive watch on the parent already covers it. Given either way
+      // round, a change under the child still arrives.
+      spec::it("notices a change when a child was named before its parent", [] {
+        const std::filesystem::path root = watched_tree();
+
+        auto watcher = blogin::Watcher::watch({root / "layouts", root}, {});
+
+        write(root / "layouts" / "base.haml", "edited");
+
+        expect(changed_within(*watcher.value(), std::chrono::seconds(5))).to_be_true();
+      });
+
+      spec::it("notices a change when a parent was named before its child", [] {
+        const std::filesystem::path root = watched_tree();
+
+        auto watcher = blogin::Watcher::watch({root, root / "layouts"}, {});
+
+        write(root / "layouts" / "base.haml", "edited");
+
+        expect(changed_within(*watcher.value(), std::chrono::seconds(5))).to_be_true();
+      });
+
       spec::it("counts the directories it is watching", [] {
         const std::filesystem::path root = watched_tree();
 

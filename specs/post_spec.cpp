@@ -22,6 +22,30 @@ std::string error_of(std::string_view source, std::string_view filename = "a-pos
 
 SPEC {
   spec::describe("Post", [] {
+    spec::context("what it refuses", [] {
+      // The title falls back to the filename, so only a file with no usable
+      // name left has none at all.
+      spec::it("refuses a post with no title and no name to fall back on", [] {
+        expect(error_of("---\ntitle: \"\"\n---\n", "")).to_contain("missing title");
+      });
+
+      spec::it("says which file cannot be read", [] {
+        expect(Post::load("no-such-post.md").error().message).to_contain("cannot read");
+      });
+    });
+
+    spec::context("a filename with directories in it", [] {
+      spec::it("takes the title from the last component", [] {
+        expect(parsed("---\n---\nbody\n", "posts/deep/hello-world.md").title).to_eq("Hello World");
+      });
+    });
+
+    spec::context("front matter with nothing after it", [] {
+      spec::it("reads an empty body", [] {
+        expect(parsed("---\ntitle: Hello\n---").body).to_eq("");
+      });
+    });
+
     spec::context("front matter", [] {
       auto post = spec::let([] {
         return parsed("---\ntitle: Hello\ndate: 2024-03-07\ntags: [one, two]\n---\nBody text.\n");

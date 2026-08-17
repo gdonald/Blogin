@@ -128,6 +128,12 @@ SPEC {
         });
       });
 
+      // A blank line closes the definition, so the next term is added to the
+      // list that is still open rather than starting another one.
+      spec::it("keeps a term after a blank line in the same list", [] {
+        expect(render("A\n: one\n\nB\n: two\n")).to_contain("<dt>B</dt>");
+      });
+
       spec::it("parses markup in a definition", [] {
         expect(render("Term\n: with *emphasis*\n")).to_contain("<em>emphasis</em>");
       });
@@ -162,7 +168,7 @@ SPEC {
       });
 
       // Expansion belongs to the shortcode registry. Until then the source is
-      // shown rather than injected as markup.
+      // shown, never injected as markup.
       spec::it("does not inject it as markup", [] {
         expect(render("{{< raw >}}")).not_to_contain("<raw");
       });
@@ -279,6 +285,18 @@ SPEC {
 
     // The corners of each extension's own matcher, which the conformance suite
     // has no reason to reach.
+    // A marker followed by five or more spaces is a list item holding indented
+    // code, so only one space counts as the marker's own padding.
+    spec::context("a list marker followed by a wide gap", [] {
+      spec::it("reads the item as a list item", [] {
+        expect(render("-      item\n")).to_contain("<li>");
+      });
+
+      spec::it("treats the rest of the gap as indented code", [] {
+        expect(render("-      item\n")).to_contain("<pre>");
+      });
+    });
+
     spec::context("markers that look like an extension and are not", [] {
       spec::it("leaves a task marker with no space after it alone", [] {
         expect(render("- [ ]todo")).not_to_contain("checkbox");
@@ -286,6 +304,19 @@ SPEC {
 
       spec::it("leaves an empty shortcode name alone", [] {
         expect(render("{{< >}}")).not_to_contain("<iframe");
+      });
+
+      spec::it("leaves an entity with nothing between the markers alone", [] {
+        expect(render("a &; b")).to_contain("&amp;; b");
+      });
+
+      // An emphasis marker at the very start has nothing before it to inspect.
+      spec::it("opens emphasis written at the start of a paragraph", [] {
+        expect(render("*emphasised* after")).to_contain("<em>emphasised</em>");
+      });
+
+      spec::it("leaves a truncated multi-byte sequence beside a marker alone", [] {
+        expect(render("*a*\xf0")).to_contain("<em>a</em>");
       });
 
       spec::it("leaves an empty line where a thematic break would go", [] {
@@ -297,7 +328,7 @@ SPEC {
       });
 
       // Every width a UTF-8 sequence comes in, since flanking is decided over
-      // characters rather than bytes.
+      // characters, not bytes.
       spec::it("reads a four-byte character beside an emphasis marker", [] {
         expect(render("*\U0001F600*")).to_contain("<em>");
       });

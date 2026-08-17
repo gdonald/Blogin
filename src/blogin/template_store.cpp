@@ -30,7 +30,7 @@ std::string read_file(const std::filesystem::path& path) {
 // "show.haml" and "show.html.haml" both name the template "show"; "_entry.haml"
 // names the partial "_entry". A file in a subdirectory keeps that directory in
 // its name, so "docs/ORM-ActiveRecord/_docnav.haml" is a different template
-// from "docs/MVC-Keayl/_docnav.haml" rather than the same one twice.
+// from "docs/MVC-Keayl/_docnav.haml", not the same one twice.
 std::string template_name(const std::filesystem::path& path, const std::filesystem::path& root) {
   std::string relative = std::filesystem::relative(path, root).generic_string();
 
@@ -182,17 +182,6 @@ void FragmentCache::remember_reads(const void* site, std::vector<std::string> na
 
 void FragmentCache::note_render() {
   renders_.fetch_add(1, std::memory_order_relaxed);
-}
-
-void FragmentCache::clear() {
-  const std::unique_lock guard(mutex_);
-  const std::unique_lock reads_guard(reads_mutex_);
-
-  entries_.clear();
-  reads_.clear();
-  hits_.store(0, std::memory_order_relaxed);
-  misses_.store(0, std::memory_order_relaxed);
-  renders_.store(0, std::memory_order_relaxed);
 }
 
 }  // namespace blogin

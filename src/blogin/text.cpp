@@ -10,10 +10,6 @@ constexpr std::string_view whitespace = " \t\r\n\f\v";
 
 }  // namespace
 
-bool is_continuation(unsigned char byte) {
-  return (byte & 0xC0U) == 0x80U;
-}
-
 std::size_t sequence_length(unsigned char lead) {
   if (lead < 0x80U) {
     return 1;
@@ -32,7 +28,7 @@ std::size_t sequence_length(unsigned char lead) {
   }
 
   // A continuation byte or an invalid lead. Counted as one character so that
-  // malformed input still advances rather than looping.
+  // malformed input still advances instead of looping.
   return 1;
 }
 
@@ -190,14 +186,6 @@ std::string to_upper_ascii(std::string_view text) {
   }
 
   return out;
-}
-
-bool starts_with(std::string_view text, std::string_view prefix) {
-  return text.starts_with(prefix);
-}
-
-bool ends_with(std::string_view text, std::string_view suffix) {
-  return text.ends_with(suffix);
 }
 
 std::optional<double> to_double(std::string_view text) {

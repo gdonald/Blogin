@@ -31,8 +31,8 @@ struct Post {
   bool draft = false;
   bool toc = false;
 
-  // Absent unless the front matter set it, which is how a section orders its
-  // posts by hand rather than by date.
+  // Absent unless the front matter set it, so a section can order its posts by
+  // hand instead of by date.
   std::optional<double> order;
 
   // Front matter keys that are not one of the known ones, kept so a layout can

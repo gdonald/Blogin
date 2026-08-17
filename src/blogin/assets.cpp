@@ -35,12 +35,6 @@ bool is_structural(char character) {
          character == ',' || character == '>';
 }
 
-void drop_trailing_space(std::string& out) {
-  while (!out.empty() && out.back() == ' ') {
-    out.pop_back();
-  }
-}
-
 std::string quote(const std::filesystem::path& path) {
   std::string out = "'";
 
@@ -184,8 +178,6 @@ std::string minify_css(std::string_view css) {
     }
 
     if (is_structural(character)) {
-      drop_trailing_space(out);
-
       // A semicolon before a closing brace ends nothing.
       if (character == '}' && !out.empty() && out.back() == ';') {
         out.pop_back();
@@ -203,8 +195,6 @@ std::string minify_css(std::string_view css) {
     out += character;
     ++index;
   }
-
-  drop_trailing_space(out);
 
   return out;
 }
@@ -385,7 +375,7 @@ int image_width(const std::filesystem::path& file, std::string_view tool) {
   }
 
   // sips echoes the file's path before the answer, and a path can contain
-  // digits, so the number is read from after the label rather than from the
+  // digits, so the number is read from after the label, not from the
   // start of the output.
   std::size_t start = 0;
 

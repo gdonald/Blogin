@@ -26,7 +26,7 @@ struct ParseError {
 // fewer than ten levels.
 //
 // Anything written as JSON has to stay inside this to be read back, so the YAML
-// parser checks what it built against it rather than carrying a second number
+// parser checks what it built against it, without carrying a second number
 // that could drift.
 inline constexpr std::size_t max_json_depth = 64;
 
@@ -37,7 +37,7 @@ enum class JsonStyle {
   pretty,
 };
 
-// `sorted_keys` orders object keys by name rather than by insertion. The search
+// `sorted_keys` orders object keys by name, not by insertion. The search
 // index uses it so that the emitted file is stable whatever order posts were
 // discovered in.
 std::string to_json(const Value& value, JsonStyle style = JsonStyle::compact, bool sorted_keys = false);

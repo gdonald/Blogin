@@ -28,7 +28,7 @@ std::filesystem::path copy_site(std::string_view name) {
 }
 
 // The names of the output files that differ between two builds, so a failure
-// says which page went wrong rather than printing two whole sites.
+// says which page went wrong, without printing two whole sites.
 std::vector<std::string> differences_between(const std::filesystem::path& left,
                                              const std::filesystem::path& right);
 
@@ -178,7 +178,7 @@ SPEC {
     });
 
     // A post's neighbours are the posts either side of it in the order its own
-    // section lists them, which is why they are not a function of its file.
+    // section lists them, so they are not a function of its file.
     spec::context("post navigation", [] {
       auto root = spec::let([] { return copy_site("blogin.dev"); });
 
@@ -282,6 +282,23 @@ SPEC {
           .to_contain("url=/guide/moved/");
       });
 
+      // Two posts claiming one alias each want it pointing somewhere else. The
+      // first keeps it, and the loss is reported.
+      spec::it("says when two posts claim the same alias", [] {
+        const std::filesystem::path root = copy_site("blogin.dev");
+        const blogin::BuildOptions options = options_for(root);
+
+        write(options.content / "guide" / "first-mover.md",
+              "---\ntitle: First\naliases: [/contested]\n---\nOne.\n");
+        write(options.content / "guide" / "second-mover.md",
+              "---\ntitle: Second\naliases: [/contested]\n---\nTwo.\n");
+
+        const auto report = blogin::build(options);
+
+        expect(report->warnings.empty() ? std::string("said nothing") : report->warnings.front())
+          .to_contain("claimed by both");
+      });
+
       spec::it("never replaces a page the content tree publishes", [] {
         const std::filesystem::path root = copy_site("blogin.dev");
         const blogin::BuildOptions options = options_for(root);
@@ -339,7 +356,7 @@ SPEC {
       });
     });
 
-    // The four property checks. Each is about work done rather than time taken,
+    // The four property checks. Each is about work done, never time taken,
     // so they mean the same thing on any machine.
     spec::context("properties", [] {
       spec::it("writes nothing on a rebuild that changed nothing", [] {
@@ -366,7 +383,7 @@ SPEC {
       });
 
       // Whole trees, not one page: a difference caused by worker ordering is
-      // most likely to land in a listing or a feed, which is what naming a
+      // most likely to land in a listing or a feed, the reason naming a
       // single file would miss.
       for (const std::string_view name : {"blogin.dev", "behave.dev", "keayl.dev", "gregdonald.com"}) {
         spec::it("renders " + std::string(name) + " to the same bytes however many workers run", [name] {
@@ -596,9 +613,9 @@ SPEC {
         expect(blogin::build(options)->rendered).to_eq(std::size_t{1});
       });
 
-      // Two tags that differ only in characters a slug used to discard would
-      // land on one path, and whichever ran last would win. Now the slug keeps
-      // them apart, and anything that still collides stops the build.
+      // Two tags differing only in punctuation keep separate paths. Anything
+      // that still collides stops the build, and the last one written does not
+      // silently win.
       spec::it("keeps tags apart that differ only in punctuation", [] {
         const std::filesystem::path root = copy_site("blogin.dev");
         const blogin::BuildOptions options = options_for(root);
@@ -809,8 +826,8 @@ SPEC {
       });
 
       // Whichever finished last would otherwise win, silently.
-      // Running the command in the wrong directory used to write an empty site
-      // and report success, which reads as a site that lost its posts.
+      // Run in the wrong directory, an empty site written with a success
+      // message reads as a site that lost its posts.
       spec::it("says when there is no content directory at all", [=] {
         const std::filesystem::path root = spec::scratch_directory("empty");
 
@@ -917,7 +934,7 @@ SPEC {
     //
     // Each post is alone in its own section, so no post is another's previous
     // or next. That leaves shared tags as the only thing tying two pages
-    // together, which is what these examples are about.
+    // together, which these examples cover.
     const auto related_site = [](std::string_view show, std::string_view configuration) {
       const std::filesystem::path root = spec::scratch_directory("related");
 

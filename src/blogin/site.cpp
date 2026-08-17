@@ -40,15 +40,14 @@ namespace {
 
 // One post on its way to becoming a page.
 //
-// Metadata lives here for the whole build, because listings, feeds, and the
-// search index all read it afterward. The body and its parse tree do not: they
-// are released once the page is written, which is what keeps peak memory
-// tracking the number of posts rather than the size of the site.
+// Metadata lives here for the whole build: listings, feeds, and the search
+// index all read it afterward. The body and its parse tree are released once
+// the page is written, so peak memory tracks the number of posts.
 struct Page {
   Post post;
 
-  // False when the post was unchanged and its metadata came from the last
-  // build's state rather than from reading the file.
+  // False when the metadata came from the last build's state and the file was
+  // never read.
   bool parsed = false;
 
   // True once the body has been read for what a listing needs from it: the
@@ -61,7 +60,7 @@ struct Page {
   std::string url_path;
 
   // The same name for this post in every language, so a switcher can link to
-  // its translation rather than to that language's home page.
+  // its translation.
   std::string translation_key;
 
   std::filesystem::path output;
@@ -95,8 +94,7 @@ std::string join_url(std::string_view prefix, std::string_view path, bool clean_
 
 // Where each language's version of this post lives, for a switcher.
 //
-// A language that has no translation of it links to that language's home page
-// rather than to a url that is not there.
+// A language with no translation of it links to that language's home page.
 Value language_switcher(const BuildOptions& options, std::string_view translation_key,
                         bool clean_urls) {
   Value out = Value::array();
@@ -145,8 +143,7 @@ Value section_switcher(const BuildOptions& options, std::string_view section, bo
 // A name for a post that is the same in every language: its section, plus its
 // filename with the date and extension taken off.
 //
-// Not the slug, which follows the title and so differs from language to
-// language, which is what makes it useless for matching translations.
+// Not the slug: it follows the title, so it differs from language to language.
 std::string translation_stem(const std::filesystem::path& file) {
   std::string stem = file.stem().string();
 
@@ -227,7 +224,7 @@ bool newer_first(const Page& left, const Page& right) {
 
 // What a page's related block came out as, small enough to carry in the build
 // state. The next build compares it against what it works out for that page,
-// which is how a post learns that a post it links to was retitled.
+// so a retitled post reaches the pages linking to it.
 std::string related_key(const Value& related) {
   return content_hash(to_json(related));
 }
@@ -263,7 +260,7 @@ void assign_related(std::vector<Page>& pages, const Config& config) {
 
   // How many terms this post shares with each other post, kept across posts and
   // cleared through the list of the ones it touched, so a post with two tags
-  // costs what its two tags cost rather than what the site has.
+  // costs what its two tags cost.
   std::vector<std::size_t> shared(pages.size(), 0);
   std::vector<std::size_t> candidates;
 
@@ -386,7 +383,7 @@ Value metadata_of(const Page& page) {
   out.set("next-title", Value(page.next_title));
 
   // The same for the posts this one calls related, which are chosen from what
-  // every other post says about itself rather than from anything in this file.
+  // every other post says about itself.
   out.set("related-key", Value(related_key(page.related)));
 
   if (page.post.order.has_value()) {
@@ -461,7 +458,7 @@ struct AssetPlan {
   // The sizes each image is available in, by its original url.
   std::map<std::string, std::string> srcsets;
 
-  // Said out loud at the end of the build rather than swallowed.
+  // Reported at the end of the build.
   std::vector<std::string> warnings;
 };
 
@@ -470,8 +467,7 @@ struct AssetPlan {
 //
 // The resizer is an external program that works on files, so each variant is
 // made in a scratch directory, read, and removed. Everything the build writes
-// still goes through the writer, which is what keeps pruning and the manifest
-// able to account for all of it.
+// goes through the writer, so pruning and the manifest account for all of it.
 std::vector<std::pair<std::filesystem::path, std::string>> resize_variants(
   const std::filesystem::path& source, const std::filesystem::path& relative_path,
   const std::vector<int>& widths, std::string_view tool, int& source_width) {
@@ -541,7 +537,7 @@ AssetPlan plan_assets(const BuildOptions& options, const Config& config,
     std::filesystem::path relative;
     std::string content;
 
-    // Zero for anything the build made rather than read, which is remembered
+    // Zero for anything the build made instead of reading, remembered
     // only for files that came off disk.
     std::uintmax_t size = 0;
     std::int64_t modified = 0;
@@ -571,13 +567,18 @@ AssetPlan plan_assets(const BuildOptions& options, const Config& config,
   };
 
   // Resizing is only attempted when the site asked for it and the machine has a
-  // tool that can do it. A missing tool is said out loud rather than silently
-  // producing a site without the variants its pages were going to reference.
+  // tool that can do it. A missing tool is reported, since the pages would
+  // otherwise reference variants that were never written.
   const std::string tool = config.image_widths.empty() ? std::string{} : assets::resizer();
 
   if (!config.image_widths.empty() && tool.empty()) {
     plan.warnings.emplace_back("responsive images were requested but no image resizer (ImageMagick or sips) was found");
   }
+
+  // Every url that turned into an asset, under the name it was written with
+  // before any fingerprint. Declared here, not beside `place`, because a
+  // reused image adds the variants it carries forward before anything is placed.
+  std::set<std::string> placed;
 
   // Which original url each variant belongs to, so a srcset can be built once
   // the fingerprinted names are known.
@@ -585,8 +586,7 @@ AssetPlan plan_assets(const BuildOptions& options, const Config& config,
   std::map<std::string, int> width_of;
 
   // A theme's assets and the site's own, by the path each is published under.
-  // The theme's go in first so the site's overwrite them, which is what makes a
-  // theme something you can override one file of.
+  // The theme's go in first so the site's overwrite them, one file at a time.
   std::map<std::filesystem::path, std::filesystem::path> asset_sources;
 
   if (!options.theme_assets.empty()) {
@@ -613,7 +613,33 @@ AssetPlan plan_assets(const BuildOptions& options, const Config& config,
     const bool stamped = !options.force && !stylesheet && known != previous_state.copies.end() &&
                          known->second.size == size && known->second.modified == modified;
 
-    if (stamped &&
+    // An unchanged image is not resized again, so its variants are carried
+    // forward. Unclaimed, the writer prunes them while the page naming them is
+    // not re-rendered, leaving a srcset pointing at deleted files. Any missing
+    // from the output tree means the image is treated as changed.
+    std::vector<std::pair<std::string, std::string>> carried_variants;
+    bool variants_on_disk = true;
+
+    if (stamped) {
+      const Value& recorded = known->second.metadata["variants"];
+
+      for (std::size_t index = 0; index < recorded.size(); ++index) {
+        const Value& variant = recorded.at(index);
+
+        std::string variant_url(variant["url"].as_string());
+        std::string variant_output(variant["output"].as_string());
+
+        if (!std::filesystem::exists(options.output /
+                                     std::filesystem::path(variant_output).lexically_relative("/"))) {
+          variants_on_disk = false;
+          break;
+        }
+
+        carried_variants.emplace_back(std::move(variant_url), std::move(variant_output));
+      }
+    }
+
+    if (stamped && variants_on_disk &&
         (previous_state.settled(known->second) || source_hash(file) == known->second.hash)) {
       const std::string url = "/assets/" + key;
 
@@ -623,6 +649,17 @@ AssetPlan plan_assets(const BuildOptions& options, const Config& config,
 
       plan.assets.push_back(PlannedAsset{
         std::filesystem::path(known->second.output).lexically_relative("/"), {}, true, file});
+
+      for (const auto& [variant_url, variant_output] : carried_variants) {
+        placed.insert(variant_url);
+
+        if (variant_output != variant_url) {
+          plan.manifest.emplace(variant_url, variant_output);
+        }
+
+        plan.assets.push_back(PlannedAsset{
+          std::filesystem::path(variant_output).lexically_relative("/"), {}, true, {}});
+      }
 
       state.copies.emplace(key, known->second);
 
@@ -676,10 +713,6 @@ AssetPlan plan_assets(const BuildOptions& options, const Config& config,
     stylesheets.push_back(
       Candidate{"css/search.css", minified("css/search.css", std::string(search::stylesheet()))});
   }
-
-  // Every url that turned into an asset, under the name it was written with
-  // before any fingerprint.
-  std::set<std::string> placed;
 
   const auto place = [&plan, &config, &placed, &state](Candidate& candidate) {
     const std::filesystem::path destination = std::filesystem::path("assets") / candidate.relative;
@@ -755,10 +788,36 @@ AssetPlan plan_assets(const BuildOptions& options, const Config& config,
       found.push_back(assets::Variant{width, url});
     }
 
-    if (!found.empty()) {
-      plan.srcsets.emplace(original.first,
-                           assets::srcset_value(original.first, original.second, found));
+    if (found.empty()) {
+      continue;
     }
+
+    plan.srcsets.emplace(original.first,
+                         assets::srcset_value(original.first, original.second, found));
+
+    // Remembered against the image they came from, so the next build carries
+    // them forward without resizing. Unrecorded, the writer prunes them while
+    // the pages naming them stay as they are.
+    const auto entry = state.copies.find(
+      std::filesystem::path(original.first).lexically_relative("/assets").generic_string());
+
+    if (entry == state.copies.end()) {
+      continue;
+    }
+
+    Value recorded = Value::array();
+
+    for (const assets::Variant& variant : found) {
+      const auto renamed = plan.manifest.find(variant.url);
+
+      Value one = Value::object();
+      one.set("url", Value(variant.url));
+      one.set("output", Value(renamed == plan.manifest.end() ? variant.url : renamed->second));
+
+      recorded.push(std::move(one));
+    }
+
+    entry->second.metadata.set("variants", std::move(recorded));
   }
 
   return plan;
@@ -852,9 +911,8 @@ std::string redirect_html(std::string_view target) {
                      escaped);
 }
 
-// What a site with no 404 layout of its own gets. A static host serves this for
-// any url it cannot find, so the alternative is the host's page rather than
-// none at all.
+// What a site with no 404 layout of its own gets. A static host serves it for
+// any url it cannot find.
 std::string not_found_html() {
   return R"HTML(<!doctype html>
 <html lang="en">
@@ -1002,8 +1060,8 @@ std::expected<BuildReport, ParseError> build_site(const BuildOptions& options) {
   const std::filesystem::path index = options.output / "index.html";
   const std::string redirect = redirect_html("/" + options.config.languages.front() + "/");
 
-  // Written directly rather than through a writer: it belongs to no language's
-  // output tree, and each language's writer prunes only its own.
+  // Written directly, not through a writer: it belongs to no language's output
+  // tree, and each language's writer prunes only its own.
   if (files::read_file(index) != redirect) {
     std::ofstream out(index, std::ios::binary | std::ios::trunc);
 
@@ -1046,9 +1104,8 @@ std::expected<std::size_t, ParseError> clean(const std::filesystem::path& output
 
 std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
   // Building where there is nothing to build wrote an empty site and reported
-  // success, which reads as a site that lost its posts rather than as a command
-  // run in the wrong directory. An empty content directory is a different
-  // thing: that is a new site, and it builds.
+  // success, which reads as a site that lost its posts. An empty content
+  // directory is a new site, and it builds.
   std::error_code missing;
 
   if (!std::filesystem::is_directory(options.content, missing)) {
@@ -1101,15 +1158,11 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
 
   // Assets are planned before anything renders, because a page that references
   // one has to be written with the name that asset will have. Working
-  // it out afterwards would mean rewriting finished pages on disk, which is how
-  // the output stops being a function of the input.
-  // What the static trees will publish, and which file each path comes from.
-  // The theme's go in first so the site's replace them, which is what makes a
-  // theme something you can override one file of.
-  //
-  // A file the site or its theme ships by hand is the author's answer, so the
-  // build does not also generate its own and leave which one lands on disk to
-  // the order things ran in.
+  // it out afterwards would mean rewriting finished pages on disk, leaving the
+  // output dependent on the order things ran in.
+  // What the static trees publish, and which file each path comes from. The
+  // theme's go in first so the site's replace them, one file at a time. A file
+  // shipped by hand also suppresses the one the build would generate.
   std::map<std::filesystem::path, std::filesystem::path> static_sources;
 
   for (const std::filesystem::path& tree : {options.theme_static, options.static_files}) {
@@ -1130,6 +1183,9 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
 
   const AssetPlan plan = plan_assets(options, config, previous_state, state);
 
+  // Anything the build wants said out loud that the asset plan did not raise.
+  std::vector<std::string> warnings;
+
   for (const auto& entry : plan.manifest) {
     state.fingerprint += entry.first;
     state.fingerprint += entry.second;
@@ -1145,8 +1201,8 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
     });
   }
 
-  // A change anywhere outside the content tree can affect any page, so the
-  // whole site is rebuilt rather than reasoned about.
+  // A change outside the content tree can affect any page, so the whole site is
+  // rebuilt.
   const bool reusable = !options.force && !previous_state.fingerprint.empty() &&
                         previous_state.fingerprint == state.fingerprint;
 
@@ -1252,9 +1308,8 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
   // The posts either side of this one, in the order its section lists them.
   //
   // A post's neighbours are not a function of its own file, so adding,
-  // removing, or retitling one changes the two pages around it. Those are
-  // re-read and re-rendered here even though nothing about them changed, which
-  // is the edge an incremental build has to walk rather than infer.
+  // removing, or retitling one changes the two pages around it. Both are
+  // re-read and re-rendered here.
   {
     std::map<std::string, std::vector<std::size_t>> section_order;
 
@@ -1308,7 +1363,7 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
                   before["next-title"].as_string() == page.next_title;
       }
 
-      // Kept rather than kept-and-committed: whether this page can be left
+      // Kept, not kept-and-committed: whether this page can be left
       // alone also depends on its related posts, which are not known until
       // every page's summary is.
       if (settled && writer.reusable(page.output)) {
@@ -1342,8 +1397,8 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
   render_options.heading_anchors = true;
 
   // Runs a task over every page across the thread pool, stopping at the first
-  // failure. A task reports success as a ParseError on line zero, which is what
-  // lets it be returned from a worker rather than thrown across one.
+  // failure. A task reports success as a ParseError on line zero, so it is
+  // returned from a worker instead of thrown across one.
   const auto over_pages = [&](const std::function<ParseError(std::size_t)>& task)
     -> std::expected<void, ParseError> {
     std::atomic<std::size_t> next{0};
@@ -1396,7 +1451,7 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
   };
 
   // What a listing, a feed, or another post's related block asks of this post's
-  // body. It is read here rather than during the render because every page's
+  // body. It is read here, not during the render, because every page's
   // summary has to exist before any page's related posts can be chosen.
   const auto prepare_page = [&](std::size_t index) {
     Page& page = pages[index];
@@ -2016,9 +2071,8 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
     }
 
     // The page a static host serves for a url it does not have. It is a listing
-    // with nothing in it, so a site that has a 404 layout gets its own chrome
-    // around the message, and one that does not gets a plain page rather than
-    // whatever the host would have shown.
+    // with nothing in it, so a site with a 404 layout gets its own chrome around
+    // the message and one without gets a plain page.
     if (!shipped.contains("404.html")) {
       std::string html = not_found_html();
 
@@ -2059,16 +2113,27 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
     // A url a post used to live at sends a browser to where it lives now. A
     // page of the site's own always wins the path, so an alias can never
     // replace something the content tree publishes.
-    std::set<std::string> aliased;
+    std::map<std::string, std::string> aliased;
 
     for (const Page& page : pages) {
       for (const std::string& alias : page.post.aliases) {
         const std::filesystem::path file = url_to_file(options.output, alias, clean_urls);
         const std::string key = file.generic_string();
 
-        if (seen.contains(key) || !aliased.insert(key).second) {
+        if (seen.contains(key)) {
           continue;
         }
+
+        // Two posts claiming one alias would each redirect it somewhere else.
+        // The first keeps it, and the second is said out loud, since a silently
+        // dropped redirect looks exactly like one that works.
+        if (const auto claimed = aliased.find(key); claimed != aliased.end()) {
+          warnings.push_back(std::format("alias '{}' is claimed by both '{}' and '{}', so it points at the first",
+                                         alias, claimed->second, page.url));
+          continue;
+        }
+
+        aliased.emplace(key, page.url);
 
         writer.write(file, redirect_html(page.url));
       }
@@ -2161,6 +2226,7 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
   report.fragments_rendered = fragments.renders();
   report.changed = writer.changed();
   report.warnings = plan.warnings;
+  report.warnings.insert(report.warnings.end(), warnings.begin(), warnings.end());
 
   return report;
 }

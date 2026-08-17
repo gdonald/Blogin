@@ -195,7 +195,7 @@ SPEC {
     };
 
     // Whichever verb accepts the option, so each pair is compared on a command
-    // that actually takes it.
+    // that takes it.
     const auto verb_for = [](const std::string& longer) -> std::vector<std::string> {
       if (longer == "--section") {
         return {"new", "A Title"};

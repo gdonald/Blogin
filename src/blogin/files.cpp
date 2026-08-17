@@ -14,7 +14,7 @@
 namespace blogin::files {
 namespace {
 
-// A directory identified by what it is rather than by how it was reached, so a
+// A directory identified by what it is, not by how it was reached, so a
 // symlink pointing at an ancestor is recognised as somewhere already visited.
 struct DirectoryIdentity {
   std::uintmax_t device = 0;
@@ -32,7 +32,7 @@ std::optional<DirectoryIdentity> identify(const std::filesystem::path& directory
   }
 
   // std::filesystem does not expose device and inode portably, so the canonical
-  // path stands in: it resolves symlinks, which is what the guard needs.
+  // path stands in: it resolves symlinks, as the guard requires.
   const std::filesystem::path canonical = std::filesystem::canonical(directory, error);
 
   if (error) {
