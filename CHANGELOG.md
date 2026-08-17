@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.2
+
+### Fixed
+
+- A rebuild deleted the responsive image variants while leaving each page's
+  `srcset` naming them, so a site using `image-widths` served missing images
+  from its second build onward.
+
+### Changed
+
+- Two posts claiming the same alias produce a warning naming both. The first
+  one keeps the alias now.
+
 ## 0.9.1
 
 No functional changes.
@@ -9,7 +22,7 @@ No functional changes.
 - The development container pins its base image by digest and every package by
   version, so a Linux build compiles against the same toolchain each time.
 - Static analysis through CodeQL, a published coverage figure, and an OpenSSF
-  Scorecard run, alongside the sanitizers, clang-tidy, and fuzzing already here.
+  Scorecard run, alongside the sanitizers, clang-tidy, and fuzzing.
 - Release binaries carry their build provenance attestation on the release
   itself, so a signature can be checked beside the file it covers.
 - A security policy, at SECURITY.md.
