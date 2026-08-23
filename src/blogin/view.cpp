@@ -21,14 +21,17 @@ void escape_attribute(std::string& out, std::string_view value) {
 std::string safe_comment(std::string_view text) {
   std::string out;
 
-  for (std::size_t index = 0; index < text.size(); ++index) {
+  std::size_t index = 0;
+
+  while (index < text.size()) {
     if (text[index] == '-' && index + 1 < text.size() && text[index + 1] == '-') {
       out += "- -";
-      ++index;
+      index += 2;
       continue;
     }
 
     out += text[index];
+    ++index;
   }
 
   return out;
@@ -78,45 +81,8 @@ std::string canonical_url(const Chrome& chrome) {
   return chrome.url.empty() ? base : base + chrome.url;
 }
 
-// Everything a layout can ask for that does not depend on which kind of page it
-// is.
-void add_chrome(ViewContext& context, const Chrome& chrome, std::string_view page_title,
-                std::string_view description, std::string_view meta_type,
-                std::string_view template_label) {
-  context.set("site", chrome.site);
-  context.set("site-title", chrome.site["title"]);
-  context.set("data", chrome.data);
-  context.set("languages", chrome.languages);
-  context.set("has-languages", Value(!chrome.languages.empty()));
-  context.set("section", Value(chrome.section));
-  context.set("url", Value(chrome.url));
-  context.set("nav-nodes", nav_to_value(chrome.nav, chrome.section));
-  context.set("has-header", Value(chrome.has_header));
-  context.set("has-sidebar", Value(chrome.has_sidebar));
-  context.set("has-footer", Value(chrome.has_footer));
-  context.set("debug", Value(chrome.debug));
-  context.set("template-label", Value(std::string(template_label)));
-
-  context.set("page-title", Value(std::string(page_title)));
-  context.set("meta-title", Value(compose_title(chrome.site["title"].as_string(), page_title)));
-  context.set("meta-description", Value(std::string(description)));
-  context.set("meta-type", Value(std::string(meta_type)));
-  context.set("canonical-url", Value(canonical_url(chrome)));
-  context.set("section-label", Value(section_label(chrome.nav, chrome.section)));
-
-  context.set("head-meta", Value(head_meta(chrome, page_title, description, meta_type)));
-  context.set("theme-script", Value(std::string(theme_script())));
-  context.set("theme-toggle", Value(std::string(theme_toggle())));
-
-  const std::string_view stylesheet = chrome.framework.stylesheet();
-  const std::string_view script = chrome.framework.script();
-
-  context.set("framework-stylesheet-tag",
-              Value(stylesheet.empty() ? std::string{}
-                                       : R"(<link rel="stylesheet" href=")" + std::string(stylesheet) + "\">"));
-  context.set("framework-script-tag",
-              Value(script.empty() ? std::string{} : "<script src=\"" + std::string(script) + "\"></script>"));
-
+// The helpers a layout calls, as against the values it reads.
+void define_chrome_functions(ViewContext& context, const Chrome& chrome) {
   context.define("framework-class", [framework = chrome.framework](const std::vector<ViewContext::Argument>& arguments) {
     if (arguments.empty()) {
       return Value(std::string{});
@@ -192,6 +158,48 @@ void add_chrome(ViewContext& context, const Chrome& chrome, std::string_view pag
 
     return out;
   });
+}
+
+// Everything a layout can ask for that does not depend on which kind of page it
+// is.
+void add_chrome(ViewContext& context, const Chrome& chrome, std::string_view page_title,
+                std::string_view description, std::string_view meta_type,
+                std::string_view template_label) {
+  context.set("site", chrome.site);
+  context.set("site-title", chrome.site["title"]);
+  context.set("data", chrome.data);
+  context.set("languages", chrome.languages);
+  context.set("has-languages", Value(!chrome.languages.empty()));
+  context.set("section", Value(chrome.section));
+  context.set("url", Value(chrome.url));
+  context.set("nav-nodes", nav_to_value(chrome.nav, chrome.section));
+  context.set("has-header", Value(chrome.has_header));
+  context.set("has-sidebar", Value(chrome.has_sidebar));
+  context.set("has-footer", Value(chrome.has_footer));
+  context.set("debug", Value(chrome.debug));
+  context.set("template-label", Value(std::string(template_label)));
+
+  context.set("page-title", Value(std::string(page_title)));
+  context.set("meta-title", Value(compose_title(chrome.site["title"].as_string(), page_title)));
+  context.set("meta-description", Value(std::string(description)));
+  context.set("meta-type", Value(std::string(meta_type)));
+  context.set("canonical-url", Value(canonical_url(chrome)));
+  context.set("section-label", Value(section_label(chrome.nav, chrome.section)));
+
+  context.set("head-meta", Value(head_meta(chrome, page_title, description, meta_type)));
+  context.set("theme-script", Value(std::string(theme_script())));
+  context.set("theme-toggle", Value(std::string(theme_toggle())));
+
+  const std::string_view stylesheet = chrome.framework.stylesheet();
+  const std::string_view script = chrome.framework.script();
+
+  context.set("framework-stylesheet-tag",
+              Value(stylesheet.empty() ? std::string{}
+                                       : R"(<link rel="stylesheet" href=")" + std::string(stylesheet) + "\">"));
+  context.set("framework-script-tag",
+              Value(script.empty() ? std::string{} : "<script src=\"" + std::string(script) + "\"></script>"));
+
+  define_chrome_functions(context, chrome);
 }
 
 }  // namespace

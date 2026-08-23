@@ -247,24 +247,27 @@ std::string rewrite_refs(std::string_view text, const std::map<std::string, std:
   std::string out;
   out.reserve(text.size());
 
-  for (std::size_t index = 0; index < text.size(); ++index) {
+  std::size_t index = 0;
+
+  while (index < text.size()) {
     const char character = text[index];
 
     out += character;
+    ++index;
 
     // Only a delimited absolute path can be a url, which keeps the lookup off
     // ordinary prose.
-    if (!is_delimiter(character) || index + 1 >= text.size() || text[index + 1] != '/') {
+    if (!is_delimiter(character) || index >= text.size() || text[index] != '/') {
       continue;
     }
 
-    std::size_t end = index + 1;
+    std::size_t end = index;
 
     while (end < text.size() && !is_delimiter(text[end])) {
       ++end;
     }
 
-    const std::string_view candidate = text.substr(index + 1, end - index - 1);
+    const std::string_view candidate = text.substr(index, end - index);
     const auto found = manifest.find(std::string(candidate));
 
     if (found == manifest.end()) {
@@ -272,7 +275,7 @@ std::string rewrite_refs(std::string_view text, const std::map<std::string, std:
     }
 
     out += found->second;
-    index = end - 1;
+    index = end;
   }
 
   return out;
@@ -316,9 +319,12 @@ std::string add_srcset(std::string_view html, const std::map<std::string, std::s
 
   constexpr std::string_view opening = "src=\"";
 
-  for (std::size_t index = 0; index < html.size(); ++index) {
+  std::size_t index = 0;
+
+  while (index < html.size()) {
     if (html.compare(index, opening.size(), opening) != 0) {
       out += html[index];
+      ++index;
 
       continue;
     }
@@ -327,6 +333,7 @@ std::string add_srcset(std::string_view html, const std::map<std::string, std::s
 
     if (closing == std::string_view::npos) {
       out += html[index];
+      ++index;
 
       continue;
     }
@@ -344,7 +351,7 @@ std::string add_srcset(std::string_view html, const std::map<std::string, std::s
       out += '"';
     }
 
-    index = closing;
+    index = closing + 1;
   }
 
   return out;

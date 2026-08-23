@@ -285,6 +285,40 @@ private:
     return value;
   }
 
+  std::expected<void, ParseError> append_escaped_code_point(std::string& out) {
+    std::expected<std::uint32_t, ParseError> code_point = parse_hex4();
+
+    if (!code_point) {
+      return std::unexpected(code_point.error());
+    }
+
+    std::uint32_t value = *code_point;
+
+    // A character outside the basic plane arrives as a surrogate pair.
+    if (value >= 0xD800U && value <= 0xDBFFU && position_ + 1 < text_.size() && text_[position_] == '\\' &&
+        text_[position_ + 1] == 'u') {
+      advance();
+      advance();
+
+      std::expected<std::uint32_t, ParseError> low = parse_hex4();
+
+      if (!low) {
+        return std::unexpected(low.error());
+      }
+
+      if (*low >= 0xDC00U && *low <= 0xDFFFU) {
+        value = 0x10000U + ((value - 0xD800U) << 10) + (*low - 0xDC00U);
+      } else {
+        append_utf8(out, value);
+        value = *low;
+      }
+    }
+
+    append_utf8(out, value);
+
+    return {};
+  }
+
   std::expected<std::string, ParseError> parse_string() {
     advance();
 
@@ -340,35 +374,10 @@ private:
           out += '\t';
           break;
         case 'u': {
-          std::expected<std::uint32_t, ParseError> code_point = parse_hex4();
-
-          if (!code_point) {
-            return std::unexpected(code_point.error());
+          if (auto appended = append_escaped_code_point(out); !appended) {
+            return std::unexpected(appended.error());
           }
 
-          std::uint32_t value = *code_point;
-
-          // A character outside the basic plane arrives as a surrogate pair.
-          if (value >= 0xD800U && value <= 0xDBFFU && position_ + 1 < text_.size() && text_[position_] == '\\' &&
-              text_[position_ + 1] == 'u') {
-            advance();
-            advance();
-
-            std::expected<std::uint32_t, ParseError> low = parse_hex4();
-
-            if (!low) {
-              return std::unexpected(low.error());
-            }
-
-            if (*low >= 0xDC00U && *low <= 0xDFFFU) {
-              value = 0x10000U + ((value - 0xD800U) << 10) + (*low - 0xDC00U);
-            } else {
-              append_utf8(out, value);
-              value = *low;
-            }
-          }
-
-          append_utf8(out, value);
           break;
         }
         default:
@@ -476,9 +485,93 @@ void append_indent(std::string& out, int depth) {
   out.append(static_cast<std::size_t>(depth) * 2, ' ');
 }
 
-void write(std::string& out, const Value& value, JsonStyle style, bool sorted_keys, int depth) {
+void write(std::string& out, const Value& value, JsonStyle style, bool sorted_keys, int depth);
+
+void write_array(std::string& out, const Value& value, JsonStyle style, bool sorted_keys, int depth) {
   const bool pretty = style == JsonStyle::pretty;
 
+  if (value.items().empty()) {
+    out += "[]";
+    return;
+  }
+
+  out += '[';
+
+  bool first = true;
+
+  for (const Value& item : value.items()) {
+    if (!first) {
+      out += ',';
+    }
+
+    first = false;
+
+    if (pretty) {
+      out += '\n';
+      append_indent(out, depth + 1);
+    }
+
+    write(out, item, style, sorted_keys, depth + 1);
+  }
+
+  if (pretty) {
+    out += '\n';
+    append_indent(out, depth);
+  }
+
+  out += ']';
+}
+
+void write_object(std::string& out, const Value& value, JsonStyle style, bool sorted_keys, int depth) {
+  const bool pretty = style == JsonStyle::pretty;
+
+  if (value.members().empty()) {
+    out += "{}";
+    return;
+  }
+
+  out += '{';
+
+  Value::Object members = value.members();
+
+  if (sorted_keys) {
+    std::sort(members.begin(), members.end(),
+              [](const Value::Member& left, const Value::Member& right) { return left.first < right.first; });
+  }
+
+  bool first = true;
+
+  for (const Value::Member& member : members) {
+    if (!first) {
+      out += ',';
+    }
+
+    first = false;
+
+    if (pretty) {
+      out += '\n';
+      append_indent(out, depth + 1);
+    }
+
+    append_json_string(out, member.first);
+    out += ':';
+
+    if (pretty) {
+      out += ' ';
+    }
+
+    write(out, member.second, style, sorted_keys, depth + 1);
+  }
+
+  if (pretty) {
+    out += '\n';
+    append_indent(out, depth);
+  }
+
+  out += '}';
+}
+
+void write(std::string& out, const Value& value, JsonStyle style, bool sorted_keys, int depth) {
   switch (value.type()) {
     case Value::Type::null:
       out += "null";
@@ -512,87 +605,13 @@ void write(std::string& out, const Value& value, JsonStyle style, bool sorted_ke
       append_json_string(out, value.as_string());
       return;
 
-    case Value::Type::array: {
-      if (value.items().empty()) {
-        out += "[]";
-        return;
-      }
-
-      out += '[';
-
-      bool first = true;
-
-      for (const Value& item : value.items()) {
-        if (!first) {
-          out += ',';
-        }
-
-        first = false;
-
-        if (pretty) {
-          out += '\n';
-          append_indent(out, depth + 1);
-        }
-
-        write(out, item, style, sorted_keys, depth + 1);
-      }
-
-      if (pretty) {
-        out += '\n';
-        append_indent(out, depth);
-      }
-
-      out += ']';
+    case Value::Type::array:
+      write_array(out, value, style, sorted_keys, depth);
       return;
-    }
 
-    case Value::Type::object: {
-      if (value.members().empty()) {
-        out += "{}";
-        return;
-      }
-
-      out += '{';
-
-      Value::Object members = value.members();
-
-      if (sorted_keys) {
-        std::sort(members.begin(), members.end(),
-                  [](const Value::Member& left, const Value::Member& right) { return left.first < right.first; });
-      }
-
-      bool first = true;
-
-      for (const Value::Member& member : members) {
-        if (!first) {
-          out += ',';
-        }
-
-        first = false;
-
-        if (pretty) {
-          out += '\n';
-          append_indent(out, depth + 1);
-        }
-
-        append_json_string(out, member.first);
-        out += ':';
-
-        if (pretty) {
-          out += ' ';
-        }
-
-        write(out, member.second, style, sorted_keys, depth + 1);
-      }
-
-      if (pretty) {
-        out += '\n';
-        append_indent(out, depth);
-      }
-
-      out += '}';
+    case Value::Type::object:
+      write_object(out, value, style, sorted_keys, depth);
       return;
-    }
   }
 }
 

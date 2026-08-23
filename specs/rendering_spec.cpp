@@ -119,6 +119,9 @@ SPEC {
     });
   });
 
+}
+
+SPEC {
   spec::describe("filters", [] {
     spec::it("formats a date", [] {
       expect(blogin::filters::format_date("2024-03-07", "%B %e, %Y")).to_eq("March 7, 2024");
@@ -212,6 +215,9 @@ SPEC {
     });
   });
 
+}
+
+SPEC {
   spec::describe("shortcodes", [] {
     spec::it("parses arguments in order", [] {
       const auto arguments = blogin::shortcode::parse_arguments(R"(id="abc" width="4")");
@@ -302,6 +308,11 @@ SPEC {
         .to_contain("&quot;");
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("shortcodes", [] {
     spec::it("adds a caption when given one", [] {
       expect(blogin::shortcode::expand_builtin(
                "figure", blogin::shortcode::parse_arguments(R"(src="/a.png" caption="A cat")")))
@@ -390,7 +401,9 @@ SPEC {
       });
     });
   });
+}
 
+SPEC {
   spec::describe("the render result", [] {
     spec::it("collects headings", [] {
       expect(render("# One\n\n## Two\n").headings.size()).to_eq(std::size_t{2});
@@ -484,6 +497,9 @@ SPEC {
     });
   });
 
+}
+
+SPEC {
   spec::describe("the content stylesheet", [] {
     spec::it("escapes markup inside highlighted code", [] {
       expect(blogin::highlight::render("a & b < c", "rust")).to_contain("&amp;");

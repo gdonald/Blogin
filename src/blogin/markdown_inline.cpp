@@ -30,6 +30,64 @@ struct Bracket {
   bool active = true;
 };
 
+// One attribute of an open tag: a name, and the value that may follow it.
+// Leaves index on whatever comes next, and answers whether what it read was an
+// attribute at all.
+bool match_attribute(std::string_view rest, std::size_t& index) {
+  if (!is_letter(rest[index]) && rest[index] != '_' && rest[index] != ':') {
+    return false;
+  }
+
+  while (index < rest.size() && (is_letter(rest[index]) || is_digit(rest[index]) || rest[index] == '_' ||
+                                 rest[index] == '.' || rest[index] == ':' || rest[index] == '-')) {
+    ++index;
+  }
+
+  const std::size_t before_equals = index;
+
+  while (index < rest.size() && is_whitespace(rest[index])) {
+    ++index;
+  }
+
+  if (index >= rest.size() || rest[index] != '=') {
+    index = before_equals;
+
+    return true;
+  }
+
+  ++index;
+
+  while (index < rest.size() && is_whitespace(rest[index])) {
+    ++index;
+  }
+
+  if (index >= rest.size()) {
+    return false;
+  }
+
+  if (rest[index] == '"' || rest[index] == '\'') {
+    const char quote = rest[index];
+    const auto closing_quote = rest.find(quote, index + 1);
+
+    if (closing_quote == std::string_view::npos) {
+      return false;
+    }
+
+    index = closing_quote + 1;
+
+    return true;
+  }
+
+  const std::size_t value_start = index;
+
+  while (index < rest.size() && !is_whitespace(rest[index]) && rest[index] != '"' && rest[index] != '\'' &&
+         rest[index] != '=' && rest[index] != '<' && rest[index] != '>' && rest[index] != '`') {
+    ++index;
+  }
+
+  return index != value_start;
+}
+
 // Matches an open or closing tag against the specification's grammar. Looking
 // for the next '>' is not enough: an attribute value may quote a '>' or a '<',
 // and an attribute name that is not a name at all makes the whole thing text.
@@ -88,50 +146,7 @@ std::size_t match_tag_impl(std::string_view rest) {
       return 0;
     }
 
-    if (!is_letter(rest[index]) && rest[index] != '_' && rest[index] != ':') {
-      return 0;
-    }
-
-    while (index < rest.size() && (is_letter(rest[index]) || is_digit(rest[index]) || rest[index] == '_' ||
-                                   rest[index] == '.' || rest[index] == ':' || rest[index] == '-')) {
-      ++index;
-    }
-
-    const std::size_t before_equals = index;
-    skip_whitespace();
-
-    if (index >= rest.size() || rest[index] != '=') {
-      index = before_equals;
-      continue;
-    }
-
-    ++index;
-    skip_whitespace();
-
-    if (index >= rest.size()) {
-      return 0;
-    }
-
-    if (rest[index] == '"' || rest[index] == '\'') {
-      const char quote = rest[index];
-      const auto closing_quote = rest.find(quote, index + 1);
-
-      if (closing_quote == std::string_view::npos) {
-        return 0;
-      }
-
-      index = closing_quote + 1;
-      continue;
-    }
-
-    const std::size_t value_start = index;
-
-    while (index < rest.size() && !is_whitespace(rest[index]) && rest[index] != '"' && rest[index] != '\'' &&
-           rest[index] != '=' && rest[index] != '<' && rest[index] != '>' && rest[index] != '`') {
-      ++index;
-    }
-
-    if (index == value_start) {
+    if (!match_attribute(rest, index)) {
       return 0;
     }
   }
@@ -530,19 +545,9 @@ private:
 
   // A trailing {.class #id key=value} block attaches to the link or image just
   // closed.
-  void attach_attribute_block(Node* node) {
-    if (position_ >= input_.size() || input_[position_] != '{') {
-      return;
-    }
-
-    const auto closing = input_.find('}', position_);
-
-    if (closing == std::string_view::npos) {
-      return;
-    }
-
-    const std::string_view body = input_.substr(position_ + 1, closing - position_ - 1);
-
+  // The body of a {.class #id key=value} block, read into a list of
+  // attributes. A shorthand marker names the attribute it stands for.
+  Attribute* parse_attributes(std::string_view body) {
     Attribute* first = nullptr;
     Attribute* last = nullptr;
 
@@ -626,8 +631,24 @@ private:
       append(name, body.substr(value_start, index - value_start));
     }
 
-    if (first != nullptr) {
-      node->attributes = first;
+    return first;
+  }
+
+  void attach_attribute_block(Node* node) {
+    if (position_ >= input_.size() || input_[position_] != '{') {
+      return;
+    }
+
+    const auto closing = input_.find('}', position_);
+
+    if (closing == std::string_view::npos) {
+      return;
+    }
+
+    Attribute* parsed = parse_attributes(input_.substr(position_ + 1, closing - position_ - 1));
+
+    if (parsed != nullptr) {
+      node->attributes = parsed;
       position_ = closing + 1;
     }
   }
@@ -644,130 +665,153 @@ private:
     position_ += marker_length;
   }
 
+  // An angle-bracketed destination honours escapes and cannot run over a line
+  // break, so the first '>' is not necessarily the closing one.
+  bool read_bracketed_destination(std::size_t& scan, std::string& destination) {
+    std::size_t probe = scan + 1;
+    std::string bracketed;
+    bool closed = false;
+
+    while (probe < input_.size()) {
+      if (input_[probe] == '\\' && probe + 1 < input_.size() && is_punctuation(input_[probe + 1])) {
+        bracketed += input_[probe + 1];
+        probe += 2;
+        continue;
+      }
+
+      if (input_[probe] == '\n' || input_[probe] == '<') {
+        break;
+      }
+
+      if (input_[probe] == '>') {
+        closed = true;
+        break;
+      }
+
+      bracketed += input_[probe];
+      ++probe;
+    }
+
+    if (!closed) {
+      return false;
+    }
+
+    destination = bracketed;
+    scan = probe + 1;
+
+    return true;
+  }
+
+  void read_bare_destination(std::size_t& scan, std::string& destination) {
+    int depth = 0;
+
+    while (scan < input_.size()) {
+      const char character = input_[scan];
+
+      if (character == '\\' && scan + 1 < input_.size() && is_punctuation(input_[scan + 1])) {
+        destination += input_[scan + 1];
+        scan += 2;
+        continue;
+      }
+
+      if (is_whitespace(character)) {
+        break;
+      }
+
+      if (character == '(') {
+        ++depth;
+      } else if (character == ')') {
+        if (depth == 0) {
+          break;
+        }
+
+        --depth;
+      }
+
+      destination += character;
+      ++scan;
+    }
+  }
+
+  // The title after a destination, which may be quoted or parenthesized. A
+  // destination with no title at all is still a link.
+  bool read_link_title(std::size_t& scan, std::string& title) {
+    if (scan >= input_.size() || (input_[scan] != '"' && input_[scan] != '\'' && input_[scan] != '(')) {
+      return true;
+    }
+
+    const char opener = input_[scan];
+    const char closer = opener == '(' ? ')' : opener;
+    ++scan;
+
+    while (scan < input_.size() && input_[scan] != closer) {
+      if (input_[scan] == '\\' && scan + 1 < input_.size() && is_punctuation(input_[scan + 1])) {
+        title += input_[scan + 1];
+        scan += 2;
+        continue;
+      }
+
+      title += input_[scan];
+      ++scan;
+    }
+
+    if (scan >= input_.size()) {
+      return false;
+    }
+
+    ++scan;
+
+    return true;
+  }
+
+  void skip_whitespace_from(std::size_t& scan) {
+    while (scan < input_.size() && is_whitespace(input_[scan])) {
+      ++scan;
+    }
+  }
+
   // Reads what follows a closing bracket: an inline destination, a reference
   // label, or nothing.
   bool resolve_link(std::string& url, std::string& title, bool& matched) {
     matched = false;
 
-    if (position_ < input_.size() && input_[position_] == '(') {
-      std::size_t scan = position_ + 1;
-
-      while (scan < input_.size() && is_whitespace(input_[scan])) {
-        ++scan;
-      }
-
-      std::string destination;
-
-      if (scan < input_.size() && input_[scan] == '<') {
-        // An angle-bracketed destination honours escapes and cannot run over a
-        // line break, so the first '>' is not necessarily the closing one.
-        std::size_t probe = scan + 1;
-        std::string bracketed;
-        bool closed = false;
-
-        while (probe < input_.size()) {
-          if (input_[probe] == '\\' && probe + 1 < input_.size() && is_punctuation(input_[probe + 1])) {
-            bracketed += input_[probe + 1];
-            probe += 2;
-            continue;
-          }
-
-          if (input_[probe] == '\n' || input_[probe] == '<') {
-            break;
-          }
-
-          if (input_[probe] == '>') {
-            closed = true;
-            break;
-          }
-
-          bracketed += input_[probe];
-          ++probe;
-        }
-
-        if (!closed) {
-          return false;
-        }
-
-        destination = bracketed;
-        scan = probe + 1;
-      } else {
-        int depth = 0;
-
-        while (scan < input_.size()) {
-          const char character = input_[scan];
-
-          if (character == '\\' && scan + 1 < input_.size() && is_punctuation(input_[scan + 1])) {
-            destination += input_[scan + 1];
-            scan += 2;
-            continue;
-          }
-
-          if (is_whitespace(character)) {
-            break;
-          }
-
-          if (character == '(') {
-            ++depth;
-          } else if (character == ')') {
-            if (depth == 0) {
-              break;
-            }
-
-            --depth;
-          }
-
-          destination += character;
-          ++scan;
-        }
-      }
-
-      while (scan < input_.size() && is_whitespace(input_[scan])) {
-        ++scan;
-      }
-
-      std::string found_title;
-
-      if (scan < input_.size() && (input_[scan] == '"' || input_[scan] == '\'' || input_[scan] == '(')) {
-        const char opener = input_[scan];
-        const char closer = opener == '(' ? ')' : opener;
-        ++scan;
-
-        while (scan < input_.size() && input_[scan] != closer) {
-          if (input_[scan] == '\\' && scan + 1 < input_.size() && is_punctuation(input_[scan + 1])) {
-            found_title += input_[scan + 1];
-            scan += 2;
-            continue;
-          }
-
-          found_title += input_[scan];
-          ++scan;
-        }
-
-        if (scan >= input_.size()) {
-          return false;
-        }
-
-        ++scan;
-      }
-
-      while (scan < input_.size() && is_whitespace(input_[scan])) {
-        ++scan;
-      }
-
-      if (scan >= input_.size() || input_[scan] != ')') {
-        return false;
-      }
-
-      url = unescape_string(destination);
-      title = unescape_string(found_title);
-      position_ = scan + 1;
-      matched = true;
-
-      return true;
+    if (position_ >= input_.size() || input_[position_] != '(') {
+      return false;
     }
 
-    return false;
+    std::size_t scan = position_ + 1;
+    skip_whitespace_from(scan);
+
+    std::string destination;
+
+    if (scan < input_.size() && input_[scan] == '<') {
+      if (!read_bracketed_destination(scan, destination)) {
+        return false;
+      }
+    } else {
+      read_bare_destination(scan, destination);
+    }
+
+    skip_whitespace_from(scan);
+
+    std::string found_title;
+
+    if (!read_link_title(scan, found_title)) {
+      return false;
+    }
+
+    skip_whitespace_from(scan);
+
+    if (scan >= input_.size() || input_[scan] != ')') {
+      return false;
+    }
+
+    url = unescape_string(destination);
+    title = unescape_string(found_title);
+    position_ = scan + 1;
+    matched = true;
+
+    return true;
   }
 
   bool lookup_reference(std::string_view label, std::string& url, std::string& title) {
@@ -1071,15 +1115,16 @@ std::size_t match_html_tag(std::string_view text) {
   return text.size() < 2 || text[0] != '<' ? 0 : match_tag_impl(text);
 }
 
-std::size_t parse_reference_definition(Arena& arena, std::string_view input, ReferenceMap& references) {
-  std::size_t position = 0;
+namespace {
 
+// The `[label]:` a definition opens with. Leaves position on the destination.
+bool read_definition_label(std::string_view input, std::size_t& position, std::string& label) {
   while (position < input.size() && is_space_or_tab(input[position])) {
     ++position;
   }
 
   if (position >= input.size() || input[position] != '[') {
-    return 0;
+    return false;
   }
 
   const std::size_t label_start = ++position;
@@ -1105,14 +1150,14 @@ std::size_t parse_reference_definition(Arena& arena, std::string_view input, Ref
   }
 
   if (position >= input.size() || input[position] != ']') {
-    return 0;
+    return false;
   }
 
-  const std::string label(input.substr(label_start, position - label_start));
+  label = std::string(input.substr(label_start, position - label_start));
   ++position;
 
   if (position >= input.size() || input[position] != ':' || normalize_label(label).empty()) {
-    return 0;
+    return false;
   }
 
   ++position;
@@ -1121,9 +1166,11 @@ std::size_t parse_reference_definition(Arena& arena, std::string_view input, Ref
     ++position;
   }
 
-  std::string destination;
-  bool angled = false;
+  return true;
+}
 
+bool read_definition_destination(std::string_view input, std::size_t& position, std::string& destination,
+                                 bool& angled) {
   if (position < input.size() && input[position] == '<') {
     std::size_t probe = position + 1;
     std::string bracketed;
@@ -1150,7 +1197,7 @@ std::size_t parse_reference_definition(Arena& arena, std::string_view input, Ref
     }
 
     if (!closed) {
-      return 0;
+      return false;
     }
 
     angled = true;
@@ -1169,36 +1216,16 @@ std::size_t parse_reference_definition(Arena& arena, std::string_view input, Ref
     }
   }
 
-  if (destination.empty() && !angled) {
-    return 0;
-  }
+  return true;
+}
 
-  const std::size_t after_destination = position;
-
-  // A title has to be separated from the destination. Without this
-  // "[foo]: <bar>(baz)" would read as a definition, not as text.
-  std::size_t separators = 0;
-
-  while (position < input.size() && is_space_or_tab(input[position])) {
-    ++position;
-    ++separators;
-  }
-
-  bool crossed_newline = false;
-
-  if (position < input.size() && input[position] == '\n') {
-    crossed_newline = true;
-    ++position;
-
-    while (position < input.size() && is_space_or_tab(input[position])) {
-      ++position;
-    }
-  }
-
-  std::string title;
+// The optional title, and the offset the definition ends at. Answers with the
+// end of the destination when there is no title to read.
+std::size_t read_definition_title(std::string_view input, std::size_t position, bool separated,
+                                  std::size_t after_destination, std::string& title) {
   std::size_t after_title = after_destination;
 
-  if (separators + (crossed_newline ? 1 : 0) > 0 && position < input.size() &&
+  if (separated && position < input.size() &&
       (input[position] == '"' || input[position] == '\'' || input[position] == '(')) {
     const char opener = input[position];
     const char closer = opener == '(' ? ')' : opener;
@@ -1237,6 +1264,56 @@ std::size_t parse_reference_definition(Arena& arena, std::string_view input, Ref
       title.clear();
     }
   }
+
+  return after_title;
+}
+
+}  // namespace
+
+std::size_t parse_reference_definition(Arena& arena, std::string_view input, ReferenceMap& references) {
+  std::size_t position = 0;
+  std::string label;
+
+  if (!read_definition_label(input, position, label)) {
+    return 0;
+  }
+
+  std::string destination;
+  bool angled = false;
+
+  if (!read_definition_destination(input, position, destination, angled)) {
+    return 0;
+  }
+
+  if (destination.empty() && !angled) {
+    return 0;
+  }
+
+  const std::size_t after_destination = position;
+
+  // A title has to be separated from the destination. Without this
+  // "[foo]: <bar>(baz)" would read as a definition, not as text.
+  std::size_t separators = 0;
+
+  while (position < input.size() && is_space_or_tab(input[position])) {
+    ++position;
+    ++separators;
+  }
+
+  bool crossed_newline = false;
+
+  if (position < input.size() && input[position] == '\n') {
+    crossed_newline = true;
+    ++position;
+
+    while (position < input.size() && is_space_or_tab(input[position])) {
+      ++position;
+    }
+  }
+
+  std::string title;
+  std::size_t after_title =
+    read_definition_title(input, position, separators + (crossed_newline ? 1 : 0) > 0, after_destination, title);
 
   if (after_title == after_destination) {
     // No title, so the definition ends at the end of its own line.

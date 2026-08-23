@@ -183,43 +183,8 @@ private:
         return {};
       }
 
-      case NodeKind::output: {
-        if (auto handled = render_engine_call(*node.value); handled.has_value()) {
-          if (!*handled) {
-            return std::unexpected(handled->error());
-          }
-
-          out_ += node.escaped ? escaped_copy(**handled) : **handled;
-          out_ += '\n';
-
-          return {};
-        }
-
-        // `yield` is the layout's hole for the page it wraps.
-        if (node.value->kind == expression::NodeKind::name && node.value->text == "yield") {
-          out_ += options_.body;
-          out_ += '\n';
-
-          return {};
-        }
-
-        auto value = expression::evaluate(*node.value, context_);
-
-        if (!value) {
-          return std::unexpected(value.error());
-        }
-
-        const std::string rendered = to_text(*value);
-
-        if (node.escaped) {
-          escape(out_, rendered);
-        } else {
-          out_ += rendered;
-        }
-
-        out_ += '\n';
-        return {};
-      }
+      case NodeKind::output:
+        return render_output(node);
 
       case NodeKind::filter:
         return render_filter(node);
@@ -232,6 +197,44 @@ private:
     }
 
     return render_element(node);
+  }
+
+  std::expected<void, ParseError> render_output(const Node& node) {
+    if (auto handled = render_engine_call(*node.value); handled.has_value()) {
+      if (!*handled) {
+        return std::unexpected(handled->error());
+      }
+
+      out_ += node.escaped ? escaped_copy(**handled) : **handled;
+      out_ += '\n';
+
+      return {};
+    }
+
+    // `yield` is the layout's hole for the page it wraps.
+    if (node.value->kind == expression::NodeKind::name && node.value->text == "yield") {
+      out_ += options_.body;
+      out_ += '\n';
+
+      return {};
+    }
+
+    auto value = expression::evaluate(*node.value, context_);
+
+    if (!value) {
+      return std::unexpected(value.error());
+    }
+
+    const std::string rendered = to_text(*value);
+
+    if (node.escaped) {
+      escape(out_, rendered);
+    } else {
+      out_ += rendered;
+    }
+
+    out_ += '\n';
+    return {};
   }
 
   std::expected<void, ParseError> render_loop(const Node& node) {

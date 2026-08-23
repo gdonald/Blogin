@@ -21,6 +21,8 @@ struct Aligned {
   alignas(64) double value;
 };
 
+constexpr std::size_t small_bytes = sizeof(Small);
+
 }  // namespace
 
 SPEC {
@@ -208,35 +210,35 @@ SPEC {
       spec::it("poisons the gap that follows an allocation", [] {
         Arena arena(128);
 
-        const auto* first = reinterpret_cast<const std::byte*>(arena.create<Small>(1));
+        const Small* first = arena.create<Small>(1);
 
-        expect(blogin::memory_is_poisoned(first + sizeof(Small))).to_be_true();
+        expect(blogin::memory_is_poisoned(first, small_bytes)).to_be_true();
       });
 
       spec::it("keeps a later allocation out of the gap", [] {
         Arena arena(128);
 
-        const auto* first = reinterpret_cast<const std::byte*>(arena.create<Small>(1));
-        const auto* second = reinterpret_cast<const std::byte*>(arena.create<Small>(2));
+        const auto first_address = reinterpret_cast<std::uintptr_t>(arena.create<Small>(1));
+        const auto second_address = reinterpret_cast<std::uintptr_t>(arena.create<Small>(2));
 
-        expect(second - first).to_be_greater_than(static_cast<std::ptrdiff_t>(sizeof(Small)));
+        expect(second_address - first_address).to_be_greater_than(small_bytes);
       });
 
       spec::it("poisons the storage a block has not handed out yet", [] {
         Arena arena(128);
 
-        const auto* first = reinterpret_cast<const std::byte*>(arena.create<Small>(1));
+        const Small* first = arena.create<Small>(1);
 
-        expect(blogin::memory_is_poisoned(first + 64)).to_be_true();
+        expect(blogin::memory_is_poisoned(first, 64)).to_be_true();
       });
 
       spec::it("poisons the padding an over-aligned allocation skips over", [] {
         Arena arena(256);
 
-        const auto* first = reinterpret_cast<const std::byte*>(arena.create<Small>(1));
+        const Small* first = arena.create<Small>(1);
         arena.create<Aligned>();
 
-        expect(blogin::memory_is_poisoned(first + sizeof(Small))).to_be_true();
+        expect(blogin::memory_is_poisoned(first, small_bytes)).to_be_true();
       });
 
       spec::it("poisons storage that a reset has taken back", [] {

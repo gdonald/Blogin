@@ -211,8 +211,12 @@ bool newer_first(const Page& left, const Page& right) {
   const double left_order = left.post.order.value_or(1e18);
   const double right_order = right.post.order.value_or(1e18);
 
-  if (left_order != right_order) {
-    return left_order < right_order;
+  if (left_order < right_order) {
+    return true;
+  }
+
+  if (right_order < left_order) {
+    return false;
   }
 
   if (left.post.date != right.post.date) {

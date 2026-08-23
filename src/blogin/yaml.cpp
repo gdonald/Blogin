@@ -125,13 +125,20 @@ std::expected<Value, ParseError> unquote(std::string_view token, std::size_t lin
     const std::string_view inner = token.substr(1, token.size() - 2);
     std::string out;
 
-    for (std::size_t index = 0; index < inner.size(); ++index) {
+    std::size_t index = 0;
+
+    while (index < inner.size()) {
       if (inner[index] != '\\' || index + 1 >= inner.size()) {
         out += inner[index];
+        ++index;
         continue;
       }
 
-      switch (const char escape = inner[++index]; escape) {
+      const char escape = inner[index + 1];
+
+      index += 2;
+
+      switch (escape) {
         case 'n':
           out += '\n';
           break;

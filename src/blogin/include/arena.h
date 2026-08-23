@@ -54,14 +54,23 @@ public:
 
   ~Arena() { unpoison_blocks(); }
 
-  template <typename Node, typename... Args>
-  Node* create(Args&&... args) {
-    static_assert(std::is_trivially_destructible_v<Node>,
-                  "arena types are never destroyed individually");
+  template <typename Node>
+  Node* create() {
+    return std::construct_at(static_cast<Node*>(storage_for<Node>()));
+  }
 
-    void* storage = allocate(sizeof(Node), alignof(Node));
+  // One argument rather than a forwarded pack, because an arena node is an
+  // aggregate that is either default constructed or built from a single value.
+  template <typename Node, typename Argument>
+  Node* create(Argument&& argument) {
+    return std::construct_at(static_cast<Node*>(storage_for<Node>()), std::forward<Argument>(argument));
+  }
 
-    return std::construct_at(static_cast<Node*>(storage), std::forward<Args>(args)...);
+  template <typename Node>
+  void* storage_for() {
+    static_assert(std::is_trivially_destructible_v<Node>, "arena types are never destroyed individually");
+
+    return allocate(sizeof(Node), alignof(Node));
   }
 
   void* allocate(std::size_t size, std::size_t alignment) {

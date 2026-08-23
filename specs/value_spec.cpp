@@ -103,6 +103,11 @@ SPEC {
       });
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("Value", [] {
     spec::context("objects", [] {
       auto config = spec::let([] {
         Value value = Value::object();
@@ -237,6 +242,11 @@ SPEC {
       });
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("Value", [] {
     spec::context("size and emptiness", [] {
       spec::it("reports the length of a string", [] { expect(Value("abc").size()).to_eq(std::size_t{3}); });
 

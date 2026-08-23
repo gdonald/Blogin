@@ -75,6 +75,11 @@ SPEC {
     });
 
     // A setting that silently does nothing is worse than one that complains.
+  });
+}
+
+SPEC {
+  spec::describe("Config", [] {
     spec::context("rejecting the wrong type", [] {
       spec::it("rejects a number where a string belongs", [] {
         expect(rejects(R"({"title":1})")).to_be_true();
@@ -143,6 +148,11 @@ SPEC {
 
     // Silently ignoring a key it does not recognise would make a typo read as
     // "my setting does nothing" and cost an afternoon to find.
+  });
+}
+
+SPEC {
+  spec::describe("Config", [] {
     spec::context("unknown keys", [] {
       spec::it("collects them rather than failing", [] {
         expect(from(R"({"pagesize":10})").unknown_keys.size()).to_eq(std::size_t{1});
@@ -169,6 +179,11 @@ SPEC {
       });
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("Config", [] {
     spec::context("sections", [] {
       auto config = spec::let([] {
         return from(R"({"sections":{"posts":{"page-size":5,"label":"Writing","nav":false}}})");
@@ -242,6 +257,11 @@ SPEC {
       });
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("Config", [] {
     spec::context("language config", [] {
       spec::it("reads a language entry", [] {
         expect(from(R"({"language-config":{"fr":{"title":"Blogin FR"}}})").language_config.size())

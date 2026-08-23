@@ -53,14 +53,17 @@ std::string unescape(std::string_view text) {
   std::string out;
   out.reserve(text.size());
 
-  for (std::size_t index = 0; index < text.size(); ++index) {
+  std::size_t index = 0;
+
+  while (index < text.size()) {
     if (text.compare(index, 3, "\xe2\x86\x92") == 0) {
       out += '\t';
-      index += 2;
+      index += 3;
       continue;
     }
 
     out += text[index];
+    ++index;
   }
 
   return out;
@@ -82,8 +85,12 @@ std::vector<CommonMarkExample> load_commonmark_examples() {
   std::string section = "unsectioned";
   int number = 0;
 
-  for (std::size_t index = 0; index < lines.size(); ++index) {
+  std::size_t index = 0;
+
+  while (index < lines.size()) {
     const std::string_view line = lines[index];
+
+    ++index;
 
     if (line.starts_with("#")) {
       std::size_t level = 0;
@@ -111,8 +118,10 @@ std::vector<CommonMarkExample> load_commonmark_examples() {
     std::string html;
     bool in_html = false;
 
-    for (++index; index < lines.size(); ++index) {
+    while (index < lines.size()) {
       const std::string_view body = lines[index];
+
+      ++index;
 
       if (body.starts_with(fence)) {
         break;

@@ -113,6 +113,11 @@ SPEC {
       });
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("feeds", [] {
     spec::context("filenames", [] {
       spec::it("names the atom feed", [] {
         expect(std::string(blogin::feed::filename_for("atom"))).to_eq("feed.xml");

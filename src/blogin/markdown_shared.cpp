@@ -1,5 +1,7 @@
 #include "markdown_internal.h"
 
+#include <algorithm>
+#include <array>
 #include <unordered_map>
 
 #include "text.h"
@@ -252,31 +254,51 @@ bool is_unicode_punctuation(std::uint32_t code_point) {
     return is_punctuation(static_cast<char>(code_point));
   }
 
-  return (code_point >= 0x00A1 && code_point <= 0x00BF) || code_point == 0x00D7 || code_point == 0x00F7 ||
-         (code_point >= 0x2010 && code_point <= 0x2027) || (code_point >= 0x2030 && code_point <= 0x205E) ||
-         (code_point >= 0x20A0 && code_point <= 0x20BF) || (code_point >= 0x2100 && code_point <= 0x2BFF) ||
-         (code_point >= 0x3001 && code_point <= 0x303F) || (code_point >= 0xFE30 && code_point <= 0xFE4F) ||
-         (code_point >= 0xFF01 && code_point <= 0xFF65);
+  struct CodePointRange {
+    std::uint32_t first;
+    std::uint32_t last;
+  };
+
+  static constexpr std::array<CodePointRange, 10> punctuation_ranges{{
+    {0x00A1, 0x00BF},
+    {0x00D7, 0x00D7},
+    {0x00F7, 0x00F7},
+    {0x2010, 0x2027},
+    {0x2030, 0x205E},
+    {0x20A0, 0x20BF},
+    {0x2100, 0x2BFF},
+    {0x3001, 0x303F},
+    {0xFE30, 0xFE4F},
+    {0xFF01, 0xFF65},
+  }};
+
+  return std::ranges::any_of(punctuation_ranges, [code_point](const CodePointRange& range) {
+    return code_point >= range.first && code_point <= range.last;
+  });
 }
 
 std::string unescape_string(std::string_view input) {
   std::string out;
   out.reserve(input.size());
 
-  for (std::size_t index = 0; index < input.size(); ++index) {
+  std::size_t index = 0;
+
+  while (index < input.size()) {
     if (input[index] == '\\' && index + 1 < input.size() && is_punctuation(input[index + 1])) {
-      out += input[++index];
+      out += input[index + 1];
+      index += 2;
       continue;
     }
 
     if (input[index] == '&') {
       if (const std::size_t consumed = decode_entity(input.substr(index), out); consumed > 0) {
-        index += consumed - 1;
+        index += consumed;
         continue;
       }
     }
 
     out += input[index];
+    ++index;
   }
 
   return out;

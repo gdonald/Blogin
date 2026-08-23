@@ -382,8 +382,13 @@ SPEC {
 
             const blogin::haml::Template* compiled = store->find(name);
 
+            if (compiled == nullptr) {
+              failures.push_back(std::format("{}/{}: the store compiled no template", site, name));
+              continue;
+            }
+
             for (const std::string& section : sections) {
-              options.partial = [&store, section](std::string_view partial) {
+              options.partial = [&store, &section](std::string_view partial) {
                 return store->find_partial(partial, section);
               };
 

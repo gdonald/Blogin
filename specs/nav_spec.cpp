@@ -107,6 +107,15 @@ SPEC {
       });
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("the navigation tree", [] {
+    spec::serial();
+
+    auto content = spec::let([] { return make_content(); });
+
     spec::context("marking the current section", [=] {
       auto tree = spec::let([=] { return blogin::nav::build_tree(content(), Config{}); });
 

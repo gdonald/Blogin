@@ -1,8 +1,14 @@
 #include "style.h"
 
+#include <string>
+
 namespace blogin::style {
 
-std::string_view content_css() {
+namespace {
+
+// The markup Blogin's renderer emits: code blocks, highlighting, heading
+// anchors, pagination, post navigation, and definition lists.
+std::string_view markup_css() {
   return R"CSS(pre {
   background: #f6f8fa;
   padding: 1rem;
@@ -84,8 +90,12 @@ dl dd {
 dl dd:last-child {
   margin-bottom: 0;
 }
+)CSS";
+}
 
-.blogin-theme-toggle {
+// The light and dark theme toggle, and what dark mode changes.
+std::string_view theme_css() {
+  return R"CSS(.blogin-theme-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -139,8 +149,12 @@ dl dd:last-child {
   border-color: #30363d;
   background: #161b22;
 }
+)CSS";
+}
 
-.navbar-tools {
+// The navigation bar's own layout, which the theme toggle and search sit in.
+std::string_view navbar_css() {
+  return R"CSS(.navbar-tools {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -172,6 +186,17 @@ dl dd:last-child {
   }
 }
 )CSS";
+}
+
+}  // namespace
+
+// The pieces are joined with the blank line that separated them when they were
+// one literal, so the stylesheet reads the same as it did.
+std::string_view content_css() {
+  static const std::string css =
+    std::string(markup_css()) + "\n" + std::string(theme_css()) + "\n" + std::string(navbar_css());
+
+  return css;
 }
 
 }  // namespace blogin::style

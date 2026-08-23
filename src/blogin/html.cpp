@@ -252,6 +252,12 @@ private:
   }
 
   void render(const Node* node);
+  void render_block(const Node* node);
+  void render_table(const Node* node);
+  void render_definition(const Node* node);
+  void render_footnote(const Node* node);
+  void render_inline(const Node* node);
+  void render_link(const Node* node);
 
   const RenderOptions& options_;
   std::string html_;
@@ -260,6 +266,239 @@ private:
 };
 
 void Renderer::render(const Node* node) {
+  switch (node->kind) {
+    case NodeKind::document:
+    case NodeKind::paragraph:
+    case NodeKind::heading:
+    case NodeKind::thematic_break:
+    case NodeKind::block_quote:
+    case NodeKind::list:
+    case NodeKind::item:
+    case NodeKind::code_block:
+    case NodeKind::html_block:
+      render_block(node);
+      return;
+
+    case NodeKind::table:
+    case NodeKind::table_row:
+    case NodeKind::table_cell:
+      render_table(node);
+      return;
+
+    case NodeKind::definition_list:
+    case NodeKind::definition_term:
+    case NodeKind::definition_detail:
+      render_definition(node);
+      return;
+
+    case NodeKind::footnotes:
+    case NodeKind::footnote_item:
+    case NodeKind::footnote_ref:
+      render_footnote(node);
+      return;
+
+    case NodeKind::shortcode:
+    case NodeKind::text:
+    case NodeKind::soft_break:
+    case NodeKind::line_break:
+    case NodeKind::code_span:
+    case NodeKind::html_inline:
+    case NodeKind::emphasis:
+    case NodeKind::strong:
+    case NodeKind::strikethrough:
+    case NodeKind::math:
+      render_inline(node);
+      return;
+
+    case NodeKind::link:
+    case NodeKind::image:
+      render_link(node);
+      return;
+  }
+}
+
+void Renderer::render_table(const Node* node) {
+  std::string& out = html_;
+
+  switch (node->kind) {
+    case NodeKind::table:
+      ensure_newline(out);
+      out += "<table";
+      with_class("table");
+      out += ">\n";
+      children(node);
+      out += "</table>\n";
+      text_ += '\n';
+      return;
+
+    case NodeKind::table_row: {
+      const bool head = node->header;
+
+      ensure_newline(out);
+
+      if (head) {
+        out += "<thead>\n";
+      }
+
+      out += "<tr>\n";
+      children(node);
+      out += "</tr>\n";
+
+      if (head) {
+        out += "</thead>\n<tbody>\n";
+      }
+
+      if (!head && node->next_sibling == nullptr) {
+        out += "</tbody>\n";
+      }
+
+      return;
+    }
+
+    case NodeKind::table_cell:
+    default: {
+      const char* tag = node->header ? "th" : "td";
+
+      out += '<';
+      out += tag;
+
+      switch (node->alignment) {
+        case CellAlignment::left: out += " align=\"left\""; break;
+        case CellAlignment::center: out += " align=\"center\""; break;
+        case CellAlignment::right: out += " align=\"right\""; break;
+        case CellAlignment::none: break;
+      }
+
+      out += '>';
+      children(node);
+      out += "</";
+      out += tag;
+      out += ">\n";
+      text_ += ' ';
+      return;
+    }
+  }
+}
+
+void Renderer::render_definition(const Node* node) {
+  std::string& out = html_;
+
+  switch (node->kind) {
+    case NodeKind::definition_list:
+      ensure_newline(out);
+      out += "<dl";
+      with_class("definition-list");
+      out += ">\n";
+      children(node);
+      out += "</dl>\n";
+      return;
+
+    case NodeKind::definition_term:
+      ensure_newline(out);
+      out += "<dt>";
+      children(node);
+      out += "</dt>\n";
+      text_ += '\n';
+      return;
+
+    case NodeKind::definition_detail:
+    default:
+      ensure_newline(out);
+      out += "<dd>";
+      children(node);
+      out += "</dd>\n";
+      text_ += '\n';
+      return;
+  }
+}
+
+void Renderer::render_footnote(const Node* node) {
+  std::string& out = html_;
+
+  switch (node->kind) {
+    case NodeKind::footnotes:
+      ensure_newline(out);
+      out += "<section class=\"footnotes\">\n<ol>\n";
+      children(node);
+      out += "</ol>\n</section>\n";
+      return;
+
+    case NodeKind::footnote_item:
+      ensure_newline(out);
+      out += "<li id=\"fn-";
+      append_escaped(out, node->label);
+      out += "\">";
+      children(node);
+      out += " <a href=\"#fnref-";
+      append_escaped(out, node->label);
+      out += "\" class=\"footnote-back\">&#8617;</a></li>\n";
+      return;
+
+    case NodeKind::footnote_ref:
+    default:
+      out += R"(<sup class="footnote-ref"><a href="#fn-)";
+      append_escaped(out, node->label);
+      out += "\" id=\"fnref-";
+      append_escaped(out, node->label);
+
+      if (node->occurrence > 1) {
+        out += std::format("-{}", node->occurrence);
+      }
+
+      out += "\">";
+      out += std::format("{}", node->number);
+      out += "</a></sup>";
+      return;
+  }
+}
+
+void Renderer::render_link(const Node* node) {
+  std::string& out = html_;
+
+  switch (node->kind) {
+    case NodeKind::link:
+      out += "<a href=\"";
+      append_url_escaped(out, node->url);
+      out += '"';
+
+      if (!node->title.empty()) {
+        out += " title=\"";
+        append_escaped(out, node->title);
+        out += '"';
+      }
+
+      append_attributes(node, {});
+      out += '>';
+      children(node);
+      out += "</a>";
+      return;
+
+    case NodeKind::image:
+    default: {
+      out += "<img src=\"";
+      append_url_escaped(out, node->url);
+      out += "\" alt=\"";
+
+      const std::string alt = plain_of(node);
+      append_escaped(out, alt);
+      text_ += alt;
+
+      out += '"';
+
+      if (!node->title.empty()) {
+        out += " title=\"";
+        append_escaped(out, node->title);
+        out += '"';
+      }
+
+      append_attributes(node, options_.framework.class_for("image"));
+      out += " />";
+      return;
+    }
+  }
+}
+
+void Renderer::render_block(const Node* node) {
   std::string& out = html_;
 
   switch (node->kind) {
@@ -332,124 +571,17 @@ void Renderer::render(const Node* node) {
       return;
 
     case NodeKind::html_block:
+    default:
       ensure_newline(out);
       out += node->literal;
       return;
+  }
+}
 
-    case NodeKind::table:
-      ensure_newline(out);
-      out += "<table";
-      with_class("table");
-      out += ">\n";
-      children(node);
-      out += "</table>\n";
-      text_ += '\n';
-      return;
+void Renderer::render_inline(const Node* node) {
+  std::string& out = html_;
 
-    case NodeKind::table_row: {
-      const bool head = node->header;
-
-      ensure_newline(out);
-
-      if (head) {
-        out += "<thead>\n";
-      }
-
-      out += "<tr>\n";
-      children(node);
-      out += "</tr>\n";
-
-      if (head) {
-        out += "</thead>\n<tbody>\n";
-      }
-
-      if (!head && node->next_sibling == nullptr) {
-        out += "</tbody>\n";
-      }
-
-      return;
-    }
-
-    case NodeKind::table_cell: {
-      const char* tag = node->header ? "th" : "td";
-
-      out += '<';
-      out += tag;
-
-      switch (node->alignment) {
-        case CellAlignment::left: out += " align=\"left\""; break;
-        case CellAlignment::center: out += " align=\"center\""; break;
-        case CellAlignment::right: out += " align=\"right\""; break;
-        case CellAlignment::none: break;
-      }
-
-      out += '>';
-      children(node);
-      out += "</";
-      out += tag;
-      out += ">\n";
-      text_ += ' ';
-      return;
-    }
-
-    case NodeKind::definition_list:
-      ensure_newline(out);
-      out += "<dl";
-      with_class("definition-list");
-      out += ">\n";
-      children(node);
-      out += "</dl>\n";
-      return;
-
-    case NodeKind::definition_term:
-      ensure_newline(out);
-      out += "<dt>";
-      children(node);
-      out += "</dt>\n";
-      text_ += '\n';
-      return;
-
-    case NodeKind::definition_detail:
-      ensure_newline(out);
-      out += "<dd>";
-      children(node);
-      out += "</dd>\n";
-      text_ += '\n';
-      return;
-
-    case NodeKind::footnotes:
-      ensure_newline(out);
-      out += "<section class=\"footnotes\">\n<ol>\n";
-      children(node);
-      out += "</ol>\n</section>\n";
-      return;
-
-    case NodeKind::footnote_item:
-      ensure_newline(out);
-      out += "<li id=\"fn-";
-      append_escaped(out, node->label);
-      out += "\">";
-      children(node);
-      out += " <a href=\"#fnref-";
-      append_escaped(out, node->label);
-      out += "\" class=\"footnote-back\">&#8617;</a></li>\n";
-      return;
-
-    case NodeKind::footnote_ref:
-      out += R"(<sup class="footnote-ref"><a href="#fn-)";
-      append_escaped(out, node->label);
-      out += "\" id=\"fnref-";
-      append_escaped(out, node->label);
-
-      if (node->occurrence > 1) {
-        out += std::format("-{}", node->occurrence);
-      }
-
-      out += "\">";
-      out += std::format("{}", node->number);
-      out += "</a></sup>";
-      return;
-
+  switch (node->kind) {
     case NodeKind::shortcode:
       ensure_newline(out);
 
@@ -509,50 +641,12 @@ void Renderer::render(const Node* node) {
       return;
 
     case NodeKind::math:
+    default:
       out += node->display ? "<span class=\"math math-display\">" : "<span class=\"math math-inline\">";
       append_escaped(out, node->literal);
       out += "</span>";
       text_ += node->literal;
       return;
-
-    case NodeKind::link:
-      out += "<a href=\"";
-      append_url_escaped(out, node->url);
-      out += '"';
-
-      if (!node->title.empty()) {
-        out += " title=\"";
-        append_escaped(out, node->title);
-        out += '"';
-      }
-
-      append_attributes(node, {});
-      out += '>';
-      children(node);
-      out += "</a>";
-      return;
-
-    case NodeKind::image: {
-      out += "<img src=\"";
-      append_url_escaped(out, node->url);
-      out += "\" alt=\"";
-
-      const std::string alt = plain_of(node);
-      append_escaped(out, alt);
-      text_ += alt;
-
-      out += '"';
-
-      if (!node->title.empty()) {
-        out += " title=\"";
-        append_escaped(out, node->title);
-        out += '"';
-      }
-
-      append_attributes(node, options_.framework.class_for("image"));
-      out += " />";
-      return;
-    }
   }
 }
 

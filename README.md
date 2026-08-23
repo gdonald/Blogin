@@ -296,6 +296,7 @@ Everything a change needs:
 | ---------------------------- | -------------------------------------------------------------------------- |
 | `scripts/test.sh`            | Everything CI checks except fuzzing. Run before a commit                   |
 | `scripts/tidy.sh`            | clang-tidy over every translation unit, failing on any finding             |
+| `scripts/codeql.sh`          | The CodeQL suite the security tab reports, failing on any finding          |
 | `scripts/coverage.sh`        | Coverage report, failing below a floor                                     |
 | `scripts/uncovered.sh`       | The lines behind the coverage number, per file                             |
 | `scripts/repin-container.sh` | Move the container's pinned package versions and base image forward        |
@@ -351,9 +352,18 @@ budget for the whole run, defaulting to four fewer than the machine has, and
 two cores per stage decides how many run at once. Output is kept for a stage
 that fails and dropped for one that passes.
 
-The container stages need Docker running. A skipped stage is reported and exits
-non-zero, since CI runs it either way. Fuzzing is the one check left out, and
-`./scripts/fuzz.sh` runs it.
+The container stages need Docker running, and the `codeql` stage needs the
+CodeQL CLI, which Homebrew installs with `brew install --cask codeql`. A skipped
+stage is reported and exits non-zero, since CI runs it either way. Fuzzing is
+the one check left out, and `./scripts/fuzz.sh` runs it.
+
+The `codeql` stage runs the same query suite as
+`.github/workflows/codeql.yml`, whose findings become alerts on the repository's
+security tab. It builds the tree from scratch every run, because CodeQL reads
+the compiler as it works and a partial build makes a partial database. That is
+also what makes it the slowest stage. It analyzes what this host compiles, so
+code behind a platform conditional is only checked on the platform that builds
+it.
 
 Documentation for users lives at [blogin.dev](https://blogin.dev), in a separate
 repository. A change that alters behaviour a user can see needs the matching

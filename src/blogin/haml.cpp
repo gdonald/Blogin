@@ -540,9 +540,12 @@ private:
     Interpolated parts;
     std::string literal;
 
-    for (std::size_t index = 0; index < content.size(); ++index) {
+    std::size_t index = 0;
+
+    while (index < content.size()) {
       if (content.compare(index, 2, "#{") != 0) {
         literal += content[index];
+        ++index;
         continue;
       }
 
@@ -579,7 +582,7 @@ private:
       segment.hole = std::move(*parsed);
       parts.push_back(std::move(segment));
 
-      index = scan;
+      index = scan + 1;
     }
 
     if (!literal.empty()) {

@@ -61,12 +61,15 @@ inline void unpoison_memory([[maybe_unused]] const void* address, [[maybe_unused
 #endif
 }
 
-// Whether a byte is poisoned right now, asked without touching it. Always false
-// without the sanitizer, so a caller has to consult sanitizer_enabled to tell
-// "readable" from "nothing is tracking poison".
-inline bool memory_is_poisoned([[maybe_unused]] const void* address) {
+// Whether a byte is poisoned right now, asked without touching it. The offset
+// is in bytes from the address, so a caller asking about the storage after an
+// allocation does not scale the offset itself. Always false without the
+// sanitizer, so a caller has to consult sanitizer_enabled to tell "readable"
+// from "nothing is tracking poison".
+inline bool memory_is_poisoned([[maybe_unused]] const void* address,
+                               [[maybe_unused]] std::size_t offset = 0) {
 #ifdef BLOGIN_ASAN
-  return __asan_address_is_poisoned(address) != 0;
+  return __asan_address_is_poisoned(static_cast<const std::byte*>(address) + offset) != 0;
 #else
   return false;
 #endif

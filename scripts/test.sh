@@ -14,6 +14,11 @@
 # two cannot drift: a stage added here is added there, and a stage that fails
 # here fails there for the same reason.
 #
+# The codeql stage is the exception. Its CI counterpart is a separate workflow,
+# .github/workflows/codeql.yml, which runs the CodeQL action rather than this
+# file, because uploading to the security tab is the action's job. Both name the
+# same query suite, so a finding in one is a finding in the other.
+#
 # A stage is one build tree and every check that can run against it. Nothing is
 # compiled twice for the same instrumentation. The stages do not share a build
 # because they cannot: the sanitizers, ThreadSanitizer, and coverage each
@@ -103,6 +108,14 @@ stage_dist() {
 
 stage_coverage() {
   ./scripts/coverage.sh
+}
+
+# The suite the CodeQL workflow runs, so an alert on the security tab is caught
+# before the push that would raise it. This one needs the CodeQL CLI rather than
+# the container, and it builds the tree a second time because CodeQL has to
+# watch a compile it started itself.
+stage_codeql() {
+  ./scripts/codeql.sh
 }
 
 # ---------------------------------------------------------------------------
@@ -206,21 +219,22 @@ stage_coverage_linux() {
 # Stage table
 # ---------------------------------------------------------------------------
 
-# name|needs docker|what it does
+# name|what it needs beyond a compiler|what it does
 stages=(
-  "specs|no|Debug build, then the whole spec suite"
-  "sanitize|no|Sanitizer build, then the specs and the binary itself"
-  "thread|no|ThreadSanitizer build, then the specs"
-  "dist|no|Distribution build, then that it runs with nothing installed"
-  "coverage|no|Instrumented build, then line and branch coverage against the floor"
-  "linux|yes|The Debian container: debug, sanitizers, ThreadSanitizer"
-  "linux-static|yes|The static Linux binary, checked with nothing installed"
-  "gcc|yes|GCC builds against libstdc++, plain and with sanitizers, then the specs"
-  "tidy|yes|clang-tidy over every translation unit"
-  "coverage-linux|yes|The same coverage floor on Linux"
+  "specs|nothing|Debug build, then the whole spec suite"
+  "sanitize|nothing|Sanitizer build, then the specs and the binary itself"
+  "thread|nothing|ThreadSanitizer build, then the specs"
+  "dist|nothing|Distribution build, then that it runs with nothing installed"
+  "coverage|nothing|Instrumented build, then line and branch coverage against the floor"
+  "codeql|codeql|The CodeQL suite the security tab reports, over the whole tree"
+  "linux|docker|The Debian container: debug, sanitizers, ThreadSanitizer"
+  "linux-static|docker|The static Linux binary, checked with nothing installed"
+  "gcc|docker|GCC builds against libstdc++, plain and with sanitizers, then the specs"
+  "tidy|docker|clang-tidy over every translation unit"
+  "coverage-linux|docker|The same coverage floor on Linux"
 )
 
-native_stages=(specs sanitize thread dist coverage)
+native_stages=(specs sanitize thread dist coverage codeql)
 container_stages=(linux linux-static gcc tidy coverage-linux)
 
 field() {
@@ -239,6 +253,10 @@ describe_stages() {
   printf '  %-15s %s\n' "all" "every stage above (the default)"
   printf '  %-15s %s\n' "native" "only the stages that need no container"
 
+  printf '\nA stage whose requirement is missing is skipped and the run fails, since\n'
+  printf 'CI runs it either way. Docker is what the container stages want, and the\n'
+  printf 'CodeQL CLI is what the codeql stage wants.\n'
+
   printf '\noptions:\n'
   printf '  %-15s %s\n' "-j N" "cores to use across every stage (default $default_cores of $cores_available)"
   printf '  %-15s %s\n' "--serial" "one at a time"
@@ -246,16 +264,22 @@ describe_stages() {
   printf 'passes. Fuzzing is not here. Run ./scripts/fuzz.sh for that.\n'
 }
 
-needs_docker() {
+# What a stage needs that a bare checkout does not have: "docker", "codeql", or
+# "nothing".
+requirement() {
   for entry in "${stages[@]}"; do
     if [[ "$(field "$entry" 1)" == "$1" ]]; then
-      [[ "$(field "$entry" 2)" == "yes" ]]
+      field "$entry" 2
 
       return
     fi
   done
 
-  return 1
+  printf 'nothing'
+}
+
+needs_docker() {
+  [[ "$(requirement "$1")" == "docker" ]]
 }
 
 known_stage() {
@@ -362,9 +386,14 @@ main() {
   done
 
   local docker_available=no
+  local codeql_available=no
 
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     docker_available=yes
+  fi
+
+  if command -v codeql >/dev/null 2>&1; then
+    codeql_available=yes
   fi
 
   # Never more stages than there are to run, so a short list gets the whole
@@ -387,12 +416,24 @@ main() {
   local -a passed=() skipped=() failed=() to_run=()
 
   for name in "${selected[@]}"; do
-    if needs_docker "$name" && [[ "$docker_available" == "no" ]]; then
-      printf '    %-16s skipped, Docker is not running\n' "$name"
-      skipped+=("$name")
+    case "$(requirement "$name")" in
+      docker)
+        if [[ "$docker_available" == "no" ]]; then
+          printf '    %-16s skipped, Docker is not running\n' "$name"
+          skipped+=("$name")
 
-      continue
-    fi
+          continue
+        fi
+        ;;
+      codeql)
+        if [[ "$codeql_available" == "no" ]]; then
+          printf '    %-16s skipped, no codeql on PATH\n' "$name"
+          skipped+=("$name")
+
+          continue
+        fi
+        ;;
+    esac
 
     to_run+=("$name")
   done
@@ -480,8 +521,8 @@ main() {
   # A skipped stage is not a pass. CI runs it, so a commit that goes out on the
   # strength of a run with skips can still fail there.
   if [[ ${#skipped[@]} -gt 0 ]]; then
-    printf '\nStart Docker and run those stages before committing, or run\n'
-    printf 'scripts/test.sh native to say you meant to leave them out.\n'
+    printf '\nInstall what those stages want and run them before committing, or\n'
+    printf 'name the stages you meant to run to say you left them out.\n'
     exit 1
   fi
 }

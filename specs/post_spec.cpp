@@ -106,6 +106,11 @@ SPEC {
       });
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("Post", [] {
     spec::context("slugs", [] {
       spec::it("prefers an explicit slug", [] {
         expect(parsed("---\ntitle: Hello\nslug: custom\n---\n").slug).to_eq("custom");

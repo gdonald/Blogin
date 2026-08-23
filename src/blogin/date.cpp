@@ -114,13 +114,18 @@ std::string Date::format(std::string_view pattern) const {
   std::string out;
   out.reserve(pattern.size() + 16);
 
-  for (std::size_t index = 0; index < pattern.size(); ++index) {
+  std::size_t index = 0;
+
+  while (index < pattern.size()) {
     if (pattern[index] != '%' || index + 1 >= pattern.size()) {
       out += pattern[index];
+      ++index;
       continue;
     }
 
-    const char specifier = pattern[++index];
+    const char specifier = pattern[index + 1];
+
+    index += 2;
 
     switch (specifier) {
       case 'Y':

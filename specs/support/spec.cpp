@@ -141,11 +141,16 @@ Options parse_options(int argc, char** argv) {
   Options options;
   const std::vector<std::string> arguments(argv, argv + argc);
 
-  for (std::size_t index = 1; index < arguments.size(); ++index) {
+  std::size_t index = 1;
+
+  while (index < arguments.size()) {
     const std::string& argument = arguments[index];
 
-    if (argument == "--jobs" && index + 1 < arguments.size()) {
-      options.jobs = static_cast<unsigned>(std::stoul(arguments[++index]));
+    ++index;
+
+    if (argument == "--jobs" && index < arguments.size()) {
+      options.jobs = static_cast<unsigned>(std::stoul(arguments[index]));
+      ++index;
     } else if (argument == "--list") {
       options.list_only = true;
     } else if (argument.starts_with("--")) {

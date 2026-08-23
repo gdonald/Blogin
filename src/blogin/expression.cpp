@@ -1,6 +1,7 @@
 #include "expression.h"
 
 #include <charconv>
+#include <compare>
 #include <format>
 #include <utility>
 
@@ -756,7 +757,7 @@ bool same_value(const Value& left, const Value& right) {
     return left.is_boolean() && right.is_boolean() && left.as_boolean() == right.as_boolean();
   }
 
-  return left.as_number() == right.as_number();
+  return (left.as_number() <=> right.as_number()) == std::partial_ordering::equivalent;
 }
 
 std::expected<int, ParseError> compare(const Node& node, const Value& left, const Value& right) {
@@ -771,7 +772,7 @@ std::expected<int, ParseError> compare(const Node& node, const Value& left, cons
     const double a = left.as_number();
     const double b = right.as_number();
 
-    return a < b ? -1 : (a == b ? 0 : 1);
+    return a < b ? -1 : (b < a ? 1 : 0);
   }
 
   return std::unexpected(
@@ -811,6 +812,147 @@ std::expected<Value, ParseError> list_member(const Node& node, const Value& targ
   }
 
   return std::unexpected(error_at(node, std::format("a list has no '{}'", name)).error());
+}
+
+std::expected<Value, ParseError> evaluate_binary(const Node& node, ViewContext& context) {
+  auto left = evaluate(*node.left, context);
+
+  if (!left) {
+    return left;
+  }
+
+  // Both of these stop early, so "- if post && post<title>" is safe.
+  if (node.op == BinaryOperator::logical_and) {
+    if (!left->truthy()) {
+      return *left;
+    }
+
+    return evaluate(*node.right, context);
+  }
+
+  if (node.op == BinaryOperator::logical_or) {
+    if (left->truthy()) {
+      return *left;
+    }
+
+    return evaluate(*node.right, context);
+  }
+
+  auto right = evaluate(*node.right, context);
+
+  if (!right) {
+    return right;
+  }
+
+  switch (node.op) {
+    case BinaryOperator::equal:
+      return Value(same_value(*left, *right));
+
+    case BinaryOperator::not_equal:
+      return Value(!same_value(*left, *right));
+
+    case BinaryOperator::concatenate:
+      return Value(to_text(*left) + to_text(*right));
+
+    case BinaryOperator::add:
+      if (left->is_string() || right->is_string()) {
+        return Value(to_text(*left) + to_text(*right));
+      }
+
+      if (left->is_integer() && right->is_integer()) {
+        return Value(left->as_integer() + right->as_integer());
+      }
+
+      return Value(left->as_number() + right->as_number());
+
+    case BinaryOperator::subtract:
+      if (left->is_integer() && right->is_integer()) {
+        return Value(left->as_integer() - right->as_integer());
+      }
+
+      return Value(left->as_number() - right->as_number());
+
+    default:
+      break;
+  }
+
+  auto ordering = compare(node, *left, *right);
+
+  if (!ordering) {
+    return std::unexpected(ordering.error());
+  }
+
+  switch (node.op) {
+    case BinaryOperator::less:
+      return Value(*ordering < 0);
+    case BinaryOperator::less_or_equal:
+      return Value(*ordering <= 0);
+    case BinaryOperator::greater:
+      return Value(*ordering > 0);
+    case BinaryOperator::greater_or_equal:
+      return Value(*ordering >= 0);
+    default:
+      return error_at(node, "unsupported operator");
+  }
+}
+
+std::expected<Value, ParseError> evaluate_call(const Node& node, ViewContext& context) {
+  if (node.target->kind != NodeKind::name && node.target->kind != NodeKind::member) {
+    return error_at(node, "only a name can be called");
+  }
+
+  const std::string& name = node.target->text;
+
+  // A member call on a value, such as $node.children.elems, is a read.
+  if (node.target->kind == NodeKind::member && node.arguments.empty()) {
+    return evaluate(*node.target, context);
+  }
+
+  const ViewContext::Function* function = context.function(name);
+
+  if (function == nullptr) {
+    // `url` and `url()` mean the same thing, so calling a plain value with
+    // no arguments reads it.
+    if (node.arguments.empty()) {
+      if (const Value* local = context.lookup_local(name)) {
+        return *local;
+      }
+
+      if (const Value* value = context.lookup(name)) {
+        return *value;
+      }
+    }
+
+    return error_at(node, std::format("no such name '{}'{}", name, context.nearest(name)));
+  }
+
+  std::vector<ViewContext::Argument> arguments;
+
+  for (const auto& argument : node.arguments) {
+    // A deferred block reaches the function unevaluated, which is the whole
+    // point of the form.
+    if (argument->kind == NodeKind::block) {
+      auto value = evaluate(*argument->target, context);
+
+      if (!value) {
+        return value;
+      }
+
+      arguments.push_back(ViewContext::Argument{{}, std::move(*value)});
+      continue;
+    }
+
+    auto value = evaluate(*argument, context);
+
+    if (!value) {
+      return value;
+    }
+
+    arguments.push_back(ViewContext::Argument{
+      argument->kind == NodeKind::named_argument ? argument->text : std::string{}, std::move(*value)});
+  }
+
+  return (*function)(arguments);
 }
 
 }  // namespace
@@ -916,146 +1058,11 @@ std::expected<Value, ParseError> evaluate(const Node& node, ViewContext& context
       return Value(!operand->truthy());
     }
 
-    case NodeKind::binary: {
-      auto left = evaluate(*node.left, context);
+    case NodeKind::binary:
+      return evaluate_binary(node, context);
 
-      if (!left) {
-        return left;
-      }
-
-      // Both of these stop early, so "- if post && post<title>" is safe.
-      if (node.op == BinaryOperator::logical_and) {
-        if (!left->truthy()) {
-          return *left;
-        }
-
-        return evaluate(*node.right, context);
-      }
-
-      if (node.op == BinaryOperator::logical_or) {
-        if (left->truthy()) {
-          return *left;
-        }
-
-        return evaluate(*node.right, context);
-      }
-
-      auto right = evaluate(*node.right, context);
-
-      if (!right) {
-        return right;
-      }
-
-      switch (node.op) {
-        case BinaryOperator::equal:
-          return Value(same_value(*left, *right));
-
-        case BinaryOperator::not_equal:
-          return Value(!same_value(*left, *right));
-
-        case BinaryOperator::concatenate:
-          return Value(to_text(*left) + to_text(*right));
-
-        case BinaryOperator::add:
-          if (left->is_string() || right->is_string()) {
-            return Value(to_text(*left) + to_text(*right));
-          }
-
-          if (left->is_integer() && right->is_integer()) {
-            return Value(left->as_integer() + right->as_integer());
-          }
-
-          return Value(left->as_number() + right->as_number());
-
-        case BinaryOperator::subtract:
-          if (left->is_integer() && right->is_integer()) {
-            return Value(left->as_integer() - right->as_integer());
-          }
-
-          return Value(left->as_number() - right->as_number());
-
-        default:
-          break;
-      }
-
-      auto ordering = compare(node, *left, *right);
-
-      if (!ordering) {
-        return std::unexpected(ordering.error());
-      }
-
-      switch (node.op) {
-        case BinaryOperator::less:
-          return Value(*ordering < 0);
-        case BinaryOperator::less_or_equal:
-          return Value(*ordering <= 0);
-        case BinaryOperator::greater:
-          return Value(*ordering > 0);
-        case BinaryOperator::greater_or_equal:
-          return Value(*ordering >= 0);
-        default:
-          return error_at(node, "unsupported operator");
-      }
-    }
-
-    case NodeKind::call: {
-      if (node.target->kind != NodeKind::name && node.target->kind != NodeKind::member) {
-        return error_at(node, "only a name can be called");
-      }
-
-      const std::string& name = node.target->text;
-
-      // A member call on a value, such as $node.children.elems, is a read.
-      if (node.target->kind == NodeKind::member && node.arguments.empty()) {
-        return evaluate(*node.target, context);
-      }
-
-      const ViewContext::Function* function = context.function(name);
-
-      if (function == nullptr) {
-        // `url` and `url()` mean the same thing, so calling a plain value with
-        // no arguments reads it.
-        if (node.arguments.empty()) {
-          if (const Value* local = context.lookup_local(name)) {
-            return *local;
-          }
-
-          if (const Value* value = context.lookup(name)) {
-            return *value;
-          }
-        }
-
-        return error_at(node, std::format("no such name '{}'{}", name, context.nearest(name)));
-      }
-
-      std::vector<ViewContext::Argument> arguments;
-
-      for (const auto& argument : node.arguments) {
-        // A deferred block reaches the function unevaluated, which is the whole
-        // point of the form.
-        if (argument->kind == NodeKind::block) {
-          auto value = evaluate(*argument->target, context);
-
-          if (!value) {
-            return value;
-          }
-
-          arguments.push_back(ViewContext::Argument{{}, std::move(*value)});
-          continue;
-        }
-
-        auto value = evaluate(*argument, context);
-
-        if (!value) {
-          return value;
-        }
-
-        arguments.push_back(ViewContext::Argument{
-          argument->kind == NodeKind::named_argument ? argument->text : std::string{}, std::move(*value)});
-      }
-
-      return (*function)(arguments);
-    }
+    case NodeKind::call:
+      return evaluate_call(node, context);
   }
 
   return error_at(node, "unsupported expression");

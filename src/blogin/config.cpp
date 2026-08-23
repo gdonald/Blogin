@@ -140,24 +140,115 @@ const SectionConfig* Config::section(std::string_view name) const {
   return found == sections.end() ? nullptr : &*found;
 }
 
-std::expected<Config, ParseError> Config::from_value(const Value& value) {
-  if (!value.is_object()) {
-    return std::unexpected(ParseError{"config must be an object", 1, 1});
+namespace {
+
+// Every format a feed can be written in, checked against the ones there are.
+std::expected<void, ParseError> read_feed_formats(const Value& item, Config& config) {
+  auto parsed = want_string_list(item, "feed-formats");
+
+  if (!parsed) {
+    return std::unexpected(parsed.error());
   }
 
-  Config config;
+  for (const std::string& format : *parsed) {
+    const auto* const found = std::find_if(known_feed_formats.begin(), known_feed_formats.end(),
+                                           [&](const char* candidate) { return format == candidate; });
 
-  for (const Value::Member& member : value.members()) {
-    const std::string& key = member.first;
-    const Value& item = member.second;
-
-    const auto *const is_known = std::find_if(known_keys.begin(), known_keys.end(),
-                                       [&](const char* candidate) { return key == candidate; });
-
-    if (is_known == known_keys.end()) {
-      config.unknown_keys.push_back(key);
-      continue;
+    if (found == known_feed_formats.end()) {
+      return std::unexpected(ParseError{
+        std::format("config key 'feed-formats' has an unknown format '{}' (use atom, rss, or json)", format), 1, 1});
     }
+  }
+
+  config.feed_formats = std::move(*parsed);
+
+  return {};
+}
+
+// The per-language block, which carries a title for each language code.
+std::expected<void, ParseError> read_language_config(const Value& item, Config& config) {
+  if (!item.is_object()) {
+    return std::unexpected(wrong_type("language-config", "a map", item).error());
+  }
+
+  for (const Value::Member& entry : item.members()) {
+    if (!entry.second.is_object()) {
+      return std::unexpected(
+        wrong_type(std::format("language-config.{}", entry.first), "a map", entry.second).error());
+    }
+
+    LanguageConfig language;
+    language.code = entry.first;
+
+    if (const Value* language_title = entry.second.find("title")) {
+      auto parsed = want_string(*language_title, std::format("language-config.{}.title", entry.first));
+
+      if (!parsed) {
+        return std::unexpected(parsed.error());
+      }
+
+      language.title = std::move(*parsed);
+    }
+
+    config.language_config.push_back(std::move(language));
+  }
+
+  return {};
+}
+
+// One section's fields, each of which overrides the site-wide one.
+std::expected<void, ParseError> read_section(const Value::Member& entry, SectionConfig& section) {
+  const auto field = [&](const char* field_name) { return std::format("sections.{}.{}", entry.first, field_name); };
+
+#define BLOGIN_SECTION_FIELD(reader, name, member)              \
+  if (const Value* found = entry.second.find(name)) {           \
+    auto parsed = reader(*found, field(name));                  \
+                                                                \
+    if (!parsed) {                                              \
+      return std::unexpected(parsed.error());                   \
+    }                                                           \
+                                                                \
+    section.member = std::move(*parsed);                        \
+  }
+
+  BLOGIN_SECTION_FIELD(want_int, "page-size", page_size)
+  BLOGIN_SECTION_FIELD(want_string, "label", label)
+  BLOGIN_SECTION_FIELD(want_int, "order", order)
+  BLOGIN_SECTION_FIELD(want_bool, "nav", nav)
+  BLOGIN_SECTION_FIELD(want_string, "layout", layout)
+  BLOGIN_SECTION_FIELD(want_bool, "index-dates", index_dates)
+  BLOGIN_SECTION_FIELD(want_bool, "show-dates", show_dates)
+
+#undef BLOGIN_SECTION_FIELD
+
+  return {};
+}
+
+// The per-section block, whose fields override the site-wide ones.
+std::expected<void, ParseError> read_sections(const Value& item, Config& config) {
+  if (!item.is_object()) {
+    return std::unexpected(wrong_type("sections", "a map", item).error());
+  }
+
+  for (const Value::Member& entry : item.members()) {
+    if (!entry.second.is_object()) {
+      return std::unexpected(wrong_type(std::format("sections.{}", entry.first), "a map", entry.second).error());
+    }
+
+    SectionConfig section;
+    section.name = entry.first;
+
+    if (auto read = read_section(entry, section); !read) {
+      return std::unexpected(read.error());
+    }
+
+    config.sections.push_back(std::move(section));
+  }
+
+  return {};
+}
+
+}  // namespace
 
 #define BLOGIN_STRING_KEY(name, field)                    \
   if (key == (name)) {                                    \
@@ -191,6 +282,25 @@ std::expected<Config, ParseError> Config::from_value(const Value& value) {
     continue;                                             \
   }
 
+std::expected<Config, ParseError> Config::from_value(const Value& value) {
+  if (!value.is_object()) {
+    return std::unexpected(ParseError{"config must be an object", 1, 1});
+  }
+
+  Config config;
+
+  for (const Value::Member& member : value.members()) {
+    const std::string& key = member.first;
+    const Value& item = member.second;
+
+    const auto *const is_known = std::find_if(known_keys.begin(), known_keys.end(),
+                                       [&](const char* candidate) { return key == candidate; });
+
+    if (is_known == known_keys.end()) {
+      config.unknown_keys.push_back(key);
+      continue;
+    }
+
     BLOGIN_STRING_KEY("title", title)
     BLOGIN_STRING_KEY("base-url", base_url)
     BLOGIN_STRING_KEY("output-dir", output_dir)
@@ -217,11 +327,6 @@ std::expected<Config, ParseError> Config::from_value(const Value& value) {
     BLOGIN_STRING_LIST_KEY("taxonomies", taxonomies)
     BLOGIN_STRING_LIST_KEY("languages", languages)
 
-#undef BLOGIN_STRING_KEY
-#undef BLOGIN_INT_KEY
-#undef BLOGIN_BOOL_KEY
-#undef BLOGIN_STRING_LIST_KEY
-
     if (key == "image-widths") {
       auto parsed = want_int_list(item, key);
 
@@ -234,123 +339,30 @@ std::expected<Config, ParseError> Config::from_value(const Value& value) {
     }
 
     if (key == "feed-formats") {
-      auto parsed = want_string_list(item, key);
+      auto read = read_feed_formats(item, config);
 
-      if (!parsed) {
-        return std::unexpected(parsed.error());
+      if (!read) {
+        return std::unexpected(read.error());
       }
 
-      for (const std::string& format : *parsed) {
-        const auto *const found = std::find_if(known_feed_formats.begin(), known_feed_formats.end(),
-                                        [&](const char* candidate) { return format == candidate; });
-
-        if (found == known_feed_formats.end()) {
-          return std::unexpected(ParseError{
-            std::format("config key 'feed-formats' has an unknown format '{}' (use atom, rss, or json)", format),
-            1, 1});
-        }
-      }
-
-      config.feed_formats = std::move(*parsed);
       continue;
     }
 
     if (key == "language-config") {
-      if (!item.is_object()) {
-        return std::unexpected(wrong_type(key, "a map", item).error());
-      }
+      auto read = read_language_config(item, config);
 
-      for (const Value::Member& entry : item.members()) {
-        if (!entry.second.is_object()) {
-          return std::unexpected(
-            wrong_type(std::format("language-config.{}", entry.first), "a map", entry.second).error());
-        }
-
-        LanguageConfig language;
-        language.code = entry.first;
-
-        if (const Value* language_title = entry.second.find("title")) {
-          auto parsed = want_string(*language_title, std::format("language-config.{}.title", entry.first));
-
-          if (!parsed) {
-            return std::unexpected(parsed.error());
-          }
-
-          language.title = std::move(*parsed);
-        }
-
-        config.language_config.push_back(std::move(language));
+      if (!read) {
+        return std::unexpected(read.error());
       }
 
       continue;
     }
 
     if (key == "sections") {
-      if (!item.is_object()) {
-        return std::unexpected(wrong_type(key, "a map", item).error());
-      }
+      auto read = read_sections(item, config);
 
-      for (const Value::Member& entry : item.members()) {
-        if (!entry.second.is_object()) {
-          return std::unexpected(
-            wrong_type(std::format("sections.{}", entry.first), "a map", entry.second).error());
-        }
-
-        SectionConfig section;
-        section.name = entry.first;
-
-        const auto field = [&](const char* field_name) { return std::format("sections.{}.{}", entry.first, field_name); };
-
-        if (const Value* found = entry.second.find("page-size")) {
-          auto parsed = want_int(*found, field("page-size"));
-          if (!parsed) { return std::unexpected(parsed.error());
-}
-          section.page_size = *parsed;
-        }
-
-        if (const Value* found = entry.second.find("label")) {
-          auto parsed = want_string(*found, field("label"));
-          if (!parsed) { return std::unexpected(parsed.error());
-}
-          section.label = std::move(*parsed);
-        }
-
-        if (const Value* found = entry.second.find("order")) {
-          auto parsed = want_int(*found, field("order"));
-          if (!parsed) { return std::unexpected(parsed.error());
-}
-          section.order = *parsed;
-        }
-
-        if (const Value* found = entry.second.find("nav")) {
-          auto parsed = want_bool(*found, field("nav"));
-          if (!parsed) { return std::unexpected(parsed.error());
-}
-          section.nav = *parsed;
-        }
-
-        if (const Value* found = entry.second.find("layout")) {
-          auto parsed = want_string(*found, field("layout"));
-          if (!parsed) { return std::unexpected(parsed.error());
-}
-          section.layout = std::move(*parsed);
-        }
-
-        if (const Value* found = entry.second.find("index-dates")) {
-          auto parsed = want_bool(*found, field("index-dates"));
-          if (!parsed) { return std::unexpected(parsed.error());
-}
-          section.index_dates = *parsed;
-        }
-
-        if (const Value* found = entry.second.find("show-dates")) {
-          auto parsed = want_bool(*found, field("show-dates"));
-          if (!parsed) { return std::unexpected(parsed.error());
-}
-          section.show_dates = *parsed;
-        }
-
-        config.sections.push_back(std::move(section));
+      if (!read) {
+        return std::unexpected(read.error());
       }
 
       continue;
@@ -359,6 +371,11 @@ std::expected<Config, ParseError> Config::from_value(const Value& value) {
 
   return config;
 }
+
+#undef BLOGIN_STRING_KEY
+#undef BLOGIN_INT_KEY
+#undef BLOGIN_BOOL_KEY
+#undef BLOGIN_STRING_LIST_KEY
 
 std::expected<Config, ParseError> Config::load(const std::filesystem::path& path) {
   std::ifstream input(path, std::ios::binary);

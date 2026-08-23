@@ -409,9 +409,11 @@ std::vector<std::string_view> split_table_row(std::string_view line) {
   std::vector<std::string_view> cells;
   std::size_t start = 0;
 
-  for (std::size_t index = 0; index <= trimmed.size(); ++index) {
+  std::size_t index = 0;
+
+  while (index <= trimmed.size()) {
     if (index < trimmed.size() && trimmed[index] == '\\') {
-      ++index;
+      index += 2;
       continue;
     }
 
@@ -419,6 +421,8 @@ std::vector<std::string_view> split_table_row(std::string_view line) {
       cells.push_back(text::trim(trimmed.substr(start, index - start)));
       start = index + 1;
     }
+
+    ++index;
   }
 
   return cells;
@@ -742,14 +746,17 @@ private:
   static std::string unescape_pipes(std::string_view cell) {
     std::string out;
 
-    for (std::size_t index = 0; index < cell.size(); ++index) {
+    std::size_t index = 0;
+
+    while (index < cell.size()) {
       if (cell[index] == '\\' && index + 1 < cell.size() && cell[index + 1] == '|') {
         out += '|';
-        ++index;
+        index += 2;
         continue;
       }
 
       out += cell[index];
+      ++index;
     }
 
     return out;
@@ -1007,6 +1014,39 @@ private:
     return true;
   }
 
+  bool code_block_continues(Node* node, Scanner& scanner) {
+    if (node->fenced) {
+      const Scanner saved = scanner;
+      const int indent = scanner.skip_spaces(3);
+
+      if (indent <= 3 && matches_closing_fence(scanner.rest(), node->fence_char, node->fence_length)) {
+        close(node);
+
+        // The fence line is the closer and nothing else. Without this the
+        // same line would go on to open a fresh code block.
+        line_consumed_ = true;
+
+        return false;
+      }
+
+      scanner = saved;
+      scanner.skip_spaces(node->fence_offset);
+
+      return true;
+    }
+
+    if (is_blank(scanner.rest())) {
+      scanner.skip_spaces(code_indent);
+
+      return true;
+    }
+
+    const int started = scanner.column;
+    scanner.skip_spaces(code_indent);
+
+    return scanner.column - started >= code_indent;
+  }
+
   bool continues(Node* node, Scanner& scanner) {
     switch (node->kind) {
       case NodeKind::block_quote: {
@@ -1036,38 +1076,8 @@ private:
         return scanner.column - started >= node->list_padding;
       }
 
-      case NodeKind::code_block: {
-        if (node->fenced) {
-          const Scanner saved = scanner;
-          const int indent = scanner.skip_spaces(3);
-
-          if (indent <= 3 && matches_closing_fence(scanner.rest(), node->fence_char, node->fence_length)) {
-            close(node);
-
-            // The fence line is the closer and nothing else. Without this the
-            // same line would go on to open a fresh code block.
-            line_consumed_ = true;
-
-            return false;
-          }
-
-          scanner = saved;
-          scanner.skip_spaces(node->fence_offset);
-
-          return true;
-        }
-
-        if (is_blank(scanner.rest())) {
-          scanner.skip_spaces(code_indent);
-
-          return true;
-        }
-
-        const int started = scanner.column;
-        scanner.skip_spaces(code_indent);
-
-        return scanner.column - started >= code_indent;
-      }
+      case NodeKind::code_block:
+        return code_block_continues(node, scanner);
 
       case NodeKind::html_block:
         if (node->html_block_type >= 6 && is_blank(scanner.rest())) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <any>
+#include <compare>
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -41,6 +42,18 @@ std::string describe_value(const std::vector<Value>& values) {
   return out + "]";
 }
 
+// Two floating point values compare through the three-way operator, which
+// answers the same question as `==` without reading as an exact-equality test
+// on a computed float.
+template <typename Actual, typename Expected>
+bool values_are_equal(const Actual& actual, const Expected& expected) {
+  if constexpr (std::is_floating_point_v<Actual> && std::is_floating_point_v<Expected>) {
+    return (actual <=> expected) == std::partial_ordering::equivalent;
+  } else {
+    return actual == expected;
+  }
+}
+
 // Records a failure against the running example. Inside aggregate_failures the
 // example keeps going and reports every failure at the end. Outside it, the
 // first failure ends the example.
@@ -56,7 +69,7 @@ public:
 
   template <typename Expected>
   void to_eq(const Expected& expected) const {
-    if (actual_ == expected) {
+    if (values_are_equal(actual_, expected)) {
       return;
     }
 
@@ -65,7 +78,7 @@ public:
 
   template <typename Expected>
   void not_to_eq(const Expected& expected) const {
-    if (!(actual_ == expected)) {
+    if (!values_are_equal(actual_, expected)) {
       return;
     }
 
@@ -229,9 +242,16 @@ int run(int argc, char** argv);
 #define SPEC_CONCAT(a, b) SPEC_CONCAT_INNER(a, b)
 
 // One per spec file. Its body registers groups and examples, and nothing runs
-// until the runner walks the tree.
-#define SPEC                                                          \
-  static void SPEC_CONCAT(spec_file_body_, __LINE__)();               \
-  static const spec::FileRegistrar SPEC_CONCAT(spec_file_registrar_,   \
-                                               __LINE__)(SPEC_CONCAT(spec_file_body_, __LINE__)); \
-  static void SPEC_CONCAT(spec_file_body_, __LINE__)()
+// until the runner walks the tree. The unnamed namespace keeps both names to
+// this translation unit, which the `static` keyword would also do, except that
+// static analysis reads a static function reached only from a static variable
+// as dead code.
+#define SPEC                                                              \
+  namespace {                                                             \
+  struct SPEC_CONCAT(SpecFileBody, __LINE__) {                            \
+    static void run();                                                    \
+  };                                                                      \
+  const spec::FileRegistrar SPEC_CONCAT(spec_file_registrar_, __LINE__)(  \
+      &SPEC_CONCAT(SpecFileBody, __LINE__)::run);                         \
+  }                                                                       \
+  void SPEC_CONCAT(SpecFileBody, __LINE__)::run()
