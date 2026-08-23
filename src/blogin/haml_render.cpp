@@ -92,7 +92,6 @@ private:
 
   std::expected<std::size_t, ParseError> render_conditional(const Node& parent, std::size_t index) {
     bool taken = false;
-    bool first = true;
 
     while (index < parent.children.size()) {
       const Node& branch = *parent.children[index];
@@ -104,19 +103,9 @@ private:
       const bool is_head = branch.control == ControlKind::if_ || branch.control == ControlKind::unless_;
       const bool is_tail = branch.control == ControlKind::elsif_ || branch.control == ControlKind::else_;
 
-      // A second `if` starts its own chain. This has to be about position
-      // within the chain, not position in the file: comparing against the
-      // absolute index made the first branch of a later chain end the walk
-      // without consuming anything, and the caller then spun on it forever.
-      if (!first && is_head) {
-        break;
-      }
-
       if (!is_head && !is_tail) {
         break;
       }
-
-      first = false;
 
       if (!taken) {
         bool condition = true;
@@ -146,6 +135,12 @@ private:
         break;
       }
 
+      // A chain runs until something that is not one of its own branches. A
+      // second `if` starts a chain of its own, and the caller enters this again
+      // at that index. Ending the chain here rather than at the top of the loop
+      // is what keeps the walk moving: a version that broke on the head of the
+      // next chain returned without consuming anything, and the caller spun on
+      // it forever.
       const ControlKind next = parent.children[index]->control;
 
       if (next != ControlKind::elsif_ && next != ControlKind::else_) {

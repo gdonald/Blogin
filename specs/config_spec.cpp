@@ -174,6 +174,16 @@ SPEC {
         expect(blogin::nearest_key_hint("completely-unrelated-nonsense")).to_eq("");
       });
 
+      // Three edits away is a typo. Four is a different word, and guessing at
+      // it would be noise.
+      spec::it("suggests nothing for a key four edits from the nearest", [] {
+        expect(blogin::nearest_key_hint("titlexxxx")).to_eq("");
+      });
+
+      spec::it("suggests the nearest for a key three edits from it", [] {
+        expect(blogin::nearest_key_hint("titlexxx")).to_contain("title");
+      });
+
       spec::it("carries the plugins key as unknown", [] {
         expect(from(R"({"plugins":["Some::Module"]})").unknown_keys[0]).to_eq("plugins");
       });

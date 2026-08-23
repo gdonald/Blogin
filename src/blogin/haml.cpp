@@ -454,10 +454,9 @@ private:
         continue;
       }
 
-      while (position < body.size() && (body[position] == ' ' || body[position] == '\t')) {
-        ++position;
-      }
-
+      // Whatever separates the name from its value is left where it is. The
+      // value is trimmed below, so skipping it here would be the same work
+      // twice.
       const std::size_t value_start = position;
       char value_quote = '\0';
       int value_depth = 0;

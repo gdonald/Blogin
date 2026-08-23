@@ -136,6 +136,16 @@ SPEC {
         expect(render("%p.one{class: 'two'}")).to_contain("class=\"one two\"");
       });
 
+      // An attribute name runs through letters of either case, digits, and the
+      // two joining characters, and every one of those ends is inclusive.
+      spec::it("takes a name spanning the characters a name is made of", [] {
+        expect(render("%p{azAZ09-_: 'x'}")).to_contain("azAZ09-_=\"x\"");
+      });
+
+      spec::it("takes a tab between a name and its value", [] {
+        expect(render("%a{href:\t'/x'}")).to_eq("<a href=\"/x\"></a>\n");
+      });
+
       spec::it("escapes a value", [] {
         expect(render("%a{title: unsafe}")).to_contain("title=\"a &lt; b\"");
       });

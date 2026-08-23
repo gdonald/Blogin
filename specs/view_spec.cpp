@@ -78,6 +78,29 @@ SPEC {
         expect(value_of(*context(), "section-label")).to_eq("Writing");
       });
 
+      spec::it("labels a section the nav does not know from its own name", [] {
+        PostView page = sample_page();
+        const Post post = sample_post();
+        page.post = &post;
+        page.chrome.section = "release-notes";
+
+        blogin::ViewContext built = blogin::view::build(page);
+
+        expect(value_of(built, "section-label")).to_eq("Release Notes");
+      });
+
+      // A subsection is labelled by its own name, not by the path it sits at.
+      spec::it("labels a subsection from the last part of its path", [] {
+        PostView page = sample_page();
+        const Post post = sample_post();
+        page.post = &post;
+        page.chrome.section = "guide/release-notes";
+
+        blogin::ViewContext built = blogin::view::build(page);
+
+        expect(value_of(built, "section-label")).to_eq("Release Notes");
+      });
+
       spec::it("offers the navigation tree", [=] {
         expect(context()->lookup("nav-nodes")->size()).to_eq(std::size_t{1});
       });

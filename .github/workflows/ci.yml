@@ -99,6 +99,18 @@ jobs:
       - name: Check every translation unit
         run: ./scripts/test.sh tidy
 
+  valgrind:
+    name: Valgrind
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The one check that reports a read of uninitialised memory. The
+      # sanitizers do not see that class of defect, and neither does coverage.
+      # Memcheck interprets every instruction, so this is the slowest job here.
+      - name: Run the specs under memcheck
+        run: ./scripts/test.sh valgrind
+
   coverage:
     name: Coverage (macOS)
     runs-on: macos-15

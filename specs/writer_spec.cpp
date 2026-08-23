@@ -300,6 +300,17 @@ SPEC {
         expect(writer.since(writer.mark())).to_eq(std::vector<std::string>{});
       });
 
+      // A mark from a writer that has since been replaced names an entry this
+      // one never had, and answering with nothing beats reading past the end.
+      spec::it("remembers nothing produced since a mark it never handed out", [] {
+        const std::filesystem::path root = scratch();
+
+        Writer writer(root);
+        writer.write(root / "first.html", "one");
+
+        expect(writer.since(64)).to_eq(std::vector<std::string>{});
+      });
+
       // A file the build changed some other way is still output, and pruning
       // has to know that.
       spec::it("records a file it did not write itself", [] {

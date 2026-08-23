@@ -441,6 +441,12 @@ SPEC {
         expect(render("[text][a]\n\n[a]: /one\n[a]: /two\n")).to_contain("/one");
       });
 
+      // A label matches whatever case either side is written in, and the range
+      // it lowercases runs from A through Z inclusive.
+      spec::it("matches a label written in another case", [] {
+        expect(render("[text][AZ]\n\n[az]: /one\n")).to_contain("/one");
+      });
+
       spec::it("leaves a definition whose title sits alone on the next line alone", [] {
         expect(render("[text][a]\n\n[a]: /one\n\"Title\"\n")).to_contain("/one");
       });

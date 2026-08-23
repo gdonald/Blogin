@@ -1,8 +1,10 @@
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <ios>
 #include <string>
 
+#include "counters.h"
 #include "files.h"
 #include "support/spec.h"
 
@@ -41,6 +43,43 @@ SPEC {
       });
     });
 
+    // The scratch tree is shared, and the walk touches the global directory
+    // counter.
+    spec::serial();
+
+    // A path that exists and is not a directory has nothing under it either,
+    // and asking is how a caller finds that out.
+    spec::context("a path that is a file", [] {
+      spec::it("lists nothing under it", [] {
+        const std::filesystem::path root = make_tree("file-not-directory");
+
+        touch(root / "page.md");
+
+        expect(blogin::files::all_files(root / "page.md").size()).to_eq(std::size_t{0});
+      });
+
+      spec::it("finds no descendants of it", [] {
+        const std::filesystem::path root = make_tree("file-not-directory-dirs");
+
+        touch(root / "page.md");
+
+        expect(blogin::files::descendant_directories(root / "page.md").size()).to_eq(std::size_t{0});
+      });
+
+      // Answering with nothing is not the same as looking. A file is rejected
+      // before the walk counts a directory it was never going to read.
+      spec::it("does not count a directory walk for it", [] {
+        const std::filesystem::path root = make_tree("file-not-directory-walks");
+
+        touch(root / "page.md");
+
+        blogin::reset_counters();
+        blogin::files::all_files(root / "page.md");
+
+        expect(blogin::counter_value(blogin::Counter::directory_walks)).to_eq(std::uint64_t{0});
+      });
+    });
+
     // A symlink pointing back up the tree would otherwise be walked forever.
     spec::context("a directory reachable twice", [] {
       spec::it("walks it once", [] {
@@ -54,10 +93,6 @@ SPEC {
         expect(blogin::files::descendant_directories(root).size()).to_be_less_than(std::size_t{8});
       });
     });
-
-    // The scratch tree is shared, and the walk touches the global directory
-    // counter.
-    spec::serial();
 
     spec::context("listing every file", [] {
       auto root = spec::let([] {

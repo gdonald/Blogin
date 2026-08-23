@@ -772,9 +772,9 @@ private:
 
   // Reads what follows a closing bracket: an inline destination, a reference
   // label, or nothing.
-  bool resolve_link(std::string& url, std::string& title, bool& matched) {
-    matched = false;
-
+  // Whether the bracket is followed by an inline destination, and the url and
+  // title it carries when it is.
+  bool resolve_link(std::string& url, std::string& title) {
     if (position_ >= input_.size() || input_[position_] != '(') {
       return false;
     }
@@ -809,7 +809,6 @@ private:
     url = unescape_string(destination);
     title = unescape_string(found_title);
     position_ = scan + 1;
-    matched = true;
 
     return true;
   }
@@ -849,9 +848,7 @@ private:
 
     std::string url;
     std::string title;
-    bool matched = false;
-
-    resolve_link(url, title, matched);
+    bool matched = resolve_link(url, title);
 
     if (!matched) {
       // A reference link, either with an explicit label or using its own text.

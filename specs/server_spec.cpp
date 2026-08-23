@@ -144,15 +144,26 @@ public:
   // Reads until the connection goes quiet or `wanted` bytes have arrived. The
   // quiet window is what a caller waiting for nothing pays, so it is short, and
   // receive_until is what waits a long time for something.
+  // Waits for an answer to start, then reads what follows it.
+  //
+  // The deadline bounds how long an example that will never get an answer takes
+  // to say so, and is not what is being asserted: the first byte is waited for
+  // however long the machine takes to produce it. Once bytes are arriving, a
+  // short idle says the answer is complete, since nothing else is coming on a
+  // connection that is being kept alive.
   std::string receive(std::size_t wanted = 0) const {
     std::string out;
     char chunk[4096];
 
-    for (int attempt = 0; attempt < 25; ++attempt) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    int idle = 0;
+
+    while (out.empty() ? std::chrono::steady_clock::now() < deadline : idle < 25) {
       const ssize_t received = ::recv(socket_, chunk, sizeof(chunk), MSG_DONTWAIT);
 
       if (received > 0) {
         out.append(chunk, static_cast<std::size_t>(received));
+        idle = 0;
 
         if (wanted > 0 && out.size() >= wanted) {
           break;
@@ -167,6 +178,7 @@ public:
         break;
       }
 
+      ++idle;
       std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 

@@ -150,6 +150,15 @@ SPEC {
       spec::it("refuses to read a member of a number", [] {
         expect(error_of("count.name")).to_contain("cannot read");
       });
+
+      // Only a string answers to these two, and only these two are answered.
+      spec::it("refuses to count the characters of a number", [] {
+        expect(error_of("count.chars")).to_contain("cannot read");
+      });
+
+      spec::it("refuses a member of a string that is not a count", [] {
+        expect(error_of("title.name")).to_contain("cannot read");
+      });
     });
 
     spec::context("truthiness", [] {
@@ -289,11 +298,29 @@ SPEC {
         expect(std::string(evaluate("{one: 'a', two: 'b'}<two>").as_string())).to_eq("b");
       });
 
+      // A key starts with a letter of either case or an underscore, and runs
+      // on through letters, digits, and the two joining characters.
+      spec::it("takes a key at either end of the letters", [] {
+        expect(std::string(evaluate("{aZ: 'a', zA: 'b'}<zA>").as_string())).to_eq("b");
+      });
+
+      spec::it("takes a key that starts with an underscore", [] {
+        expect(std::string(evaluate("{_key: 'a'}<_key>").as_string())).to_eq("a");
+      });
+
+      spec::it("takes a key carrying digits and joining characters", [] {
+        expect(std::string(evaluate("{a0-9_z: 'a'}<a0-9_z>").as_string())).to_eq("a");
+      });
+
       spec::it("holds an expression rather than only a literal", [] {
         expect(std::string(evaluate("{joined: title ~ '!'}<joined>").as_string())).to_eq("Blogin!");
       });
 
       spec::it("can be empty", [] { expect(evaluate("{}").truthy()).to_be_false(); });
+
+      // A brace opens either a map or a deferred block, and an empty one is a
+      // map. A block would evaluate to nothing rather than to an object.
+      spec::it("reads an empty one as an object", [] { expect(evaluate("{}").is_object()).to_be_true(); });
 
       // The two forms are told apart by what follows the first name, so a block
       // is still a block.
@@ -481,6 +508,10 @@ SPEC {
 
       spec::it("counts the characters of a string", [] {
         expect(evaluate("title.chars").as_integer()).to_eq(6);
+      });
+
+      spec::it("counts the characters of a string asked for as elements", [] {
+        expect(evaluate("title.elems").as_integer()).to_eq(6);
       });
     });
 

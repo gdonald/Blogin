@@ -471,35 +471,31 @@ std::vector<CellAlignment> table_alignments(std::string_view line) {
   return alignments;
 }
 
-// A task marker opens the first paragraph of a list item.
+// A task marker opens the first paragraph of a list item. Every field is set
+// together, so there is nothing to default: a marker either matched, and then
+// says whether its box was checked and how wide it was, or it did not.
 struct TaskMatch {
-  bool matched = false;
-  bool checked = false;
-  std::size_t width = 0;
+  bool matched;
+  bool checked;
+  std::size_t width;
 };
 
 TaskMatch match_task_marker(std::string_view content) {
-  TaskMatch match;
-
   if (content.size() < 3 || content[0] != '[' || content[2] != ']') {
-    return match;
+    return TaskMatch{};
   }
 
   const char box = content[1];
 
   if (box != ' ' && box != 'x' && box != 'X') {
-    return match;
+    return TaskMatch{};
   }
 
   if (content.size() > 3 && !is_space_or_tab(content[3])) {
-    return match;
+    return TaskMatch{};
   }
 
-  match.matched = true;
-  match.checked = box != ' ';
-  match.width = content.size() > 3 ? 4 : 3;
-
-  return match;
+  return TaskMatch{true, box != ' ', content.size() > 3 ? std::size_t{4} : std::size_t{3}};
 }
 
 // {{< name key="value" >}} alone on a line.
@@ -835,11 +831,9 @@ private:
     node->parent = nullptr;
   }
 
-  static void loosen(Node* list) {
-    if (list != nullptr && list->kind == NodeKind::list) {
-      list->tight = false;
-    }
-  }
+  // Both callers hand this the list itself: an item is only ever added under
+  // one, so its parent is a list, and the other call site has just checked.
+  static void loosen(Node& list) { list.tight = false; }
 
   // A list is loose when a blank line separates content inside it.
   static void finalize_list(Node* list) {
@@ -874,12 +868,12 @@ private:
     // A blank line inside an item, followed by more content in that item, makes
     // the whole list loose. So does a blank line between two items.
     if (tip_->kind == NodeKind::item && tip_->last_line_blank && tip_->first_child != nullptr) {
-      loosen(tip_->parent);
+      loosen(*tip_->parent);
     }
 
     if (kind == NodeKind::item && tip_->kind == NodeKind::list && tip_->last_child != nullptr &&
         tip_->last_child->last_line_blank) {
-      loosen(tip_);
+      loosen(*tip_);
     }
 
     Node* node = make(kind);

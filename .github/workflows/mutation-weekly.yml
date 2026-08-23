@@ -1,0 +1,66 @@
+name: Mutation
+
+# Mutation testing says what coverage cannot: whether an assertion would have
+# caught the code changing. It runs weekly rather than per commit because one
+# mutant costs a rebuild and a spec run, and a sample large enough to mean
+# something takes half an hour.
+#
+# The sample is drawn per run from the seed below. A different seed each week
+# reaches parts of the library the last one did not, and passing an explicit
+# seed reproduces a run exactly.
+
+on:
+  schedule:
+    - cron: '0 7 * * 0'
+  workflow_dispatch:
+    inputs:
+      count:
+        description: How many mutants to run
+        required: false
+        default: '300'
+      seed:
+        description: Which sample to take
+        required: false
+        default: '0'
+
+concurrency:
+  group: mutation-weekly
+  cancel-in-progress: false
+
+# Read-only by default. A job that needs to write says so itself, so a new job
+# cannot quietly inherit the ability to push, release, or comment.
+permissions: read-all
+
+jobs:
+  mutate:
+    name: Mutation score
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the image
+        run: docker build -t blogin-dev docker
+
+      # The floor is a ratchet, the same as the coverage floors. A sample of 120
+      # scored 85.9% the day this was added, and the floor sits under that
+      # because a different sample reaches different code. Raise it as the score
+      # climbs, and read the survivors a run prints: each is a change to the
+      # library that no example objects to.
+      - name: Run the mutants
+        run: |
+          docker run --rm -v "$PWD:/workspace" -w /workspace blogin-dev bash -euo pipefail -c "
+            ./scripts/mutate.py \
+              --build-dir build-linux/mutate \
+              --count ${{ github.event.inputs.count || 300 }} \
+              --seed ${{ github.event.inputs.seed || 0 }} \
+              --floor 80 \
+              | tee mutation-report.txt
+          "
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: mutation-report
+          path: mutation-report.txt
+          if-no-files-found: ignore

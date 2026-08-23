@@ -160,12 +160,18 @@ stage_linux_static() {
 # plain build and a sanitizer build, both against libstdc++ rather than libc++.
 # A different frontend also reports what clang accepts.
 #
+# The plain build turns on libstdc++'s debug containers, which is the check for
+# an iterator used after its container moved it and for a range whose ends come
+# from different containers. It needs libstdc++, so this is the stage that has
+# it. The sanitizer build below leaves it off: AddressSanitizer is what that
+# build is for, and debug containers on top of it only make it slower.
+#
 # The integer checks and coverage are left out because they are clang's alone,
 # which CMakeLists refuses at configure time rather than mid-build.
 stage_gcc() {
   build_image
   in_container "
-    cmake -S . -B $container_build_root/gcc -DCMAKE_BUILD_TYPE=Debug \
+    cmake -S . -B $container_build_root/gcc -DCMAKE_BUILD_TYPE=Debug -DBLOGIN_GLIBCXX_DEBUG=ON \
       -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc
     cmake --build $container_build_root/gcc -j\"\${BLOGIN_JOBS:-\$(nproc)}\"
     ./$container_build_root/gcc/blogin_specs --jobs \"\${BLOGIN_JOBS:-\$(nproc)}\"
@@ -174,6 +180,16 @@ stage_gcc() {
       -DCMAKE_CXX_COMPILER=g++ -DCMAKE_C_COMPILER=gcc
     cmake --build $container_build_root/gcc-asan -j\"\${BLOGIN_JOBS:-\$(nproc)}\"
     ./$container_build_root/gcc-asan/blogin_specs --jobs \"\${BLOGIN_JOBS:-\$(nproc)}\"
+  "
+}
+
+# In the container on every host, because Valgrind does not run on macOS. The
+# build carries no sanitizer: memcheck and the sanitizers each replace the
+# allocator, and a binary carrying both reports nothing useful.
+stage_valgrind() {
+  build_image
+  in_container "
+    BLOGIN_VALGRIND_BUILD_DIR=$container_build_root/valgrind ./scripts/valgrind.sh
   "
 }
 
@@ -231,11 +247,12 @@ stages=(
   "linux-static|docker|The static Linux binary, checked with nothing installed"
   "gcc|docker|GCC builds against libstdc++, plain and with sanitizers, then the specs"
   "tidy|docker|clang-tidy over every translation unit"
+  "valgrind|docker|The specs under memcheck, for uninitialised reads and leaks"
   "coverage-linux|docker|The same coverage floor on Linux"
 )
 
 native_stages=(specs sanitize thread dist coverage codeql)
-container_stages=(linux linux-static gcc tidy coverage-linux)
+container_stages=(linux linux-static gcc tidy valgrind coverage-linux)
 
 field() {
   printf '%s' "$1" | cut -d'|' -f"$2"

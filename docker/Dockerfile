@@ -31,6 +31,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
       make \
       ninja-build \
       python3 \
+      valgrind \
     && rm -rf /var/lib/apt/lists/*
 
 # g++ is not what blogin ships with. It is a second opinion: a different
@@ -40,6 +41,10 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # ImageMagick above is for the tests, not for building: it is the resizer the
 # responsive-image specs need in order to run rather than report themselves
 # pending. Blogin itself calls whichever resizer it finds and works without one.
+# Valgrind is what reads of uninitialised memory are caught with. The
+# sanitizers do not report them and neither does coverage, so this is the one
+# tool in the set that sees that class of defect. Linux only, which is why it
+# lives here rather than on the host.
 
 # Debian's own clang lags the LLVM releases, so the apt repository is added and
 # preferred. If it ever carries a newer clang than the repository, this still

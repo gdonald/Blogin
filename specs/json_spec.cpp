@@ -195,6 +195,10 @@ SPEC {
         expect(parsed("1e+2").as_number()).to_eq(100.0);
       });
 
+      spec::it("reads an exponent of zero", [] { expect(parsed("7e0").as_number()).to_eq(7.0); });
+
+      spec::it("reads an exponent ending in nine", [] { expect(parsed("2e9").as_number()).to_eq(2e9); });
+
       // A deeply nested document would otherwise recurse until the stack runs
       // out.
       spec::it("rejects a document nested past the depth limit", [] {

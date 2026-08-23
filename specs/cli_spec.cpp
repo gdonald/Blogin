@@ -98,6 +98,12 @@ SPEC {
         expect(parse({"build", "--jobs", "many"}).error().message).to_contain("wants a number");
       });
 
+      // A number has to be the whole value. "4x" reads as 4 and stops, which is
+      // a typo rather than a job count.
+      spec::it("refuses a number with something after it", [] {
+        expect(parse({"build", "--jobs", "4x"}).error().message).to_contain("wants a number");
+      });
+
       spec::it("reads where to write the output", [] {
         expect(parse({"build", "--out", "site"})->output.value()).to_eq("site");
       });

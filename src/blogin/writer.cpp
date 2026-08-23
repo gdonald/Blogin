@@ -1,5 +1,6 @@
 #include "writer.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <format>
 #include <fstream>
@@ -85,11 +86,10 @@ std::size_t Writer::mark() const {
 std::vector<std::string> Writer::since(std::size_t start) const {
   const std::scoped_lock guard(mutex_);
 
-  if (start >= produced_.size()) {
-    return {};
-  }
+  // A mark past the end answers with nothing rather than reading past it.
+  const auto from = static_cast<std::ptrdiff_t>(std::min(start, produced_.size()));
 
-  return std::vector<std::string>(produced_.begin() + static_cast<std::ptrdiff_t>(start), produced_.end());
+  return std::vector<std::string>(produced_.begin() + from, produced_.end());
 }
 
 std::string Writer::relative(const std::filesystem::path& path) const {

@@ -209,6 +209,30 @@ Specs live in `specs/`, one file per header, written with a small in-repo
 harness offering `describe`, `context`, `it`, `before_each`, `let`, and
 `aggregate_failures`.
 
+Coverage says a line ran. Mutation testing says an assertion would have caught
+it changing:
+
+```bash
+./scripts/mutate.py                 # a sample of 100 mutants
+./scripts/mutate.py --count 400     # a longer run
+./scripts/mutate.py --file markdown # only one part of the library
+```
+
+It changes one operator in the library, rebuilds the one translation unit, and
+runs the specs. A mutant the suite still passes is printed as a survivor, and
+each survivor is behaviour nothing objects to. Fix one, then re-check it on its
+own by passing back the file and line it printed:
+`./scripts/mutate.py --at markdown.cpp:1004`.
+
+A mutation that changes no behaviour is not a hole in the suite, and
+`scripts/mutants-equivalent.txt` lists those with the reading behind each claim.
+Both the line and the line above it are matched exactly, so editing either
+brings the mutant back.
+
+Mutation testing sits outside `scripts/test.sh` for the same reason fuzzing
+does: the result is a number to act on rather than a gate on every commit. A
+weekly job runs a larger sample against a floor.
+
 Nothing asserts on elapsed time, and nothing fails because the machine is slow
 or busy. Speed is checked through work counters, which are deterministic across
 machines. Wall-clock numbers come from `scripts/bench.sh` and inform judgement
@@ -276,6 +300,14 @@ job builds plain and with the sanitizers and runs the specs against both. A
 different frontend reports things clang accepts, and it builds against libstdc++
 rather than libc++.
 
+The plain GCC build turns on `_GLIBCXX_DEBUG` through `BLOGIN_GLIBCXX_DEBUG`.
+Every other build carries `_GLIBCXX_ASSERTIONS`, which checks what a call is
+handed. Debug mode goes further and replaces the containers with ones that track
+their iterators, so an iterator used after its container reallocated, two
+iterators from different containers compared, and a range whose ends do not
+belong together each become a diagnostic. It changes container layout, so it is
+one build rather than all of them, and it is libstdc++'s alone.
+
 ```bash
 ./scripts/test.sh gcc      # both GCC builds and the specs, in the container
 ```
@@ -292,23 +324,25 @@ cmake --build build/gcc -j
 
 Everything a change needs:
 
-| Script                       | What it does                                                               |
-| ---------------------------- | -------------------------------------------------------------------------- |
-| `scripts/test.sh`            | Everything CI checks except fuzzing. Run before a commit                   |
-| `scripts/tidy.sh`            | clang-tidy over every translation unit, failing on any finding             |
-| `scripts/codeql.sh`          | The CodeQL suite the security tab reports, failing on any finding          |
-| `scripts/coverage.sh`        | Coverage report, failing below a floor                                     |
-| `scripts/uncovered.sh`       | The lines behind the coverage number, per file                             |
-| `scripts/repin-container.sh` | Move the container's pinned package versions and base image forward        |
-| `scripts/fuzz.sh`            | Replay the fuzz corpus, explore for new inputs, or minimize what was found |
-| `scripts/sanitize-cli.sh`    | Drive the binary itself under the sanitizers, build through serve          |
-| `scripts/test-linux.sh`      | Build and test on Linux in the Debian container                            |
-| `scripts/check-static.sh`    | Assert a release binary runs with nothing installed                        |
-| `scripts/regold.sh`          | Regenerate golden files, then show the diff                                |
-| `scripts/bench.sh`           | Wall-clock measurements, never a gate                                      |
-| `scripts/refresh-corpus.sh`  | Re-copy the real sites into the test corpus                                |
-| `scripts/synth-corpus.sh`    | Generate a large synthetic site for scaling work                           |
-| `docker/dev.sh`              | Shell in the Debian development container                                  |
+| Script                       | What it does                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `scripts/test.sh`            | Everything CI checks except fuzzing. Run before a commit                      |
+| `scripts/tidy.sh`            | clang-tidy over every translation unit, failing on any finding                |
+| `scripts/codeql.sh`          | The CodeQL suite the security tab reports, failing on any finding             |
+| `scripts/valgrind.sh`        | The specs under memcheck, for uninitialised reads and leaks                   |
+| `scripts/mutate.py`          | Mutation testing: change an operator, rebuild, see whether the specs catch it |
+| `scripts/coverage.sh`        | Coverage report, failing below a floor                                        |
+| `scripts/uncovered.sh`       | The lines behind the coverage number, per file                                |
+| `scripts/repin-container.sh` | Move the container's pinned package versions and base image forward           |
+| `scripts/fuzz.sh`            | Replay the fuzz corpus, explore for new inputs, or minimize what was found    |
+| `scripts/sanitize-cli.sh`    | Drive the binary itself under the sanitizers, build through serve             |
+| `scripts/test-linux.sh`      | Build and test on Linux in the Debian container                               |
+| `scripts/check-static.sh`    | Assert a release binary runs with nothing installed                           |
+| `scripts/regold.sh`          | Regenerate golden files, then show the diff                                   |
+| `scripts/bench.sh`           | Wall-clock measurements, never a gate                                         |
+| `scripts/refresh-corpus.sh`  | Re-copy the real sites into the test corpus                                   |
+| `scripts/synth-corpus.sh`    | Generate a large synthetic site for scaling work                              |
+| `docker/dev.sh`              | Shell in the Debian development container                                     |
 
 ### Release scripts
 
@@ -360,10 +394,15 @@ the one check left out, and `./scripts/fuzz.sh` runs it.
 The `codeql` stage runs the same query suite as
 `.github/workflows/codeql.yml`, whose findings become alerts on the repository's
 security tab. It builds the tree from scratch every run, because CodeQL reads
-the compiler as it works and a partial build makes a partial database. That is
-also what makes it the slowest stage. It analyzes what this host compiles, so
-code behind a platform conditional is only checked on the platform that builds
-it.
+the compiler as it works and a partial build makes a partial database. It
+analyzes what this host compiles, so code behind a platform conditional is only
+checked on the platform that builds it.
+
+The `valgrind` stage runs the specs under memcheck, which reports reads of
+uninitialised memory. Nothing else here sees that: the sanitizers do not, and a
+covered line says only that the line ran. Memcheck interprets every instruction,
+so at around nine minutes it is the slowest stage, and it decides the wall clock
+of a full run.
 
 Documentation for users lives at [blogin.dev](https://blogin.dev), in a separate
 repository. A change that alters behaviour a user can see needs the matching

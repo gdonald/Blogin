@@ -21,6 +21,8 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
 endif()
 
+option(BLOGIN_GLIBCXX_DEBUG "Build against libstdc++'s debug containers" OFF)
+option(BLOGIN_WERROR "Turn warnings into errors" ON)
 option(BLOGIN_SANITIZE "Build with AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 option(BLOGIN_SANITIZE_THREAD "Build with ThreadSanitizer" OFF)
 option(BLOGIN_SANITIZE_INTEGER
@@ -81,7 +83,6 @@ target_compile_options(blogin_flags INTERFACE
   -Wall
   -Wextra
   -Wpedantic
-  -Werror
   -Wshadow
   -Wconversion
   -Wsign-conversion
@@ -96,6 +97,13 @@ target_compile_options(blogin_flags INTERFACE
   -Wextra-semi
   -Wsuggest-override
 )
+
+# On everywhere, and off for one caller: scripts/mutate.py changes an operator
+# and rebuilds, and a mutant that reads `a && b || c` is rejected for its
+# parentheses rather than for what it does. A warning is still printed there.
+if(BLOGIN_WERROR)
+  target_compile_options(blogin_flags INTERFACE -Werror)
+endif()
 
 # -Wfloat-equal is left off. Every exact comparison this codebase makes is one
 # it means: the expression language's own == operator, the <=> behind it, the
@@ -143,8 +151,25 @@ target_compile_definitions(blogin_flags INTERFACE
   $<IF:$<CONFIG:Release>,
     _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST,
     _LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE>
-  _GLIBCXX_ASSERTIONS
 )
+
+# libstdc++ has two levels above unchecked. Assertions check what a call is
+# handed, which is the level every build here carries. Debug mode replaces the
+# containers with ones that track their iterators, so it also catches an
+# iterator used after the container moved it, two iterators from different
+# containers compared, and a range whose ends do not belong together. It changes
+# the layout of a container, so everything linked together has to agree, and it
+# is slow enough that it belongs in one build rather than in all of them: the
+# GCC stage turns it on.
+if(BLOGIN_GLIBCXX_DEBUG)
+  if(APPLE)
+    message(FATAL_ERROR "BLOGIN_GLIBCXX_DEBUG is libstdc++'s. macOS builds against libc++")
+  endif()
+
+  target_compile_definitions(blogin_flags INTERFACE _GLIBCXX_DEBUG)
+else()
+  target_compile_definitions(blogin_flags INTERFACE _GLIBCXX_ASSERTIONS)
+endif()
 
 # Reading an uninitialized local stops being undefined and starts being a read
 # of a known value. Release fills with zero, which is the cheaper of the two;
@@ -426,9 +451,12 @@ add_executable(blogin_specs
 target_include_directories(blogin_specs PRIVATE specs)
 target_link_libraries(blogin_specs PRIVATE blogin_core)
 
+# The conformance floor sits one under what passes today, so the assertion reads
+# as "no example that passes may stop passing". Slack here is slack in the
+# suite: with five to spare, a change that broke five examples still passed.
 target_compile_definitions(blogin_specs PRIVATE
   BLOGIN_SPECS_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/specs"
-  BLOGIN_COMMONMARK_FLOOR=620
+  BLOGIN_COMMONMARK_FLOOR=624
 )
 
 add_test(NAME specs COMMAND blogin_specs)

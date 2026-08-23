@@ -1,0 +1,57 @@
+# Mutants no example can catch, and why each one cannot be caught.
+#
+# A mutation that changes no behaviour is not a hole in the suite: there is
+# nothing to assert against it. Scoring one as a survivor would leave a
+# permanent gap in the number and hide the survivors that do mean something.
+#
+# Each entry names the file, the change, the line, and the line above it. Both
+# lines are matched exactly, so editing either brings the mutant back rather
+# than leaving a stale entry excusing whatever the code says next.
+#
+# Add one only after reading the code and finding no observable difference, and
+# write down what was found.
+
+[mutant]
+path = src/blogin/markdown.cpp
+change = false -> true
+before = if (node == document_) {
+line = node->open = false;
+why = Nothing reads the document's open flag once parsing has ended. Closing it
+  leaves the tree consistent, which is what the line is for, and no output
+  depends on its value.
+
+[mutant]
+path = src/blogin/include/markdown.h
+change = false -> true
+before = // math
+line = bool display = false;
+why = A default equal to the zero value. An arena node is value initialized, so
+  the initializer changes nothing there. It stays written out because a Node
+  built on the stack would otherwise read as whatever the stack held.
+
+[mutant]
+path = src/blogin/markdown_inline.cpp
+change = false -> true
+before = if (position >= input.size() || input[position] != ']') {
+line = return false;
+why = The loop above leaves position either on a ']' or past the end, and the
+  check below refuses a label not followed by ':'. Returning here is the
+  clearer way to say it, and the later check catches what this one would.
+
+[mutant]
+path = src/blogin/markdown_inline.cpp
+change = == -> !=
+before = nodes_[opener.index + 1] = wrapper;
+line = } else if (nodes_[closer.index] == nullptr) {
+why = Where a wrapper goes when its pair has nothing between it. Every input
+  the corpus and the specs reach leaves at least one node between the two
+  delimiters, so this is the branch that never runs.
+
+[mutant]
+path = src/blogin/files.cpp
+change = false -> true
+before = if (error) {
+line = return false;
+why = weakly_canonical reports an error only when the filesystem itself fails.
+  It resolves a path that does not exist without one, so no spec can arrange
+  the failure. Both guards in within() are the same case.

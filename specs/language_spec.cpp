@@ -215,6 +215,20 @@ SPEC {
 
         expect(blogin::translation_paths(options).contains("only-english")).to_be_true();
       });
+
+      // Ten characters in the shape of a date are not a date unless every one
+      // of the eight that should be a digit is one.
+      spec::it("keeps a filename shaped like a date whose digits are letters", [] {
+        const std::filesystem::path root = bilingual_site();
+
+        write(root / "content" / "en" / "posts" / "abcd-ef-gh-hello.md",
+              "---\ntitle: Not Dated\n---\nIn English.\n");
+
+        blogin::BuildOptions options = options_for(root);
+        options.content = root / "content" / "en";
+
+        expect(blogin::translation_paths(options).contains("posts/abcd-ef-gh-hello")).to_be_true();
+      });
     });
 
     spec::it("writes nothing on a rebuild that changed nothing", [] {

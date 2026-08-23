@@ -37,6 +37,37 @@ SPEC {
       spec::it("ends at a following heading", [] {
         expect(to_html("text\n# title")).to_eq("<p>text</p>\n<h1>title</h1>\n");
       });
+
+      // A list interrupts a paragraph only when the list starts at one and its
+      // first item carries something.
+      spec::it("ends at a following list that starts at one", [] {
+        expect(to_html("text\n- item")).to_eq("<p>text</p>\n<ul>\n<li>item</li>\n</ul>\n");
+      });
+
+      spec::it("ends at a following ordered list that starts at one", [] {
+        expect(to_html("text\n1. item")).to_eq("<p>text</p>\n<ol>\n<li>item</li>\n</ol>\n");
+      });
+
+      spec::it("keeps a following ordered list that starts at two in the paragraph", [] {
+        expect(to_html("text\n2. item")).to_eq("<p>text\n2. item</p>\n");
+      });
+
+      // A bullet that is not one of the setext underlines, so what is under
+      // test is the empty item rather than the heading.
+      spec::it("keeps a following empty list item in the paragraph", [] {
+        expect(to_html("text\n*")).to_eq("<p>text\n*</p>\n");
+      });
+
+      spec::it("ends at a following block quote", [] {
+        expect(to_html("text\n> quoted")).to_eq("<p>text</p>\n<blockquote>\n<p>quoted</p>\n</blockquote>\n");
+      });
+
+      // A line that continues a paragraph whose container did not match is a
+      // lazy continuation, and a block quote is a block, so it is not one.
+      spec::it("ends a list item's paragraph at a block quote on the next line", [] {
+        expect(to_html("- foo\n> bar"))
+          .to_eq("<ul>\n<li>foo</li>\n</ul>\n<blockquote>\n<p>bar</p>\n</blockquote>\n");
+      });
     });
 
     spec::context("headings", [] {
@@ -65,6 +96,13 @@ SPEC {
       });
 
       spec::it("leaves an unmatched marker as text", [] { expect(to_html("2 * 3")).to_eq("<p>2 * 3</p>\n"); });
+
+      // Whether an underscore closes emphasis depends on what follows it being
+      // punctuation, and an en dash is punctuation as a code point rather than
+      // as any one of the three bytes that spell it.
+      spec::it("closes underscore emphasis against a multi-byte punctuation mark", [] {
+        expect(to_html("_foo_\xe2\x80\x93" "bar")).to_eq("<p><em>foo</em>\xe2\x80\x93" "bar</p>\n");
+      });
     });
 
     spec::context("a link destination in angle brackets", [] {
@@ -86,6 +124,40 @@ SPEC {
     spec::context("a link title on the line after its destination", [] {
       spec::it("reads the title", [] {
         expect(to_html("[a](/url\n\"titled\")")).to_contain(R"(title="titled")");
+      });
+    });
+
+    // A raw block of one of these four runs to its own closing tag, and the
+    // markdown after it is markdown again.
+    spec::context("lists", [] {
+      // The rules that hold a list back from interrupting a paragraph do not
+      // apply where there is no paragraph to interrupt.
+      spec::it("opens an ordered list that starts at something other than one", [] {
+        expect(to_html("2. item")).to_eq("<ol start=\"2\">\n<li>item</li>\n</ol>\n");
+      });
+
+      spec::it("opens a list whose first item is empty", [] {
+        expect(to_html("*")).to_eq("<ul>\n<li></li>\n</ul>\n");
+      });
+    });
+
+    spec::context("a raw html block", [] {
+      spec::it("ends a script block at its closing tag", [] {
+        expect(to_html("<script>\nkeep\n</script>\n\nafter"))
+          .to_eq("<script>\nkeep\n</script>\n<p>after</p>\n");
+      });
+
+      spec::it("ends a pre block at its closing tag", [] {
+        expect(to_html("<pre>\nkeep\n</pre>\n\nafter")).to_eq("<pre>\nkeep\n</pre>\n<p>after</p>\n");
+      });
+
+      spec::it("ends a style block at its closing tag", [] {
+        expect(to_html("<style>\nkeep\n</style>\n\nafter")).to_eq("<style>\nkeep\n</style>\n<p>after</p>\n");
+      });
+
+      spec::it("ends a textarea block at its closing tag", [] {
+        expect(to_html("<textarea>\nkeep\n</textarea>\n\nafter"))
+          .to_eq("<textarea>\nkeep\n</textarea>\n<p>after</p>\n");
       });
     });
 
