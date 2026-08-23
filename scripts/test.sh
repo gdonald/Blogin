@@ -129,7 +129,19 @@ build_image() {
     return
   fi
 
-  docker build -t "$image" docker
+  # buildx keeps a build in its own cache unless it is told to load the result
+  # into the daemon, and `docker build` is buildx wherever the plugin is
+  # installed. Without --load the build reports success and the tag is still
+  # missing, which the first `docker run` reports as a denied pull of a public
+  # image by that name.
+  if docker buildx version >/dev/null 2>&1; then
+    docker buildx build --load -t "$image" docker
+  else
+    docker build -t "$image" docker
+  fi
+
+  docker image inspect "$image" >/dev/null
+
   image_built=yes
 }
 

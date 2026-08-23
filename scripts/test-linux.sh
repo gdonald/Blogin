@@ -14,7 +14,16 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 image="blogin-dev"
 
-docker build -t "$image" "$root/docker"
+# --load because `docker build` is buildx wherever the plugin is installed, and
+# buildx leaves the result in its own cache rather than in the daemon's image
+# store unless it is told otherwise.
+if docker buildx version >/dev/null 2>&1; then
+  docker buildx build --load -t "$image" "$root/docker"
+else
+  docker build -t "$image" "$root/docker"
+fi
+
+docker image inspect "$image" >/dev/null
 
 docker run --rm \
   -e "BLOGIN_JOBS=${BLOGIN_JOBS:-}" \
