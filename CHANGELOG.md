@@ -2,7 +2,7 @@
 
 ## 0.9.3
 
-## Hardening and Testing
+### Hardening and testing
 
 - Mutation testing, through `scripts/mutate.py`: it changes one operator in the
   library, rebuilds that translation unit, and runs the specs, so a mutant the
