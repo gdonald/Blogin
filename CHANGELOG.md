@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.9.3
+
+## Hardening and Testing
+
+- Mutation testing, through `scripts/mutate.py`: it changes one operator in the
+  library, rebuilds that translation unit, and runs the specs, so a mutant the
+  suite still passes names behaviour nothing asserts on. A weekly job runs a
+  larger sample against a floor, and `scripts/mutants-equivalent.txt` records
+  the mutations that change no behaviour, with the reading behind each claim.
+- The specs the survivors pointed at: paragraphs ending at a following list or
+  block quote, ordered lists starting at something other than one, empty list
+  items, emphasis closing against a multi-byte punctuation mark, reference
+  labels matched in another case, and `script`, `pre`, `style`, and `textarea`
+  blocks ending at their closing tag.
+- The spec suite runs under Valgrind's memcheck, through `scripts/valgrind.sh`
+  and a `valgrind` stage in `scripts/test.sh` and CI. Memcheck reports reads of
+  uninitialised memory, which neither sanitizer sees, and counts every
+  allocation against its free.
+- The code CodeQL flagged is fixed, and `scripts/codeql.sh` runs the same query
+  suite locally that the repository's security tab reports.
+- The GCC build turns on `_GLIBCXX_DEBUG` through the new
+  `BLOGIN_GLIBCXX_DEBUG` option, so an iterator used after its container
+  reallocated, two iterators from different containers compared, and a range
+  whose ends do not belong together each become a diagnostic. Every other build
+  keeps `_GLIBCXX_ASSERTIONS`.
+- `BLOGIN_WERROR` turns `-Werror` off for the one caller that needs it, the
+  mutation runner, which would otherwise lose a mutant to a parentheses
+  warning.
+- The CommonMark spec loader read the tab arrow as two bytes rather than three,
+  leaving a stray byte in every example that uses a tab. The conformance floor
+  is 624.
+
 ## 0.9.2
 
 ### Fixed
