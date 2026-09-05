@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.4
+
+### Fixed
+
+- Templates dropped the indentation and the blank lines inside a `<pre>`, so a
+  multi-line code sample rendered flat with its statements run together. A
+  `%pre`, a `%textarea`, a `<pre>` written as markup, and a filter body now keep
+  the whitespace they were written with, relative to the block they sit in.
+
 ## 0.9.3
 
 ### Hardening and testing
