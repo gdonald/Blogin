@@ -16,13 +16,20 @@ bool is_name_character(char character) {
 
 struct Line {
   std::size_t indent = 0;
+
+  // The line without its indentation, and the same line with it. A blank line
+  // has neither.
   std::string_view content;
+  std::string_view text;
+
   std::size_t number = 1;
+  bool blank = false;
 };
 
-// A blank line separates nothing in HAML, so only lines with content are kept,
-// each carrying the column its content starts at.
-std::vector<Line> significant_lines(std::string_view source) {
+// Every line of the source, blank ones included. A blank line separates nothing
+// in HAML, so the parser walks past it, but a block that keeps its whitespace
+// keeps it.
+std::vector<Line> source_lines(std::string_view source) {
   std::vector<Line> lines;
   std::size_t number = 0;
 
@@ -30,25 +37,100 @@ std::vector<Line> significant_lines(std::string_view source) {
     ++number;
 
     if (text::trim(raw).empty()) {
+      lines.push_back(Line{0, {}, {}, number, true});
+
       continue;
     }
 
     const std::size_t indent = raw.find_first_not_of(" \t");
 
-    lines.push_back(Line{indent, text::trim_end(raw.substr(indent)), number});
+    lines.push_back(Line{indent, text::trim_end(raw.substr(indent)), text::trim_end(raw), number, false});
   }
 
   return lines;
 }
 
+bool preserves_whitespace(std::string_view tag) { return tag == "pre" || tag == "textarea"; }
+
+// The preserved tag a line opens and does not close, or nothing. Layouts write
+// `<pre>` as markup rather than as %pre, and what follows such a line is the
+// content of the element, not more HAML.
+std::string_view unclosed_preserved_tag(std::string_view content) {
+  std::string_view open;
+  std::size_t index = 0;
+
+  while ((index = content.find('<', index)) != std::string_view::npos) {
+    ++index;
+
+    const bool closing = index < content.size() && content[index] == '/';
+
+    if (closing) {
+      ++index;
+    }
+
+    const std::size_t start = index;
+
+    while (index < content.size() && is_name_character(content[index])) {
+      ++index;
+    }
+
+    const std::string_view name = content.substr(start, index - start);
+
+    if (!preserves_whitespace(name)) {
+      continue;
+    }
+
+    if (!closing) {
+      open = name;
+    } else if (name == open) {
+      open = {};
+    }
+  }
+
+  return open;
+}
+
+// The lines of a block that keeps its whitespace, written as one string. The
+// block as a whole moves to column zero, and every line keeps whatever
+// indentation it has beyond that, so the shape the author wrote survives.
+std::string block_text(const std::vector<Line>& lines, std::size_t first, std::size_t last) {
+  std::size_t base = std::string_view::npos;
+
+  for (std::size_t index = first; index < last; ++index) {
+    if (!lines[index].blank) {
+      base = std::min(base, lines[index].indent);
+    }
+  }
+
+  std::string body;
+
+  for (std::size_t index = first; index < last; ++index) {
+    if (index > first) {
+      body += '\n';
+    }
+
+    if (!lines[index].blank) {
+      body += lines[index].text.substr(base);
+    }
+  }
+
+  return body;
+}
+
 class Parser {
 public:
-  Parser(std::string_view source, std::string_view name) : lines_(significant_lines(source)), name_(name) {}
+  Parser(std::string_view source, std::string_view name) : lines_(source_lines(source)), name_(name) {}
 
   std::expected<std::unique_ptr<Node>, ParseError> parse() {
     auto root = std::make_unique<Node>();
 
-    while (position_ < lines_.size()) {
+    while (true) {
+      position_ = next_content(position_);
+
+      if (position_ >= lines_.size()) {
+        break;
+      }
+
       auto child = parse_node(lines_[position_].indent);
 
       if (!child) {
@@ -75,24 +157,46 @@ private:
       return node;
     }
 
-    // Everything indented past this line belongs to it.
-    while (position_ < lines_.size() && lines_[position_].indent > indent) {
-      const std::size_t child_indent = lines_[position_].indent;
-
-      // A filter takes its block as raw text, not as HAML.
-      if ((*node)->kind == NodeKind::filter) {
-        auto child = std::make_unique<Node>();
-        child->kind = NodeKind::text;
-        child->line = lines_[position_].number;
-        child->text.push_back(Segment{std::string(lines_[position_].content), nullptr});
-
-        (*node)->children.push_back(std::move(child));
-        ++position_;
-
-        continue;
+    // A <pre> written as markup runs to its closing tag, whatever the lines
+    // between are indented to.
+    if (const std::string_view open = unclosed_preserved_tag(line.content); !open.empty()) {
+      if (auto captured = attach_block(**node, line, markup_block_end(open)); !captured) {
+        return std::unexpected(captured.error());
       }
 
-      auto child = parse_node(child_indent);
+      return node;
+    }
+
+    // %pre and %textarea take the block under them as their content, written
+    // the way it was written.
+    if ((*node)->kind == NodeKind::element && preserves_whitespace((*node)->tag)) {
+      (*node)->keeps_whitespace = true;
+
+      if (auto captured = attach_block(**node, line, block_end(indent)); !captured) {
+        return std::unexpected(captured.error());
+      }
+
+      return node;
+    }
+
+    // A filter takes its block as raw text, not as HAML.
+    if ((*node)->kind == NodeKind::filter) {
+      attach_filter_block(**node, block_end(indent));
+
+      return node;
+    }
+
+    // Everything indented past this line belongs to it.
+    while (true) {
+      const std::size_t next = next_content(position_);
+
+      if (next >= lines_.size() || lines_[next].indent <= indent) {
+        break;
+      }
+
+      position_ = next;
+
+      auto child = parse_node(lines_[next].indent);
 
       if (!child) {
         return child;
@@ -102,6 +206,108 @@ private:
     }
 
     return node;
+  }
+
+  std::size_t next_content(std::size_t from) const {
+    while (from < lines_.size() && lines_[from].blank) {
+      ++from;
+    }
+
+    return from;
+  }
+
+  // Where the block under a line indented to `indent` ends. Blank lines inside
+  // it belong to it, and blank lines trailing it do not.
+  std::size_t block_end(std::size_t indent) const {
+    std::size_t scan = position_;
+    std::size_t end = position_;
+
+    while (scan < lines_.size() && (lines_[scan].blank || lines_[scan].indent > indent)) {
+      ++scan;
+
+      if (!lines_[scan - 1].blank) {
+        end = scan;
+      }
+    }
+
+    return end;
+  }
+
+  // Where a block opened by markup ends: past the line that closes the tag, or
+  // at the end of the template when nothing does.
+  std::size_t markup_block_end(std::string_view tag) const {
+    const std::string closing = std::format("</{}>", tag);
+
+    std::size_t end = position_;
+
+    while (end < lines_.size()) {
+      const bool closes = lines_[end].content.find(closing) != std::string_view::npos;
+      ++end;
+
+      if (closes) {
+        break;
+      }
+    }
+
+    return end;
+  }
+
+  std::expected<void, ParseError> attach_block(Node& node, const Line& line, std::size_t end) {
+    if (end <= position_) {
+      return {};
+    }
+
+    auto parsed = parse_interpolated(line, block_text(lines_, position_, end));
+
+    if (!parsed) {
+      return std::unexpected(parsed.error());
+    }
+
+    position_ = end;
+
+    // The block continues the text the opening line began, so it joins that
+    // text rather than becoming a second child beside it.
+    Interpolated* target = nullptr;
+
+    if (node.kind == NodeKind::text) {
+      target = &node.text;
+    } else if (!node.children.empty() && node.children.back()->kind == NodeKind::text) {
+      target = &node.children.back()->text;
+    }
+
+    if (target != nullptr) {
+      target->push_back(Segment{"\n", nullptr});
+
+      for (Segment& segment : *parsed) {
+        target->push_back(std::move(segment));
+      }
+
+      return {};
+    }
+
+    auto child = std::make_unique<Node>();
+    child->kind = NodeKind::text;
+    child->line = line.number;
+    child->text = std::move(*parsed);
+
+    node.children.push_back(std::move(child));
+
+    return {};
+  }
+
+  // A filter body is text, so nothing in it is interpolated or read as HAML.
+  void attach_filter_block(Node& node, std::size_t end) {
+    if (end <= position_) {
+      return;
+    }
+
+    auto child = std::make_unique<Node>();
+    child->kind = NodeKind::text;
+    child->line = lines_[position_].number;
+    child->text.push_back(Segment{block_text(lines_, position_, end), nullptr});
+
+    node.children.push_back(std::move(child));
+    position_ = end;
   }
 
   std::expected<std::unique_ptr<Node>, ParseError> build(const Line& line) {

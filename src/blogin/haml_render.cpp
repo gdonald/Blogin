@@ -421,10 +421,12 @@ private:
     }
 
     // One inline child sits on the same line as its tag. Anything else gets its
-    // own lines.
-    const bool inline_child = node.children.size() == 1 &&
-                              (node.children[0]->kind == NodeKind::text ||
-                               node.children[0]->kind == NodeKind::output);
+    // own lines, unless the tag keeps its whitespace, where a line the renderer
+    // added is a line the page shows.
+    const bool inline_child = node.keeps_whitespace ||
+                              (node.children.size() == 1 &&
+                               (node.children[0]->kind == NodeKind::text ||
+                                node.children[0]->kind == NodeKind::output));
 
     if (!inline_child) {
       out_ += '\n';

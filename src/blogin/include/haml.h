@@ -58,6 +58,9 @@ struct Node {
   std::vector<Attribute> attributes;
   bool self_closing = false;
 
+  // %pre and %textarea, whose content is written out the way it was written.
+  bool keeps_whitespace = false;
+
   // text and output
   Interpolated text;
   std::unique_ptr<expression::Node> value;

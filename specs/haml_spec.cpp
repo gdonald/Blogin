@@ -315,6 +315,96 @@ SPEC {
       });
     });
 
+    spec::context("blocks that keep their whitespace", [] {
+      spec::it("keeps the relative indentation of the lines under a pre tag", [] {
+        expect(render("%pre\n  one\n    two\n  three")).to_eq("<pre>one\n  two\nthree</pre>\n");
+      });
+
+      spec::it("keeps a blank line inside a pre tag", [] {
+        expect(render("%pre\n  one\n\n  two")).to_eq("<pre>one\n\ntwo</pre>\n");
+      });
+
+      spec::it("keeps the indentation under a textarea", [] {
+        expect(render("%textarea\n  one\n    two")).to_eq("<textarea>one\n  two</textarea>\n");
+      });
+
+      spec::it("fills a hole inside a pre tag", [] {
+        expect(render("%pre\n  a #{title}")).to_eq("<pre>a Blogin</pre>\n");
+      });
+
+      spec::it("fills a hole inside a pre written as markup", [] {
+        expect(render("<pre>one\n  a #{title}</pre>")).to_eq("<pre>one\na Blogin</pre>\n");
+      });
+
+      spec::it("writes an empty pre tag with nothing under it", [] {
+        expect(render("%pre")).to_eq("<pre></pre>\n");
+      });
+
+      spec::it("keeps a block under a pre tag whose own line wrote a value", [] {
+        expect(render("%pre= title\n  two")).to_eq("<pre>Blogin\ntwo</pre>\n");
+      });
+
+      spec::it("writes a line that closes a tag nothing opened as it stands", [] {
+        expect(render("</pre>")).to_eq("</pre>\n");
+      });
+
+      spec::it("reads an angle bracket ending a line as text", [] {
+        expect(render("%p a <")).to_eq("<p>a <</p>\n");
+      });
+
+      spec::it("runs a pre nothing closes to the end of the template", [] {
+        expect(render("<pre>one\n  two")).to_eq("<pre>one\ntwo\n");
+      });
+
+      spec::it("keeps the indentation of a pre written as markup", [] {
+        expect(render(".code\n  <pre>one\n    two\n  three</pre>"))
+          .to_eq("<div class=\"code\"><pre>one\n  two\nthree</pre></div>\n");
+      });
+
+      spec::it("keeps a blank line inside a pre written as markup", [] {
+        expect(render("<pre>one\n\ntwo</pre>")).to_eq("<pre>one\n\ntwo</pre>\n");
+      });
+
+      spec::it("reads the lines after the closing tag as haml again", [] {
+        expect(render(".code\n  <pre>one\n  two</pre>\n  %span three"))
+          .to_contain("<span>three</span>");
+      });
+
+      spec::it("leaves a pre closed on the line that opened it alone", [] {
+        expect(render(".code\n  <pre>one</pre>\n  %span two")).to_contain("<span>two</span>");
+      });
+
+      spec::it("keeps the indentation of a plain filter's body", [] {
+        expect(render(":plain\n  <ul>\n    <li>one</li>\n  </ul>"))
+          .to_eq("<ul>\n  <li>one</li>\n</ul>\n");
+      });
+
+      spec::it("keeps a blank line inside a plain filter's body", [] {
+        expect(render(":plain\n  one\n\n  two")).to_eq("one\n\ntwo\n");
+      });
+
+      spec::it("writes nothing for a filter with no body", [] {
+        expect(render(":plain")).to_eq("");
+      });
+
+      spec::it("keeps the indentation of a pre a tag's own line opened", [] {
+        expect(render(".code <pre>one\n    two\n  three</pre>"))
+          .to_eq("<div class=\"code\"><pre>one\n  two\nthree</pre></div>\n");
+      });
+
+      spec::it("dedents the text under an element that keeps no whitespace", [] {
+        expect(render("%p\n    one\n    two")).to_eq("<p>\none\ntwo\n</p>\n");
+      });
+
+      spec::it("refuses an unterminated interpolation under a pre tag", [] {
+        expect(render("%pre\n  one #{title")).to_contain("unterminated");
+      });
+
+      spec::it("refuses an unterminated interpolation inside a pre written as markup", [] {
+        expect(render("<pre>one\n  #{title</pre>")).to_contain("unterminated");
+      });
+    });
+
     spec::context("yield", [] {
       spec::it("writes the body it was given", [] {
         blogin::haml::RenderOptions options;
@@ -545,6 +635,10 @@ SPEC {
 
       spec::it("refuses an unterminated interpolation", [] {
         expect(render("text #{title")).to_contain("unterminated");
+      });
+
+      spec::it("refuses a line it cannot read under one it can", [] {
+        expect(render("%p\n  .")).to_contain("expected a name after '.'");
       });
 
       // A name that does not exist is the same failure wherever a template
