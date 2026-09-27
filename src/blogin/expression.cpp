@@ -1,5 +1,6 @@
 #include "expression.h"
 
+#include <algorithm>
 #include <charconv>
 #include <compare>
 #include <format>
@@ -54,6 +55,31 @@ public:
 private:
   std::unexpected<ParseError> fail(std::string message) const {
     return std::unexpected(ParseError{std::move(message), line_, base_column_ + position_});
+  }
+
+  std::unexpected<ParseError> fail_too_deep() const {
+    return fail(std::format("nested too deeply, past {} levels", max_depth));
+  }
+
+  // A chain of operators or members builds its tree in a loop, not by
+  // recursing, so Depth never sees it. Every node that holds another is
+  // measured here instead.
+  static bool too_tall(Node& node) {
+    std::size_t tallest_child = 0;
+
+    for (const Node* child : {node.target.get(), node.left.get(), node.right.get()}) {
+      if (child != nullptr) {
+        tallest_child = std::max(tallest_child, child->height);
+      }
+    }
+
+    for (const auto& argument : node.arguments) {
+      tallest_child = std::max(tallest_child, argument->height);
+    }
+
+    node.height = tallest_child + 1;
+
+    return node.height > static_cast<std::size_t>(max_depth);
   }
 
   std::unique_ptr<Node> make(NodeKind kind) const {
@@ -135,7 +161,7 @@ private:
     const Depth depth(*this);
 
     if (depth.too_deep()) {
-      return fail(std::format("nested too deeply, past {} levels", max_depth));
+      return fail_too_deep();
     }
 
     auto left = parse_and();
@@ -155,6 +181,11 @@ private:
       node->op = BinaryOperator::logical_or;
       node->left = std::move(*left);
       node->right = std::move(*right);
+
+      if (too_tall(*node)) {
+        return fail_too_deep();
+      }
+
       left = std::move(node);
     }
 
@@ -179,6 +210,11 @@ private:
       node->op = BinaryOperator::logical_and;
       node->left = std::move(*left);
       node->right = std::move(*right);
+
+      if (too_tall(*node)) {
+        return fail_too_deep();
+      }
+
       left = std::move(node);
     }
 
@@ -223,6 +259,11 @@ private:
       node->op = op;
       node->left = std::move(*left);
       node->right = std::move(*right);
+
+      if (too_tall(*node)) {
+        return fail_too_deep();
+      }
+
       left = std::move(node);
     }
 
@@ -259,6 +300,11 @@ private:
       node->op = op;
       node->left = std::move(*left);
       node->right = std::move(*right);
+
+      if (too_tall(*node)) {
+        return fail_too_deep();
+      }
+
       left = std::move(node);
     }
 
@@ -271,7 +317,7 @@ private:
     const Depth depth(*this);
 
     if (depth.too_deep()) {
-      return fail(std::format("nested too deeply, past {} levels", max_depth));
+      return fail_too_deep();
     }
 
     if (consume("!") || consume("not")) {
@@ -283,6 +329,10 @@ private:
 
       auto node = make(NodeKind::unary_not);
       node->target = std::move(*operand);
+
+      if (too_tall(*node)) {
+        return fail_too_deep();
+      }
 
       return node;
     }
@@ -312,6 +362,10 @@ private:
         node->text = member;
         node->target = std::move(*target);
 
+        if (too_tall(*node)) {
+          return fail_too_deep();
+        }
+
         // A member may itself be called: $node.children.elems, url().
         if (peek() == '(') {
           auto arguments = parse_arguments();
@@ -323,6 +377,11 @@ private:
           auto call = make(NodeKind::call);
           call->target = std::move(node);
           call->arguments = std::move(*arguments);
+
+          if (too_tall(*call)) {
+            return fail_too_deep();
+          }
+
           target = std::move(call);
 
           continue;
@@ -346,6 +405,11 @@ private:
           auto node = make(NodeKind::member);
           node->text = key;
           node->target = std::move(*target);
+
+          if (too_tall(*node)) {
+            return fail_too_deep();
+          }
+
           target = std::move(node);
 
           continue;
@@ -365,6 +429,11 @@ private:
         auto call = make(NodeKind::call);
         call->target = std::move(*target);
         call->arguments = std::move(*arguments);
+
+        if (too_tall(*call)) {
+          return fail_too_deep();
+        }
+
         target = std::move(call);
 
         continue;
@@ -446,6 +515,7 @@ private:
       literal->text = std::string(source_.substr(position_ + 1, closing - position_ - 1));
 
       node->target = std::move(literal);
+      node->height = 2;
       position_ = closing + 1;
 
       return node;
@@ -466,6 +536,10 @@ private:
 
       node->target = std::move(*value);
 
+      if (too_tall(*node)) {
+        return fail_too_deep();
+      }
+
       return node;
     }
 
@@ -473,6 +547,7 @@ private:
     auto literal = make(NodeKind::literal_string);
     literal->text = name;
     node->target = std::move(literal);
+    node->height = 2;
 
     return node;
   }
@@ -618,6 +693,10 @@ private:
       entry->text = key;
       entry->target = std::move(*value);
 
+      if (too_tall(*entry)) {
+        return fail_too_deep();
+      }
+
       node->arguments.push_back(std::move(entry));
 
       skip_spaces();
@@ -631,6 +710,10 @@ private:
 
     if (!consume("}")) {
       return fail("expected '}' to close a map");
+    }
+
+    if (too_tall(*node)) {
+      return fail_too_deep();
     }
 
     return node;
@@ -653,6 +736,10 @@ private:
 
     auto node = make(NodeKind::block);
     node->target = std::move(*inner);
+
+    if (too_tall(*node)) {
+      return fail_too_deep();
+    }
 
     return node;
   }

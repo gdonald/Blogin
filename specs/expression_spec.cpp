@@ -611,6 +611,90 @@ SPEC {
           expect(error_of(source + "true")).to_contain("nested too deeply");
         });
       });
+
+      // Found by the fuzzer. A chain of operators or members is built in a
+      // loop, so the parser never recursed for it, but each link is one more
+      // level the evaluator recurses through.
+      spec::context("a long chain", [] {
+        const auto chain = [](const std::string& start, const std::string& link, int links) {
+          std::string source = start;
+
+          for (int written = 0; written < links; ++written) {
+            source += link;
+          }
+
+          return source;
+        };
+
+        // "1" is one level, and each link adds one more.
+        const int links_at_the_limit = 63;
+
+        spec::it("reads what a layout would plausibly write", [=] {
+          expect(evaluate(chain("1", " + 1", 20)).as_integer()).to_eq(std::int64_t{21});
+        });
+
+        spec::it("reads a chain as tall as the limit", [=] {
+          expect(evaluate(chain("1", " + 1", links_at_the_limit)).as_integer()).to_eq(std::int64_t{64});
+        });
+
+        spec::it("refuses a run of additions past the limit rather than crashing", [=] {
+          expect(error_of(chain("1", " + 1", 5000))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a run of ors past the limit rather than crashing", [=] {
+          expect(error_of(chain("1", " || 1", 5000))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a run of ands past the limit rather than crashing", [=] {
+          expect(error_of(chain("1", " && 1", 5000))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a run of comparisons past the limit rather than crashing", [=] {
+          expect(error_of(chain("1", " == 1", 5000))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a run of member reads past the limit rather than crashing", [=] {
+          expect(error_of(chain("$page", ".title", 5000))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a run of member calls past the limit rather than crashing", [=] {
+          expect(error_of(chain("$page", ".title()", 5000))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a run of angle-bracket subscripts past the limit rather than crashing", [=] {
+          expect(error_of(chain("$page", "<title>", 5000))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a run of calls past the limit rather than crashing", [=] {
+          expect(error_of(chain("url", "()", 5000))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a negation of a chain already at the limit", [=] {
+          expect(error_of("!" + chain("$page", ".title", links_at_the_limit))).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a named argument holding a chain already at the limit", [=] {
+          expect(error_of("url(:path(" + chain("1", " + 1", links_at_the_limit) + "))"))
+              .to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a map entry holding a chain already at the limit", [=] {
+          expect(error_of("{a: " + chain("1", " + 1", links_at_the_limit) + "}")).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a map holding an entry already at the limit", [=] {
+          expect(error_of("{a: " + chain("1", " + 1", links_at_the_limit - 1) + "}")).to_contain("nested too deeply");
+        });
+
+        spec::it("refuses a block holding a chain already at the limit", [=] {
+          expect(error_of("url({" + chain("1", " + 1", links_at_the_limit) + "})")).to_contain("nested too deeply");
+        });
+
+        spec::it("counts a chain inside parentheses toward the limit of the chain around it", [=] {
+          expect(error_of("(" + chain("1", " + 1", 40) + ") + " + chain("1", " + 1", 40)))
+              .to_contain("nested too deeply");
+        });
+      });
     });
   });
 }

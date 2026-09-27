@@ -53,8 +53,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
 # apt.llvm.org goes down for minutes at a time, and when it does the connection
 # is refused rather than hanging, so a single attempt fails the build in under a
 # second. Both the key fetch and the package fetch retry with a delay between
-# attempts. deb.debian.org above needs none of this.
-RUN curl -fsSL --retry 5 --retry-delay 10 --retry-all-errors --connect-timeout 15 \
+# attempts, the key fetch for four minutes. deb.debian.org above needs none of
+# this.
+RUN curl -fsSL --retry 12 --retry-delay 20 --retry-all-errors --connect-timeout 15 \
       https://apt.llvm.org/llvm-snapshot.gpg.key \
       | gpg --dearmor -o /usr/share/keyrings/llvm.gpg \
     && echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] http://apt.llvm.org/trixie/ llvm-toolchain-trixie-${LLVM_VERSION} main" \

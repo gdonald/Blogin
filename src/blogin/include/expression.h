@@ -77,6 +77,9 @@ struct Node {
   std::unique_ptr<Node> right;
   std::vector<std::unique_ptr<Node>> arguments;
 
+  // The evaluator's recursion depth from this node to its deepest leaf.
+  std::size_t height = 1;
+
   std::size_t line = 1;
   std::size_t column = 1;
 };
