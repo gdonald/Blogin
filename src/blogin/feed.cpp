@@ -66,6 +66,18 @@ std::string_view filename_for(std::string_view format) {
   return "feed.xml";
 }
 
+std::string_view media_type_for(std::string_view format) {
+  if (format == "rss") {
+    return "application/rss+xml";
+  }
+
+  if (format == "json") {
+    return "application/feed+json";
+  }
+
+  return "application/atom+xml";
+}
+
 std::string atom(const FeedInfo& info) {
   std::string out = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<feed xmlns=\"http://www.w3.org/2005/Atom\">\n";
 
@@ -158,14 +170,22 @@ std::string json_feed(const FeedInfo& info) {
   return to_json(document, JsonStyle::pretty);
 }
 
-std::string sitemap(const std::vector<std::string>& locations) {
+std::string sitemap(const std::vector<SitemapEntry>& entries) {
   std::string out =
     "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n";
 
-  for (const std::string& location : locations) {
+  for (const SitemapEntry& entry : entries) {
     out += "  <url><loc>";
-    escape_xml(out, location);
-    out += "</loc></url>\n";
+    escape_xml(out, entry.location);
+    out += "</loc>";
+
+    if (!entry.lastmod.empty()) {
+      out += "<lastmod>";
+      escape_xml(out, entry.lastmod);
+      out += "</lastmod>";
+    }
+
+    out += "</url>\n";
   }
 
   out += "</urlset>\n";

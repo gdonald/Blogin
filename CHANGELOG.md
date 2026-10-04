@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Share images. An `image` key in a post's front matter, or in `blogin.json` as
+  the default for every other page, makes `head-meta` write `og:image` as an
+  absolute URL under `base-url`, pointing at the fingerprinted name when
+  `fingerprint` is on. `og:image:width` and `og:image:height` are read from the
+  file's PNG, JPEG, GIF, or WebP header, and `twitter:card` becomes
+  `summary_large_image`. The build warns about an image it cannot find or
+  measure.
+- On post pages, `head-meta` writes `article:published_time` from `date`,
+  `article:modified_time` from a new `updated` front-matter key, and one
+  `article:tag` per tag.
+- JSON-LD structured data: a `BlogPosting` on each post page and a `WebSite` on
+  the front page.
+- The sitemap gives each post a `<lastmod>`, from `updated` or else `date`.
+- `head-meta` links each configured site-wide feed with `<link rel="alternate">`.
+- `noindex`: the 404 page, listing pages after the first, and any post with
+  `noindex: true` carry a robots `noindex` tag and are left out of the sitemap.
+- A `twitter` key in `blogin.json`, written as `twitter:site` and
+  `twitter:creator`.
+
 ## 0.9.4
 
 ### Fixed

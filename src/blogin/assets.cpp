@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <format>
@@ -409,6 +410,144 @@ int image_width(const std::filesystem::path& file, std::string_view tool) {
   }
 
   return pixels;
+}
+
+namespace {
+
+unsigned byte_at(std::string_view bytes, std::size_t index) {
+  return static_cast<unsigned char>(bytes[index]);
+}
+
+unsigned big_endian_16(std::string_view bytes, std::size_t index) {
+  return (byte_at(bytes, index) << 8U) | byte_at(bytes, index + 1);
+}
+
+unsigned little_endian_16(std::string_view bytes, std::size_t index) {
+  return byte_at(bytes, index) | (byte_at(bytes, index + 1) << 8U);
+}
+
+unsigned little_endian_24(std::string_view bytes, std::size_t index) {
+  return little_endian_16(bytes, index) | (byte_at(bytes, index + 2) << 16U);
+}
+
+std::uint32_t big_endian_32(std::string_view bytes, std::size_t index) {
+  return (static_cast<std::uint32_t>(big_endian_16(bytes, index)) << 16U) | big_endian_16(bytes, index + 2);
+}
+
+std::optional<ImageSize> sized(std::uint64_t width, std::uint64_t height) {
+  constexpr std::uint64_t largest = 1U << 30U;
+
+  if (width == 0 || height == 0 || width > largest || height > largest) {
+    return std::nullopt;
+  }
+
+  return ImageSize{static_cast<int>(width), static_cast<int>(height)};
+}
+
+std::optional<ImageSize> png_size(std::string_view bytes) {
+  if (bytes.size() < 24 || bytes.substr(12, 4) != "IHDR") {
+    return std::nullopt;
+  }
+
+  return sized(big_endian_32(bytes, 16), big_endian_32(bytes, 20));
+}
+
+std::optional<ImageSize> gif_size(std::string_view bytes) {
+  if (bytes.size() < 10) {
+    return std::nullopt;
+  }
+
+  return sized(little_endian_16(bytes, 6), little_endian_16(bytes, 8));
+}
+
+// The frame header is the first marker from C0 to CF that is not DHT (C4), JPG
+// (C8), or DAC (CC), which are table and extension markers in the same range.
+bool is_start_of_frame(unsigned marker) {
+  return marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC;
+}
+
+std::optional<ImageSize> jpeg_size(std::string_view bytes) {
+  std::size_t index = 2;
+
+  while (index + 4 <= bytes.size()) {
+    if (byte_at(bytes, index) != 0xFF) {
+      return std::nullopt;
+    }
+
+    const unsigned marker = byte_at(bytes, index + 1);
+
+    // Fill bytes before a marker.
+    if (marker == 0xFF) {
+      ++index;
+      continue;
+    }
+
+    const unsigned length = big_endian_16(bytes, index + 2);
+
+    if (is_start_of_frame(marker)) {
+      if (index + 9 > bytes.size()) {
+        return std::nullopt;
+      }
+
+      return sized(big_endian_16(bytes, index + 7), big_endian_16(bytes, index + 5));
+    }
+
+    if (length < 2) {
+      return std::nullopt;
+    }
+
+    index += 2 + length;
+  }
+
+  return std::nullopt;
+}
+
+std::optional<ImageSize> webp_size(std::string_view bytes) {
+  if (bytes.size() < 30) {
+    return std::nullopt;
+  }
+
+  const std::string_view chunk = bytes.substr(12, 4);
+
+  if (chunk == "VP8 ") {
+    return sized(little_endian_16(bytes, 26) & 0x3FFFU, little_endian_16(bytes, 28) & 0x3FFFU);
+  }
+
+  if (chunk == "VP8L") {
+    const std::uint32_t bits =
+      little_endian_16(bytes, 21) | (static_cast<std::uint32_t>(little_endian_16(bytes, 23)) << 16U);
+
+    return sized((bits & 0x3FFFU) + 1, ((bits >> 14U) & 0x3FFFU) + 1);
+  }
+
+  if (chunk == "VP8X") {
+    return sized(std::uint64_t{little_endian_24(bytes, 24)} + 1,
+                 std::uint64_t{little_endian_24(bytes, 27)} + 1);
+  }
+
+  return std::nullopt;
+}
+
+}  // namespace
+
+std::optional<ImageSize> image_size(std::string_view bytes) {
+  if (bytes.starts_with("\x89PNG\r\n\x1A\n")) {
+    return png_size(bytes);
+  }
+
+  if (bytes.starts_with("GIF87a") || bytes.starts_with("GIF89a")) {
+    return gif_size(bytes);
+  }
+
+  if (bytes.starts_with("\xFF\xD8")) {
+    return jpeg_size(bytes);
+  }
+
+  if (bytes.starts_with("RIFF") && bytes.size() >= 12 && bytes.substr(8, 4) == "WEBP") {
+    return webp_size(bytes);
+  }
+
+  return std::nullopt;
 }
 
 bool resize(const std::filesystem::path& source, const std::filesystem::path& destination, int width,

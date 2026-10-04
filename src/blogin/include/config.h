@@ -35,6 +35,13 @@ struct Config {
   std::string base_url;
   std::string output_dir = "public";
   std::string author;
+
+  // The share image a page shows when its front matter names none.
+  std::string image;
+
+  // The site's X handle, written as twitter:site and twitter:creator.
+  std::string twitter;
+
   std::string home_section;
   std::string css_framework = "none";
   std::string theme;

@@ -14,7 +14,7 @@ namespace blogin {
 namespace {
 
 constexpr std::array known_keys{
-  "title", "base-url", "output-dir", "author", "home-section", "css-framework", "theme",
+  "title", "base-url", "output-dir", "author", "image", "twitter", "home-section", "css-framework", "theme",
   "page-size", "summary-length", "reading-wpm", "related-count", "search-text-length", "search-cap",
   "clean-urls", "debug", "search", "highlight", "robots", "minify", "fingerprint",
   "image-widths", "taxonomies", "feed-formats", "languages", "language-config", "sections",
@@ -305,6 +305,8 @@ std::expected<Config, ParseError> Config::from_value(const Value& value) {
     BLOGIN_STRING_KEY("base-url", base_url)
     BLOGIN_STRING_KEY("output-dir", output_dir)
     BLOGIN_STRING_KEY("author", author)
+    BLOGIN_STRING_KEY("image", image)
+    BLOGIN_STRING_KEY("twitter", twitter)
     BLOGIN_STRING_KEY("home-section", home_section)
     BLOGIN_STRING_KEY("css-framework", css_framework)
     BLOGIN_STRING_KEY("theme", theme)

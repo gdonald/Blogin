@@ -15,6 +15,12 @@ struct FeedEntry {
   std::string summary;
 };
 
+// One url in the sitemap. `lastmod` is a date, or empty to leave it out.
+struct SitemapEntry {
+  std::string location;
+  std::string lastmod;
+};
+
 struct FeedInfo {
   std::string title;
   std::string site_url;
@@ -31,12 +37,15 @@ std::string rss(const FeedInfo& info);
 
 std::string json_feed(const FeedInfo& info);
 
-std::string sitemap(const std::vector<std::string>& locations);
+std::string sitemap(const std::vector<SitemapEntry>& entries);
 
 std::string robots_txt(std::string_view base_url);
 
 // "feed.xml", "rss.xml", or "feed.json".
 std::string_view filename_for(std::string_view format);
+
+// "application/atom+xml", "application/rss+xml", or "application/feed+json".
+std::string_view media_type_for(std::string_view format);
 
 }  // namespace feed
 }  // namespace blogin

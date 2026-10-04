@@ -81,9 +81,31 @@ SPEC {
       spec::it("carries the feed url", [=] { expect(json()).to_contain("feed_url"); });
     });
 
+  });
+}
+
+SPEC {
+  spec::describe("feeds", [] {
+    spec::context("filenames", [] {
+      spec::it("names the atom feed", [] {
+        expect(std::string(blogin::feed::filename_for("atom"))).to_eq("feed.xml");
+      });
+
+      spec::it("names the rss feed", [] {
+        expect(std::string(blogin::feed::filename_for("rss"))).to_eq("rss.xml");
+      });
+
+      spec::it("names the json feed", [] {
+        expect(std::string(blogin::feed::filename_for("json"))).to_eq("feed.json");
+      });
+    });
+
     spec::context("sitemap", [] {
       auto xml = spec::let([] {
-        return blogin::feed::sitemap({"https://example.com/", "https://example.com/a?b=1"});
+        return blogin::feed::sitemap(
+          {{"https://example.com/", ""},
+           {"https://example.com/a?b=1", ""},
+           {"https://example.com/post", "2024-03-07"}});
       });
 
       spec::it("uses the sitemap namespace", [=] { expect(xml()).to_contain("sitemaps.org/schemas/sitemap"); });
@@ -92,8 +114,26 @@ SPEC {
 
       spec::it("escapes a url", [=] { expect(xml()).to_contain("a?b=1"); });
 
+      spec::it("writes the date a url last changed", [=] {
+        expect(xml()).to_contain("<loc>https://example.com/post</loc><lastmod>2024-03-07</lastmod>");
+      });
+
+      spec::it("leaves out the date when a url has none", [=] {
+        expect(xml()).to_contain("<loc>https://example.com/</loc></url>");
+      });
+
       spec::it("writes an empty urlset for no urls", [] {
         expect(blogin::feed::sitemap({})).to_contain("</urlset>");
+      });
+    });
+
+    spec::context("media types", [] {
+      spec::it("names atom", [] { expect(blogin::feed::media_type_for("atom")).to_eq("application/atom+xml"); });
+
+      spec::it("names rss", [] { expect(blogin::feed::media_type_for("rss")).to_eq("application/rss+xml"); });
+
+      spec::it("names json feed", [] {
+        expect(blogin::feed::media_type_for("json")).to_eq("application/feed+json");
       });
     });
 
@@ -113,23 +153,5 @@ SPEC {
       });
     });
 
-  });
-}
-
-SPEC {
-  spec::describe("feeds", [] {
-    spec::context("filenames", [] {
-      spec::it("names the atom feed", [] {
-        expect(std::string(blogin::feed::filename_for("atom"))).to_eq("feed.xml");
-      });
-
-      spec::it("names the rss feed", [] {
-        expect(std::string(blogin::feed::filename_for("rss"))).to_eq("rss.xml");
-      });
-
-      spec::it("names the json feed", [] {
-        expect(std::string(blogin::feed::filename_for("json"))).to_eq("feed.json");
-      });
-    });
   });
 }

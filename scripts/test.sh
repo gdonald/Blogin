@@ -3,12 +3,15 @@
 # Everything CI checks, except fuzzing. Run it before a commit and a green run
 # here means a green run there.
 #
-#   ./scripts/test.sh              every stage, several at a time
+#   ./scripts/test.sh              every stage
 #   ./scripts/test.sh specs tidy   named stages
 #   ./scripts/test.sh native       only what needs no container
-#   ./scripts/test.sh -j 14        spend 14 cores across the stages
-#   ./scripts/test.sh --serial     one at a time, which is what to read on a failure
+#   ./scripts/test.sh -j 14        give each stage 14 cores
 #   ./scripts/test.sh --list       the stages and what each one does
+#
+# Stages run one at a time, and the run stops at the first stage that fails.
+# That stage's output is printed and also kept under build/test-logs/, so the
+# error can be read after it scrolls past.
 #
 # Each job in .github/workflows/ci.yml calls one stage from this file, so the
 # two cannot drift: a stage added here is added there, and a stage that fails
@@ -37,7 +40,6 @@ cd "$root"
 
 image="blogin-dev"
 image_built=no
-logs=
 
 # The container writes into build-linux/ and never into build/, so a container
 # stage cannot clobber the cache a native stage left behind. They share the
@@ -52,14 +54,8 @@ jobs_count() {
   fi
 }
 
-# Stages run concurrently, each with a share of the cores. Every stage has its
-# own build directory, and the spec runner keeps its scratch tree under its own
-# pid, so two of them running at once cannot meet.
-#
-# -j is the whole machine's budget, the way it reads for make and cmake, not a
-# count of stages. Four cores are left to the OS, the editor, and the Docker VM,
-# since handing over every core makes the machine unusable and buys nothing.
-# Past about eight concurrent stages the wall time stops falling.
+# -j is the cores each stage gets. Four are left to the OS, the editor, and the
+# Docker VM, since handing over every core makes the machine unusable.
 cores_available="$(jobs_count)"
 
 if [[ $cores_available -ge 12 ]]; then
@@ -68,9 +64,8 @@ else
   default_cores=$cores_available
 fi
 
-# Both set per run, once the budget is known.
+# Set per run, once the budget is known.
 jobs=1
-parallel=1
 
 # ---------------------------------------------------------------------------
 # Stages
@@ -122,8 +117,7 @@ stage_codeql() {
 # Stages that need the container
 # ---------------------------------------------------------------------------
 
-# Built once per run. Four container stages want it, and building the same tag
-# from several processes at once races on the layer cache.
+# Built once per run, before the first container stage.
 build_image() {
   if [[ "$image_built" == "yes" ]]; then
     return
@@ -287,10 +281,11 @@ describe_stages() {
   printf 'CodeQL CLI is what the codeql stage wants.\n'
 
   printf '\noptions:\n'
-  printf '  %-15s %s\n' "-j N" "cores to use across every stage (default $default_cores of $cores_available)"
-  printf '  %-15s %s\n' "--serial" "one at a time"
-  printf '\nOutput is shown for a stage that fails and swallowed for one that\n'
-  printf 'passes. Fuzzing is not here. Run ./scripts/fuzz.sh for that.\n'
+  printf '  %-15s %s\n' "-j N" "cores each stage uses (default $default_cores of $cores_available)"
+  printf '\nStages run one at a time and the run stops at the first failure. Output\n'
+  printf 'is shown for the stage that failed and swallowed for one that passes.\n'
+  printf 'Every stage'"'"'s output is kept in build/test-logs/<stage>.log.\n'
+  printf 'Fuzzing is not here. Run ./scripts/fuzz.sh for that.\n'
 }
 
 # What a stage needs that a bare checkout does not have: "docker", "codeql", or
@@ -305,10 +300,6 @@ requirement() {
   done
 
   printf 'nothing'
-}
-
-needs_docker() {
-  [[ "$(requirement "$1")" == "docker" ]]
 }
 
 known_stage() {
@@ -338,7 +329,6 @@ run_stage() {
 # content, failing with a syntax error nowhere near anything wrong.
 main() {
   local cores=$default_cores
-  local serial=no
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -349,10 +339,6 @@ main() {
       --jobs | -j)
         cores="${2:-}"
         shift 2 || true
-        ;;
-      --serial)
-        serial=yes
-        shift
         ;;
       *)
         break
@@ -365,33 +351,12 @@ main() {
     exit 2
   fi
 
-  # Past the default budget the wall time stops falling and the machine becomes
-  # unusable while the run goes. Asking for more is capped rather than refused.
   if [[ $cores -gt $default_cores ]]; then
-    printf 'capping -j %s at %s, which leaves the machine usable and runs no\n' \
-      "$cores" "$default_cores"
-    printf 'slower: past that the wall time stops falling.\n\n'
+    printf 'capping -j %s at %s, which leaves the machine usable\n\n' "$cores" "$default_cores"
     cores=$default_cores
   fi
 
-  # Two cores per stage is the smallest share that still lets a build overlap
-  # its own linking, so the budget decides how many stages run at once.
-  parallel=$((cores / 2))
-
-  if [[ $parallel -lt 1 ]]; then
-    parallel=1
-  fi
-
-  # `wait -n` arrived in bash 4.3. Without it a stage that finishes early cannot
-  # hand its slot to the next one, so an old bash runs them one at a time rather
-  # than in wrong-sized batches.
-  if [[ "${BASH_VERSINFO[0]}" -lt 5 && "${BASH_VERSINFO[0]}${BASH_VERSINFO[1]}" -lt 43 ]]; then
-    serial=yes
-  fi
-
-  if [[ "$serial" == "yes" ]]; then
-    parallel=1
-  fi
+  jobs=$cores
 
   local requested=("${@:-all}")
   local selected=()
@@ -425,24 +390,13 @@ main() {
     codeql_available=yes
   fi
 
-  # Never more stages than there are to run, so a short list gets the whole
-  # budget rather than splitting it among slots that stay empty.
-  if [[ $parallel -gt ${#selected[@]} ]]; then
-    parallel=${#selected[@]}
-  fi
+  local log_dir="$root/build/test-logs"
+  mkdir -p "$log_dir"
 
-  jobs=$(( cores / parallel ))
+  local -a passed=() skipped=()
+  local started_at=$SECONDS
 
-  if [[ $jobs -lt 1 ]]; then
-    jobs=1
-  fi
-
-  # Global rather than local, since the EXIT trap fires after main returns and
-  # would otherwise read an unbound name.
-  logs="$(mktemp -d)"
-  trap 'rm -rf "$logs"' EXIT
-
-  local -a passed=() skipped=() failed=() to_run=()
+  printf '\n%s stage(s), one at a time, %s cores each\n\n' "${#selected[@]}" "$jobs"
 
   for name in "${selected[@]}"; do
     case "$(requirement "$name")" in
@@ -452,6 +406,17 @@ main() {
           skipped+=("$name")
 
           continue
+        fi
+
+        if [[ "$image_built" == "no" ]]; then
+          printf '    %-16s building the container image\n' "docker"
+
+          if ! build_image >"$log_dir/image.log" 2>&1; then
+            printf '    %-16s FAILED\n\n' "docker image"
+            cat "$log_dir/image.log"
+            printf '\nlog: %s\n' "$log_dir/image.log"
+            exit 1
+          fi
         fi
         ;;
       codeql)
@@ -464,70 +429,31 @@ main() {
         ;;
     esac
 
-    to_run+=("$name")
-  done
-
-  # One image build up front rather than four racing inside the stages.
-  local wants_container=no
-
-  for name in "${to_run[@]}"; do
-    if needs_docker "$name"; then
-      wants_container=yes
-    fi
-  done
-
-  if [[ "$wants_container" == "yes" ]]; then
-    printf '    %-16s building the container image\n' "docker"
-    build_image >"$logs/image.log" 2>&1 || {
-      printf '    %-16s FAILED\n' "docker image"
-      cat "$logs/image.log"
-      exit 1
-    }
-  fi
-
-  local started_at=$SECONDS
-  local running=0
-
-  printf '\n%s stage(s), %s at a time, %s of %s cores each\n\n' \
-    "${#to_run[@]}" "$parallel" "$jobs" "$cores"
-
-  for name in "${to_run[@]}"; do
-    while [[ $running -ge $parallel ]]; do
-      wait -n || true
-      running=$((running - 1))
-    done
+    local log="$log_dir/$name.log"
+    local stage_started_at=$SECONDS
 
     printf '    %-16s started\n' "$name"
 
-    (
-      stage_started_at=$SECONDS
+    # Started as a background job and waited on, not called as an if
+    # condition: bash ignores set -e inside a condition, so a stage whose build
+    # failed would go on to run its specs against the last binary.
+    ( run_stage "$name" ) >"$log" 2>&1 &
 
-      if run_stage "$name" >"$logs/$name.log" 2>&1; then
-        printf '    %-16s passed in %ss\n' "$name" "$((SECONDS - stage_started_at))"
-      else
-        printf '    %-16s FAILED after %ss\n' "$name" "$((SECONDS - stage_started_at))"
-        touch "$logs/$name.failed"
-      fi
-    ) &
-
-    running=$((running + 1))
-  done
-
-  wait
-
-  for name in "${to_run[@]}"; do
-    if [[ -e "$logs/$name.failed" ]]; then
-      failed+=("$name")
-    else
+    if wait "$!"; then
+      printf '    %-16s passed in %ss\n' "$name" "$((SECONDS - stage_started_at))"
       passed+=("$name")
-    fi
-  done
 
-  # Only a failing stage's output is worth reading. A passing one produced
-  # thousands of ok lines nobody looks at.
-  for name in "${failed[@]}"; do
+      continue
+    fi
+
+    printf '    %-16s FAILED after %ss\n' "$name" "$((SECONDS - stage_started_at))"
     printf '\n================ %s ================\n' "$name"
-    cat "$logs/$name.log"
+    cat "$log"
+    printf '\n----------------------------------------------------------------\n'
+    printf 'passed:  %s\n' "${passed[*]:-none}"
+    printf 'failed:  %s\n' "$name"
+    printf 'log:     %s\n' "$log"
+    exit 1
   done
 
   printf '\n----------------------------------------------------------------\n'
@@ -537,15 +463,7 @@ main() {
     printf 'skipped: %s\n' "${skipped[*]}"
   fi
 
-  if [[ ${#failed[@]} -gt 0 ]]; then
-    printf 'failed:  %s\n' "${failed[*]}"
-  fi
-
   printf 'took:    %ss\n' "$((SECONDS - started_at))"
-
-  if [[ ${#failed[@]} -gt 0 ]]; then
-    exit 1
-  fi
 
   # A skipped stage is not a pass. CI runs it, so a commit that goes out on the
   # strength of a run with skips can still fail there.

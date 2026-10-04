@@ -13,6 +13,17 @@ using spec::expect;
 
 namespace {
 
+blogin::view::HeadMeta page_meta(std::string title, std::string description, std::string type,
+                                 std::string published = {}) {
+  blogin::view::HeadMeta meta;
+  meta.title = std::move(title);
+  meta.description = std::move(description);
+  meta.type = std::move(type);
+  meta.published = std::move(published);
+
+  return meta;
+}
+
 Chrome sample_chrome() {
   Chrome chrome;
 
@@ -126,7 +137,7 @@ SPEC {
 
     spec::context("head metadata", [] {
       auto meta = spec::let([] {
-        return blogin::view::head_meta(sample_chrome(), "Hello", "A summary.", "article");
+        return blogin::view::head_meta(sample_chrome(), page_meta("Hello", "A summary.", "article"));
       });
 
       // A base url written with a trailing slash must not double the separator.
@@ -134,7 +145,7 @@ SPEC {
         Chrome chrome = sample_chrome();
         chrome.site.set("base-url", Value("https://example.com/"));
 
-        expect(blogin::view::head_meta(chrome, "Hello", "", "article"))
+        expect(blogin::view::head_meta(chrome, page_meta("Hello", "", "article")))
           .to_contain(R"(<link rel="canonical" href="https://example.com/posts/hello"/>)");
       });
 
@@ -151,19 +162,256 @@ SPEC {
       spec::it("escapes what it writes", [] {
         Chrome chrome = sample_chrome();
 
-        expect(blogin::view::head_meta(chrome, "a \" b", "", "article")).to_contain("&quot;");
+        expect(blogin::view::head_meta(chrome, page_meta("a \" b", "", "article"))).to_contain("&quot;");
       });
 
       spec::it("leaves out a tag it has nothing for", [] {
-        expect(blogin::view::head_meta(sample_chrome(), "Hello", "", "article"))
+        expect(blogin::view::head_meta(sample_chrome(), page_meta("Hello", "", "article")))
           .not_to_contain("og:description");
+      });
+
+      spec::context("without a share image", [=] {
+        spec::it("writes no image", [=] { expect(meta()).not_to_contain("og:image"); });
+
+        spec::it("writes the small twitter card", [=] {
+          expect(meta()).to_contain(R"(<meta name="twitter:card" content="summary"/>)");
+        });
+      });
+
+      spec::context("with a share image", [] {
+        auto image_chrome = spec::let([] {
+          Chrome chrome = sample_chrome();
+          chrome.share_image = blogin::ShareImage{"/assets/share.0123abcd.png", 1200, 627};
+
+          return chrome;
+        });
+
+        auto image_meta =
+          spec::let([=] { return blogin::view::head_meta(image_chrome(), page_meta("Hello", "", "website")); });
+
+        spec::it("writes the image as an absolute url under the base url", [=] {
+          expect(image_meta())
+            .to_contain(R"(<meta property="og:image" content="https://example.com/assets/share.0123abcd.png"/>)");
+        });
+
+        spec::it("writes the width", [=] {
+          expect(image_meta()).to_contain(R"(<meta property="og:image:width" content="1200"/>)");
+        });
+
+        spec::it("writes the height", [=] {
+          expect(image_meta()).to_contain(R"(<meta property="og:image:height" content="627"/>)");
+        });
+
+        spec::it("writes the large twitter card", [=] {
+          expect(image_meta()).to_contain(R"(<meta name="twitter:card" content="summary_large_image"/>)");
+        });
+      });
+
+      spec::context("with a share image whose size is not known", [] {
+        auto image_meta = spec::let([] {
+          Chrome chrome = sample_chrome();
+          chrome.share_image = blogin::ShareImage{"/assets/share.png", 0, 0};
+
+          return blogin::view::head_meta(chrome, page_meta("Hello", "", "website"));
+        });
+
+        spec::it("writes the image", [=] { expect(image_meta()).to_contain(R"(property="og:image")"); });
+
+        spec::it("leaves out the width and height", [=] {
+          expect(image_meta()).not_to_contain("og:image:width");
+        });
+      });
+
+      spec::context("with a share image on another host", [] {
+        spec::it("writes a full url as it is", [] {
+          Chrome chrome = sample_chrome();
+          chrome.share_image = blogin::ShareImage{"https://cdn.example.net/share.png", 0, 0};
+
+          expect(blogin::view::head_meta(chrome, page_meta("Hello", "", "website")))
+            .to_contain(R"(content="https://cdn.example.net/share.png")");
+        });
+
+        spec::it("writes a protocol-relative url as it is", [] {
+          Chrome chrome = sample_chrome();
+          chrome.share_image = blogin::ShareImage{"//cdn.example.net/share.png", 0, 0};
+
+          expect(blogin::view::head_meta(chrome, page_meta("Hello", "", "website")))
+            .to_contain(R"(content="//cdn.example.net/share.png")");
+        });
+      });
+
+      spec::context("search engine indexing", [=] {
+        spec::it("asks search engines to leave out a noindex page", [] {
+          Chrome chrome = sample_chrome();
+          chrome.noindex = true;
+
+          expect(blogin::view::head_meta(chrome, page_meta("Hello", "", "article")))
+            .to_contain(R"(<meta name="robots" content="noindex"/>)");
+        });
+
+        spec::it("writes no robots tag on a page to index", [=] { expect(meta()).not_to_contain("name=\"robots\""); });
+      });
+
+      spec::context("article details", [] {
+        auto article_meta = spec::let([] {
+          blogin::view::HeadMeta page = page_meta("Hello", "", "article", "2024-03-07");
+          page.modified = "2024-04-01";
+          page.tags = {"cpp", "seo"};
+
+          return page;
+        });
+
+        spec::it("writes the modified time", [=] {
+          expect(blogin::view::head_meta(sample_chrome(), article_meta()))
+            .to_contain(R"(<meta property="article:modified_time" content="2024-04-01"/>)");
+        });
+
+        spec::it("writes a tag per tag", [=] {
+          const std::string out = blogin::view::head_meta(sample_chrome(), article_meta());
+
+          spec::aggregate_failures([&] {
+            expect(out).to_contain(R"(<meta property="article:tag" content="cpp"/>)");
+            expect(out).to_contain(R"(<meta property="article:tag" content="seo"/>)");
+          });
+        });
+
+        spec::it("leaves the modified time and tags off a page that is not an article", [=] {
+          blogin::view::HeadMeta page = article_meta();
+          page.type = "website";
+
+          const std::string out = blogin::view::head_meta(sample_chrome(), page);
+
+          spec::aggregate_failures([&] {
+            expect(out).not_to_contain("article:modified_time");
+            expect(out).not_to_contain("article:tag");
+          });
+        });
+      });
+
+      spec::context("twitter handles", [=] {
+        spec::it("writes the site and creator handles", [] {
+          Chrome chrome = sample_chrome();
+          chrome.site.set("twitter", Value("@blogin"));
+
+          const std::string out = blogin::view::head_meta(chrome, page_meta("Hello", "", "article"));
+
+          spec::aggregate_failures([&] {
+            expect(out).to_contain(R"(<meta name="twitter:site" content="@blogin"/>)");
+            expect(out).to_contain(R"(<meta name="twitter:creator" content="@blogin"/>)");
+          });
+        });
+
+        spec::it("writes no handle when the site names none", [=] { expect(meta()).not_to_contain("twitter:site"); });
+      });
+
+      spec::context("feed links", [=] {
+        spec::it("links each feed by its media type under the base url", [] {
+          Chrome chrome = sample_chrome();
+          chrome.feeds = {blogin::FeedLink{"application/atom+xml", "/feed.xml"},
+                          blogin::FeedLink{"application/rss+xml", "/rss.xml"}};
+
+          const std::string out = blogin::view::head_meta(chrome, page_meta("Hello", "", "website"));
+
+          spec::aggregate_failures([&] {
+            expect(out).to_contain(
+              R"(<link rel="alternate" type="application/atom+xml" title="Blogin" )"
+              R"(href="https://example.com/feed.xml"/>)");
+            expect(out).to_contain(
+              R"(<link rel="alternate" type="application/rss+xml" title="Blogin" )"
+              R"(href="https://example.com/rss.xml"/>)");
+          });
+        });
+
+        spec::it("links no feed when there are none", [=] { expect(meta()).not_to_contain("rel=\"alternate\""); });
+      });
+
+      spec::context("structured data on an article", [] {
+        auto posting = spec::let([] {
+          Chrome chrome = sample_chrome();
+          chrome.share_image = blogin::ShareImage{"/share.png", 1200, 627};
+
+          blogin::view::HeadMeta page = page_meta("Hello", "A summary.", "article", "2024-03-07");
+          page.modified = "2024-04-01";
+
+          return blogin::view::head_meta(chrome, page);
+        });
+
+        spec::it("writes a BlogPosting with its headline, url, and dates", [=] {
+          expect(posting()).to_contain(
+            R"(<script type="application/ld+json">{"@context":"https://schema.org","@type":"BlogPosting",)"
+            R"("headline":"Hello","url":"https://example.com/posts/hello","description":"A summary.",)"
+            R"("datePublished":"2024-03-07","dateModified":"2024-04-01",)");
+        });
+
+        spec::it("names the share image", [=] {
+          expect(posting()).to_contain(R"("image":"https://example.com/share.png")");
+        });
+
+        spec::it("names the site author as a person", [=] {
+          expect(posting()).to_contain(R"("author":{"@type":"Person","name":"Greg"}})");
+        });
+
+        spec::it("leaves out what the page does not have", [] {
+          Chrome chrome = sample_chrome();
+          chrome.site.set("author", Value(""));
+
+          const std::string out = blogin::view::head_meta(chrome, page_meta("Hello", "", "article"));
+
+          spec::aggregate_failures([&] {
+            expect(out).to_contain(R"("url":"https://example.com/posts/hello"}</script>)");
+            expect(out).not_to_contain("author");
+          });
+        });
+
+        spec::it("cannot be closed early by a title", [] {
+          expect(blogin::view::head_meta(sample_chrome(), page_meta("a </script> b", "", "article")))
+            .to_contain(R"("headline":"a \u003c/script> b")");
+        });
+
+        spec::it("is not written on a page that is not an article", [] {
+          expect(blogin::view::head_meta(sample_chrome(), page_meta("Hello", "", "website"))).not_to_contain("ld+json");
+        });
+      });
+
+      spec::context("structured data on the home page", [] {
+        spec::it("writes a WebSite with the site's name and url", [] {
+          Chrome chrome = sample_chrome();
+          chrome.url = "/";
+          chrome.home = true;
+
+          expect(blogin::view::head_meta(chrome, page_meta("", "", "website")))
+            .to_contain(R"(<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite",)"
+                        R"("name":"Blogin","url":"https://example.com/"}</script>)");
+        });
+
+        spec::it("is not written on another page", [] {
+          expect(blogin::view::head_meta(sample_chrome(), page_meta("Hello", "", "article"))).not_to_contain("WebSite");
+        });
+      });
+
+      spec::context("the publication date", [=] {
+        spec::it("writes it on an article", [] {
+          expect(blogin::view::head_meta(sample_chrome(), page_meta("Hello", "", "article", "2024-03-07")))
+            .to_contain(R"(<meta property="article:published_time" content="2024-03-07"/>)");
+        });
+
+        spec::it("leaves it out of a page that is not an article", [] {
+          expect(blogin::view::head_meta(sample_chrome(), page_meta("Hello", "", "website", "2024-03-07")))
+            .not_to_contain("article:published_time");
+        });
+
+        spec::it("leaves it out of an article with no date", [=] {
+          expect(meta()).not_to_contain("article:published_time");
+        });
       });
     });
 
     spec::context("a post page", [] {
       auto context = spec::let([] {
         PostView page = sample_page();
-        const Post post = sample_post();
+        Post post = sample_post();
+        post.updated = blogin::Date(2024, 4, 1);
+        post.tags = {"raku"};
         page.post = &post;
 
         Value tag = Value::object();
@@ -181,6 +429,20 @@ SPEC {
       spec::it("offers the title", [=] { expect(value_of(*context(), "title")).to_eq("Hello"); });
 
       spec::it("offers the date", [=] { expect(value_of(*context(), "date")).to_eq("2024-03-07"); });
+
+      spec::it("writes the post's updated date as its modified time", [=] {
+        expect(value_of(*context(), "head-meta"))
+          .to_contain(R"(property="article:modified_time" content="2024-04-01")");
+      });
+
+      spec::it("writes the post's tags", [=] {
+        expect(value_of(*context(), "head-meta")).to_contain(R"(property="article:tag" content="raku")");
+      });
+
+      spec::it("writes the post's date as its publication time", [=] {
+        expect(value_of(*context(), "head-meta"))
+          .to_contain(R"(property="article:published_time" content="2024-03-07")");
+      });
 
       spec::it("offers the body", [=] { expect(value_of(*context(), "body")).to_contain("<p>Body.</p>"); });
 

@@ -189,12 +189,15 @@ is the build, and `writer.cpp` is what reaches disk.
 Run it before a commit:
 
 ```bash
-./scripts/test.sh          # every stage, several at a time
+./scripts/test.sh          # every stage
 ./scripts/test.sh --list   # the stages, and the options
 ./scripts/test.sh specs    # one of them
-./scripts/test.sh -j 14    # spend 14 cores across the run
-./scripts/test.sh --serial # one at a time
+./scripts/test.sh -j 14    # give each stage 14 cores
 ```
+
+Stages run one at a time, and the run stops at the first one that fails. Its
+output is printed, and every stage's output is kept in
+`build/test-logs/<stage>.log`.
 
 The spec runner underneath it takes a filter and a job count:
 

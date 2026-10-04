@@ -13,6 +13,21 @@
 
 namespace blogin {
 
+// The image a link preview shows. `url` is either site-relative and already
+// fingerprinted, or a full URL to another host. A dimension is zero when the
+// image could not be read.
+struct ShareImage {
+  std::string url;
+  int width = 0;
+  int height = 0;
+};
+
+// A feed a page advertises, by its media type and its site-relative url.
+struct FeedLink {
+  std::string type;
+  std::string url;
+};
+
 // What every page has, whatever kind of page it is.
 struct Chrome {
   Value site = Value::object();
@@ -21,6 +36,15 @@ struct Chrome {
 
   std::string section;
   std::string url;
+
+  ShareImage share_image;
+
+  std::vector<FeedLink> feeds;
+
+  bool noindex = false;
+
+  // The site's front page, which carries the WebSite structured data.
+  bool home = false;
 
   std::vector<NavNode> nav;
 
@@ -94,8 +118,18 @@ std::string compose_title(std::string_view site_title, std::string_view page_tit
 // The label a section shows in a menu, from its nav entry or from its name.
 std::string section_label(const std::vector<NavNode>& nav, std::string_view section);
 
-std::string head_meta(const Chrome& chrome, std::string_view page_title, std::string_view description,
-                      std::string_view type);
+// What head_meta says about one page beyond its chrome. The dates and tags are
+// written on an article page only.
+struct HeadMeta {
+  std::string title;
+  std::string description;
+  std::string type;
+  std::string published;
+  std::string modified;
+  std::vector<std::string> tags;
+};
+
+std::string head_meta(const Chrome& chrome, const HeadMeta& page);
 
 std::string pagination_html(const ListingView& listing);
 

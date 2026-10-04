@@ -18,6 +18,7 @@ namespace {
 
 constexpr std::array known_keys{
   "title", "date", "slug", "tags", "draft", "description", "summary", "toc", "aliases", "order", "layout",
+  "image", "updated", "noindex",
 };
 
 // A value may be quoted to keep leading spaces or a colon. The quotes are not
@@ -203,6 +204,17 @@ std::expected<Post, ParseError> Post::parse(std::string_view source, std::string
     post.date = *from_name;
   }
 
+  if (const std::string_view raw_updated = unquote(field_of(front.fields, "updated")); !raw_updated.empty()) {
+    const std::optional<Date> parsed = Date::parse(raw_updated);
+
+    if (!parsed) {
+      return std::unexpected(
+        ParseError{std::format("unparseable updated date '{}' in '{}'", raw_updated, filename), 1, 1});
+    }
+
+    post.updated = *parsed;
+  }
+
   const std::string_view raw_slug = unquote(field_of(front.fields, "slug"));
 
   post.slug = raw_slug.empty() ? slug::slugify(post.title) : std::string(raw_slug);
@@ -211,9 +223,11 @@ std::expected<Post, ParseError> Post::parse(std::string_view source, std::string
   post.aliases = parse_list(field_of(front.fields, "aliases"));
   post.draft = parse_bool(field_of(front.fields, "draft"));
   post.toc = parse_bool(field_of(front.fields, "toc"));
+  post.noindex = parse_bool(field_of(front.fields, "noindex"));
   post.description = std::string(unquote(field_of(front.fields, "description")));
   post.summary = std::string(unquote(field_of(front.fields, "summary")));
   post.layout = std::string(unquote(field_of(front.fields, "layout")));
+  post.image = std::string(unquote(field_of(front.fields, "image")));
   post.order = parse_order(unquote(field_of(front.fields, "order")));
 
   for (const auto& [key, value] : front.fields) {

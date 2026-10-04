@@ -6,6 +6,7 @@
 
 #include "filters.h"
 #include "html.h"
+#include "json.h"
 #include "metrics.h"
 #include "slug.h"
 
@@ -53,6 +54,30 @@ std::string meta_tag(std::string_view attribute, std::string_view name, std::str
   return out;
 }
 
+void set_if_present(Value& object, std::string_view key, std::string_view text) {
+  if (!text.empty()) {
+    object.set(std::string(key), Value(std::string(text)));
+  }
+}
+
+// A `<` only ever appears inside a JSON string, where \u003c means the same
+// thing, so no title can close the script element early.
+std::string structured_data(const Value& document) {
+  std::string out = R"(<script type="application/ld+json">)";
+
+  for (const char character : to_json(document)) {
+    if (character == '<') {
+      out += "\\u003c";
+    } else {
+      out += character;
+    }
+  }
+
+  out += "</script>\n";
+
+  return out;
+}
+
 Value nav_to_value(const std::vector<NavNode>& nodes, std::string_view section) {
   Value list = Value::array();
 
@@ -71,14 +96,24 @@ Value nav_to_value(const std::vector<NavNode>& nodes, std::string_view section) 
   return list;
 }
 
-std::string canonical_url(const Chrome& chrome) {
+std::string site_base(const Chrome& chrome) {
   std::string base(chrome.site["base-url"].as_string());
 
   while (base.ends_with('/')) {
     base.pop_back();
   }
 
-  return chrome.url.empty() ? base : base + chrome.url;
+  return base;
+}
+
+std::string canonical_url(const Chrome& chrome) {
+  return site_base(chrome) + chrome.url;
+}
+
+std::string share_image_url(const Chrome& chrome) {
+  const std::string& url = chrome.share_image.url;
+
+  return url.starts_with('/') && !url.starts_with("//") ? site_base(chrome) + url : url;
 }
 
 // The helpers a layout calls, as against the values it reads.
@@ -162,8 +197,7 @@ void define_chrome_functions(ViewContext& context, const Chrome& chrome) {
 
 // Everything a layout can ask for that does not depend on which kind of page it
 // is.
-void add_chrome(ViewContext& context, const Chrome& chrome, std::string_view page_title,
-                std::string_view description, std::string_view meta_type,
+void add_chrome(ViewContext& context, const Chrome& chrome, const HeadMeta& page,
                 std::string_view template_label) {
   context.set("site", chrome.site);
   context.set("site-title", chrome.site["title"]);
@@ -179,14 +213,14 @@ void add_chrome(ViewContext& context, const Chrome& chrome, std::string_view pag
   context.set("debug", Value(chrome.debug));
   context.set("template-label", Value(std::string(template_label)));
 
-  context.set("page-title", Value(std::string(page_title)));
-  context.set("meta-title", Value(compose_title(chrome.site["title"].as_string(), page_title)));
-  context.set("meta-description", Value(std::string(description)));
-  context.set("meta-type", Value(std::string(meta_type)));
+  context.set("page-title", Value(page.title));
+  context.set("meta-title", Value(compose_title(chrome.site["title"].as_string(), page.title)));
+  context.set("meta-description", Value(page.description));
+  context.set("meta-type", Value(page.type));
   context.set("canonical-url", Value(canonical_url(chrome)));
   context.set("section-label", Value(section_label(chrome.nav, chrome.section)));
 
-  context.set("head-meta", Value(head_meta(chrome, page_title, description, meta_type)));
+  context.set("head-meta", Value(head_meta(chrome, page)));
   context.set("theme-script", Value(std::string(theme_script())));
   context.set("theme-toggle", Value(std::string(theme_toggle())));
 
@@ -232,10 +266,11 @@ std::string section_label(const std::vector<NavNode>& nav, std::string_view sect
   return slug::humanize(slash == std::string_view::npos ? section : section.substr(slash + 1));
 }
 
-std::string head_meta(const Chrome& chrome, std::string_view page_title, std::string_view description,
-                      std::string_view type) {
+std::string head_meta(const Chrome& chrome, const HeadMeta& page) {
   const std::string site_title(chrome.site["title"].as_string());
-  const std::string title = page_title.empty() ? site_title : std::string(page_title);
+  const std::string title = page.title.empty() ? site_title : page.title;
+  const std::string& description = page.description;
+  const std::string& type = page.type;
   const std::string url = canonical_url(chrome);
 
   std::string out;
@@ -246,15 +281,83 @@ std::string head_meta(const Chrome& chrome, std::string_view page_title, std::st
     out += "\"/>\n";
   }
 
+  if (chrome.noindex) {
+    out += meta_tag("name", "robots", "noindex");
+  }
+
   out += meta_tag("name", "description", description);
   out += meta_tag("property", "og:type", type);
   out += meta_tag("property", "og:title", title);
   out += meta_tag("property", "og:description", description);
   out += meta_tag("property", "og:url", url);
   out += meta_tag("property", "og:site_name", site_title);
-  out += meta_tag("name", "twitter:card", "summary");
+
+  const std::string image = share_image_url(chrome);
+
+  out += meta_tag("property", "og:image", image);
+
+  if (!image.empty() && chrome.share_image.width > 0 && chrome.share_image.height > 0) {
+    out += meta_tag("property", "og:image:width", std::format("{}", chrome.share_image.width));
+    out += meta_tag("property", "og:image:height", std::format("{}", chrome.share_image.height));
+  }
+
+  if (type == "article") {
+    out += meta_tag("property", "article:published_time", page.published);
+    out += meta_tag("property", "article:modified_time", page.modified);
+
+    for (const std::string& tag : page.tags) {
+      out += meta_tag("property", "article:tag", tag);
+    }
+  }
+
+  const std::string_view twitter = chrome.site["twitter"].as_string();
+
+  out += meta_tag("name", "twitter:card", image.empty() ? "summary" : "summary_large_image");
+  out += meta_tag("name", "twitter:site", twitter);
+  out += meta_tag("name", "twitter:creator", twitter);
   out += meta_tag("name", "twitter:title", title);
   out += meta_tag("name", "twitter:description", description);
+
+  for (const FeedLink& feed : chrome.feeds) {
+    out += R"(<link rel="alternate" type=")";
+    escape_attribute(out, feed.type);
+    out += R"(" title=")";
+    escape_attribute(out, site_title);
+    out += R"(" href=")";
+    escape_attribute(out, site_base(chrome) + feed.url);
+    out += "\"/>\n";
+  }
+
+  if (type == "article") {
+    Value posting = Value::object();
+    posting.set("@context", Value("https://schema.org"));
+    posting.set("@type", Value("BlogPosting"));
+    posting.set("headline", Value(title));
+    posting.set("url", Value(url));
+    set_if_present(posting, "description", description);
+    set_if_present(posting, "datePublished", page.published);
+    set_if_present(posting, "dateModified", page.modified);
+    set_if_present(posting, "image", image);
+
+    if (const std::string_view author = chrome.site["author"].as_string(); !author.empty()) {
+      Value person = Value::object();
+      person.set("@type", Value("Person"));
+      person.set("name", Value(std::string(author)));
+      posting.set("author", std::move(person));
+    }
+
+    out += structured_data(posting);
+  }
+
+  if (chrome.home) {
+    Value website = Value::object();
+    website.set("@context", Value("https://schema.org"));
+    website.set("@type", Value("WebSite"));
+    website.set("name", Value(site_title));
+    website.set("url", Value(url));
+
+    out += structured_data(website);
+  }
 
   return out;
 }
@@ -369,8 +472,18 @@ ViewContext build(const PostView& page) {
   const std::string description =
     page.post != nullptr && !page.post->description.empty() ? page.post->description : page.summary;
 
-  add_chrome(context, page.chrome, page.post != nullptr ? page.post->title : std::string{}, description,
-             "article", "template: show");
+  HeadMeta meta;
+  meta.description = description;
+  meta.type = "article";
+
+  if (page.post != nullptr) {
+    meta.title = page.post->title;
+    meta.published = page.post->date_string();
+    meta.modified = page.post->updated_string();
+    meta.tags = page.post->tags;
+  }
+
+  add_chrome(context, page.chrome, meta, "template: show");
 
   if (page.post != nullptr) {
     context.set("title", Value(page.post->title));
@@ -404,7 +517,11 @@ ViewContext build(const ListingView& listing) {
                     : (listing.heading.empty() ? section_label(listing.chrome.nav, listing.chrome.section)
                                                : listing.heading);
 
-  add_chrome(context, listing.chrome, heading, {}, "website", "template: index");
+  HeadMeta meta;
+  meta.title = heading;
+  meta.type = "website";
+
+  add_chrome(context, listing.chrome, meta, "template: index");
 
   context.set("posts", listing.entries);
   context.set("entries", listing.entries);

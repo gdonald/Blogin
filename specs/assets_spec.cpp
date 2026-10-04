@@ -1,4 +1,6 @@
+#include <format>
 #include <map>
+#include <optional>
 #include <random>
 #include <string>
 #include <vector>
@@ -7,6 +9,72 @@
 #include "support/spec.h"
 
 using spec::expect;
+
+namespace {
+
+std::string big_endian(unsigned value, int bytes) {
+  std::string out;
+
+  for (int shift = (bytes - 1) * 8; shift >= 0; shift -= 8) {
+    out += static_cast<char>((value >> static_cast<unsigned>(shift)) & 0xFFU);
+  }
+
+  return out;
+}
+
+std::string little_endian(unsigned value, int bytes) {
+  std::string out;
+
+  for (int index = 0; index < bytes; ++index) {
+    out += static_cast<char>((value >> static_cast<unsigned>(index * 8)) & 0xFFU);
+  }
+
+  return out;
+}
+
+// Each header carries only the bytes the size is read from, so a spec says
+// which field it depends on.
+std::string png_header(unsigned width, unsigned height) {
+  return std::string("\x89PNG\r\n\x1A\n", 8) + big_endian(13, 4) + "IHDR" + big_endian(width, 4) +
+         big_endian(height, 4);
+}
+
+std::string gif_header(unsigned width, unsigned height) {
+  return "GIF89a" + little_endian(width, 2) + little_endian(height, 2);
+}
+
+// An APP0 segment before the frame header, as a camera or editor writes one.
+std::string jpeg_header(unsigned width, unsigned height, unsigned frame_marker = 0xC0) {
+  return std::string("\xFF\xD8", 2) + std::string("\xFF\xE0", 2) + big_endian(16, 2) + std::string(14, 'j') +
+         "\xFF" + static_cast<char>(frame_marker) + big_endian(17, 2) + "\x08" + big_endian(height, 2) +
+         big_endian(width, 2);
+}
+
+std::string webp_header(std::string_view chunk, std::string_view payload) {
+  return "RIFF" + little_endian(0, 4) + "WEBP" + std::string(chunk) + little_endian(0, 4) + std::string(payload) +
+         std::string(16, '\0');
+}
+
+std::string webp_lossy(unsigned width, unsigned height) {
+  return webp_header("VP8 ", std::string(3, '\0') + "\x9D\x01\x2A" + little_endian(width, 2) +
+                               little_endian(height, 2));
+}
+
+std::string webp_lossless(unsigned width, unsigned height) {
+  return webp_header("VP8L", std::string(1, '\x2F') + little_endian((width - 1) | ((height - 1) << 14U), 4));
+}
+
+std::string webp_extended(unsigned width, unsigned height) {
+  return webp_header("VP8X", std::string(4, '\0') + little_endian(width - 1, 3) + little_endian(height - 1, 3));
+}
+
+std::string size_of(std::string_view bytes) {
+  const std::optional<blogin::assets::ImageSize> size = blogin::assets::image_size(bytes);
+
+  return size ? std::format("{}x{}", size->width, size->height) : "none";
+}
+
+}  // namespace
 
 SPEC {
   spec::describe("minifying css", [] {
@@ -274,5 +342,96 @@ SPEC {
 
       expect(blogin::assets::image_width("it's not here.png", tool)).to_eq(0);
     });
+  });
+}
+
+SPEC {
+  spec::describe("reading an image's size from its header", [] {
+    spec::it("reads a png", [] { expect(size_of(png_header(1200, 627))).to_eq("1200x627"); });
+
+    spec::it("reads a gif", [] { expect(size_of(gif_header(640, 480))).to_eq("640x480"); });
+
+    spec::it("reads a jpeg past the segments before its frame header", [] {
+      expect(size_of(jpeg_header(1200, 627))).to_eq("1200x627");
+    });
+
+    spec::it("reads a progressive jpeg", [] { expect(size_of(jpeg_header(800, 600, 0xC2))).to_eq("800x600"); });
+
+    // DHT shares the frame header's marker range and carries no size.
+    spec::it("does not take a huffman table for a jpeg frame header", [] {
+      expect(size_of(jpeg_header(800, 600, 0xC4))).to_eq("none");
+    });
+
+    spec::it("steps over fill bytes between jpeg segments", [] {
+      std::string bytes = jpeg_header(800, 600);
+      bytes.insert(20, "\xFF");
+
+      expect(size_of(bytes)).to_eq("800x600");
+    });
+
+    spec::it("reads a lossy webp", [] { expect(size_of(webp_lossy(1200, 627))).to_eq("1200x627"); });
+
+    spec::it("reads a lossless webp", [] { expect(size_of(webp_lossless(1200, 627))).to_eq("1200x627"); });
+
+    spec::it("reads an extended webp", [] { expect(size_of(webp_extended(1200, 627))).to_eq("1200x627"); });
+
+    spec::it("reads nothing from a webp chunk it does not know", [] {
+      expect(size_of(webp_header("ALPH", std::string(10, '\0')))).to_eq("none");
+    });
+
+    spec::it("reads nothing from an svg", [] {
+      expect(size_of("<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10'/>")).to_eq("none");
+    });
+
+    spec::it("reads nothing from a truncated png", [] {
+      expect(size_of(png_header(10, 10).substr(0, 20))).to_eq("none");
+    });
+
+    spec::it("reads nothing from a png whose first chunk is not its header", [] {
+      std::string bytes = png_header(10, 10);
+      bytes.replace(12, 4, "IDAT");
+
+      expect(size_of(bytes)).to_eq("none");
+    });
+
+    spec::it("reads nothing from a truncated gif", [] {
+      expect(size_of(gif_header(10, 10).substr(0, 8))).to_eq("none");
+    });
+
+    spec::it("reads nothing from a truncated jpeg frame header", [] {
+      const std::string bytes = jpeg_header(800, 600);
+
+      expect(size_of(bytes.substr(0, bytes.size() - 2))).to_eq("none");
+    });
+
+    spec::it("reads nothing from a jpeg that ends before its frame header", [] {
+      expect(size_of(jpeg_header(800, 600).substr(0, 22))).to_eq("none");
+    });
+
+    spec::it("reads nothing from a jpeg whose segments lose their markers", [] {
+      std::string bytes = jpeg_header(800, 600);
+      bytes[20] = 'x';
+
+      expect(size_of(bytes)).to_eq("none");
+    });
+
+    spec::it("reads nothing from a jpeg segment too short to hold its own length", [] {
+      std::string bytes = jpeg_header(800, 600);
+      bytes.replace(4, 2, big_endian(1, 2));
+
+      expect(size_of(bytes)).to_eq("none");
+    });
+
+    spec::it("reads nothing from a truncated webp", [] {
+      expect(size_of(webp_lossy(10, 10).substr(0, 24))).to_eq("none");
+    });
+
+    spec::it("reads nothing from a size of zero", [] { expect(size_of(gif_header(0, 10))).to_eq("none"); });
+
+    spec::it("reads nothing from a size too large to be an image", [] {
+      expect(size_of(png_header(0x80000000U, 10))).to_eq("none");
+    });
+
+    spec::it("reads nothing from an empty file", [] { expect(size_of("")).to_eq("none"); });
   });
 }

@@ -147,6 +147,10 @@ SPEC {
       });
 
       spec::it("reads toc", [] { expect(parsed("---\ntitle: X\ntoc: true\n---\n").toc).to_be_true(); });
+
+      spec::it("reads noindex", [] { expect(parsed("---\ntitle: X\nnoindex: true\n---\n").noindex).to_be_true(); });
+
+      spec::it("indexes a post by default", [] { expect(parsed("---\ntitle: X\n---\n").noindex).to_be_false(); });
     });
 
     spec::context("order", [] {
@@ -165,6 +169,38 @@ SPEC {
       spec::it("leaves it unset when it is not a number", [] {
         expect(parsed("---\ntitle: X\norder: first\n---\n").order.has_value()).to_be_false();
       });
+    });
+
+  });
+}
+
+SPEC {
+  spec::describe("Post", [] {
+    spec::context("an updated date", [] {
+      spec::it("reads it", [] {
+        expect(parsed("---\ntitle: X\nupdated: 2024-04-01\n---\n").updated_string()).to_eq("2024-04-01");
+      });
+
+      spec::it("leaves it empty when absent", [] {
+        expect(parsed("---\ntitle: X\n---\n").updated_string()).to_eq("");
+      });
+
+      spec::it("refuses one that is not a date", [] {
+        expect(error_of("---\ntitle: X\nupdated: later\n---\n", "bad.md"))
+          .to_contain("unparseable updated date 'later' in 'bad.md'");
+      });
+    });
+
+    spec::context("a share image", [] {
+      spec::it("reads it", [] {
+        expect(parsed("---\ntitle: X\nimage: /assets/share.png\n---\n").image).to_eq("/assets/share.png");
+      });
+
+      spec::it("does not keep it with the keys it does not know", [] {
+        expect(parsed("---\ntitle: X\nimage: /assets/share.png\n---\n").meta.size()).to_eq(std::size_t{0});
+      });
+
+      spec::it("leaves it empty when absent", [] { expect(parsed("---\ntitle: X\n---\n").image).to_eq(""); });
     });
 
     spec::context("keys it does not know", [] {

@@ -67,6 +67,7 @@ struct Page {
 
   std::string summary;
   std::string first_image;
+  ShareImage share_image;
   std::size_t word_count = 0;
   int reading_time = 0;
 
@@ -347,6 +348,12 @@ std::string listing_url(std::string_view section, int page_number, bool at_root,
   return join_url(prefix, path, clean_urls);
 }
 
+// Empty for no image, so a page recorded before share images existed compares
+// equal to one that still has none.
+std::string share_image_key(const ShareImage& image) {
+  return image.url.empty() ? std::string{} : std::format("{} {}x{}", image.url, image.width, image.height);
+}
+
 // What a page has to remember so the next build can describe it without
 // reading it: everything listings, feeds, and the search index ask for.
 Value metadata_of(const Page& page) {
@@ -373,6 +380,10 @@ Value metadata_of(const Page& page) {
   out.set("url-path", Value(page.url_path));
   out.set("translation-key", Value(page.translation_key));
   out.set("first-image", Value(page.first_image));
+  out.set("image", Value(page.post.image));
+  out.set("updated", Value(page.post.updated_string()));
+  out.set("noindex", Value(page.post.noindex));
+  out.set("share-image", Value(share_image_key(page.share_image)));
   out.set("word-count", Value(static_cast<std::int64_t>(page.word_count)));
   out.set("reading-time", Value(static_cast<std::int64_t>(page.reading_time)));
   out.set("tags", std::move(tags));
@@ -407,12 +418,19 @@ void apply_metadata(Page& page, const Value& metadata) {
   page.url_path = std::string(metadata["url-path"].as_string());
   page.translation_key = std::string(metadata["translation-key"].as_string());
   page.first_image = std::string(metadata["first-image"].as_string());
+  page.post.image = std::string(metadata["image"].as_string());
   page.word_count = static_cast<std::size_t>(metadata["word-count"].as_integer());
   page.reading_time = static_cast<int>(metadata["reading-time"].as_integer());
 
   if (const std::optional<Date> date = Date::parse(metadata["date"].as_string())) {
     page.post.date = *date;
   }
+
+  if (const std::optional<Date> updated = Date::parse(metadata["updated"].as_string())) {
+    page.post.updated = *updated;
+  }
+
+  page.post.noindex = metadata["noindex"].truthy();
 
   if (metadata.contains("order")) {
     page.post.order = metadata["order"].as_number();
@@ -438,6 +456,90 @@ void apply_metadata(Page& page, const Value& metadata) {
 
   page.tags = std::move(tags);
 }
+
+// Each image a page names in `image`, or the site names as its default, under
+// the url it is published at, with its size read from the file it is copied
+// from. Resolved once per image, however many pages name it.
+class ShareImages {
+public:
+  ShareImages(const BuildOptions& options, const std::map<std::string, std::string>& manifest,
+              const std::map<std::filesystem::path, std::filesystem::path>& static_sources)
+      : options_(options), manifest_(manifest), static_sources_(static_sources) {}
+
+  const ShareImage& resolve(const std::string& image) {
+    if (const auto found = resolved_.find(image); found != resolved_.end()) {
+      return found->second;
+    }
+
+    return resolved_.emplace(image, look_up(image)).first->second;
+  }
+
+  const std::vector<std::string>& warnings() const { return warnings_; }
+
+private:
+  ShareImage look_up(const std::string& image) {
+    if (image.empty()) {
+      return {};
+    }
+
+    if (image.starts_with("http://") || image.starts_with("https://") || image.starts_with("//")) {
+      return ShareImage{image, 0, 0};
+    }
+
+    const std::string url = image.starts_with('/') ? image : "/" + image;
+    const std::filesystem::path source = source_of(url);
+
+    ShareImage out;
+
+    const auto renamed = manifest_.find(url);
+    out.url = renamed == manifest_.end() ? url : renamed->second;
+
+    if (source.empty()) {
+      warnings_.push_back(std::format("share image '{}' is not in assets or static", image));
+
+      return out;
+    }
+
+    if (const std::optional<assets::ImageSize> size = assets::image_size(files::read_file(source))) {
+      out.width = size->width;
+      out.height = size->height;
+    } else {
+      warnings_.push_back(std::format("share image '{}' has no size blogin can read, so og:image:width "
+                                      "and og:image:height are left out", image));
+    }
+
+    return out;
+  }
+
+  // The site's own file first, then the theme's, matching the order the build
+  // publishes them in.
+  std::filesystem::path source_of(std::string_view url) const {
+    constexpr std::string_view assets_prefix = "/assets/";
+
+    if (url.starts_with(assets_prefix)) {
+      const std::filesystem::path relative(url.substr(assets_prefix.size()));
+
+      for (const std::filesystem::path& tree : {options_.assets, options_.theme_assets}) {
+        if (!tree.empty() && std::filesystem::is_regular_file(tree / relative)) {
+          return tree / relative;
+        }
+      }
+
+      return {};
+    }
+
+    const auto found = static_sources_.find(std::filesystem::path(url.substr(1)));
+
+    return found == static_sources_.end() ? std::filesystem::path{} : found->second;
+  }
+
+  const BuildOptions& options_;
+  const std::map<std::string, std::string>& manifest_;
+  const std::map<std::filesystem::path, std::filesystem::path>& static_sources_;
+
+  std::map<std::string, ShareImage> resolved_;
+  std::vector<std::string> warnings_;
+};
 
 struct PlannedAsset {
   // Relative to the output directory, so it already carries any fingerprint.
@@ -922,6 +1024,7 @@ std::string not_found_html() {
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="robots" content="noindex">
 <title>404 Not Found</title>
 </head>
 <body>
@@ -1195,6 +1298,14 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
     state.fingerprint += entry.second;
   }
 
+  ShareImages share_images(options, plan.manifest, static_sources);
+
+  // Every listing shows the default, so a change to its size or name is a
+  // change to every page.
+  const ShareImage default_share_image = share_images.resolve(config.image);
+
+  state.fingerprint += share_image_key(default_share_image);
+
   state.fingerprint = content_hash(state.fingerprint);
 
   // Order matters: a page names images by the url they were written with, so the
@@ -1309,6 +1420,22 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
     pages.push_back(std::move(page));
   }
 
+  for (Page& page : pages) {
+    page.share_image = share_images.resolve(page.post.image.empty() ? config.image : page.post.image);
+  }
+
+  // Feeds are only written for a site with posts, so only then advertised.
+  std::vector<FeedLink> feed_links;
+
+  if (!pages.empty()) {
+    for (const std::string& format : config.feed_formats) {
+      feed_links.push_back(FeedLink{std::string(feed::media_type_for(format)),
+                                    options.url_prefix + "/" + std::string(feed::filename_for(format))});
+    }
+  }
+
+  const std::string home_url = options.url_prefix + "/";
+
   // The posts either side of this one, in the order its section lists them.
   //
   // A post's neighbours are not a function of its own file, so adding,
@@ -1364,7 +1491,8 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
         settled = before["prev-url"].as_string() == page.previous_url &&
                   before["prev-title"].as_string() == page.previous_title &&
                   before["next-url"].as_string() == page.next_url &&
-                  before["next-title"].as_string() == page.next_title;
+                  before["next-title"].as_string() == page.next_title &&
+                  before["share-image"].as_string() == share_image_key(page.share_image);
       }
 
       // Kept, not kept-and-committed: whether this page can be left
@@ -1566,10 +1694,15 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
     view_page.chrome.site.set("title", Value(config.title));
     view_page.chrome.site.set("base-url", Value(config.base_url));
     view_page.chrome.site.set("author", Value(config.author));
+    view_page.chrome.site.set("twitter", Value(config.twitter));
     view_page.chrome.framework = framework;
     view_page.chrome.debug = config.debug;
     view_page.chrome.section = page.section;
     view_page.chrome.url = page.url;
+    view_page.chrome.share_image = page.share_image;
+    view_page.chrome.feeds = feed_links;
+    view_page.chrome.noindex = page.post.noindex;
+    view_page.chrome.home = page.url == home_url;
     view_page.chrome.nav = nav;
     view_page.chrome.languages = language_switcher(options, page.translation_key, clean_urls);
     view_page.chrome.has_header = store->has_partial("header", page.section);
@@ -1707,11 +1840,17 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
   // Every url the site publishes, gathered as it is produced. Deriving this
   // from what the writer changed would empty the sitemap on a rebuild that
   // changed nothing.
-  std::vector<std::string> locations;
+  std::vector<SitemapEntry> locations;
 
   locations.reserve(pages.size());
   for (const Page& page : pages) {
-    locations.push_back(config.base_url + page.url);
+    if (page.post.noindex) {
+      continue;
+    }
+
+    locations.push_back(SitemapEntry{config.base_url + page.url,
+                                     page.post.updated.valid() ? page.post.updated_string()
+                                                               : page.post.date_string()});
   }
 
   // Nothing was added, removed, or reparsed, so every listing, feed, and index
@@ -1749,9 +1888,12 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
       chrome.site.set("title", Value(config.title));
       chrome.site.set("base-url", Value(config.base_url));
       chrome.site.set("author", Value(config.author));
+      chrome.site.set("twitter", Value(config.twitter));
       chrome.framework = framework;
       chrome.debug = config.debug;
       chrome.section = std::string(section);
+      chrome.share_image = default_share_image;
+      chrome.feeds = feed_links;
       chrome.nav = nav;
       chrome.languages = section_switcher(options, section, clean_urls);
       chrome.has_header = store->has_partial("header", section);
@@ -1809,6 +1951,8 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
         ListingView listing;
         listing.chrome = chrome_for(section);
         listing.chrome.url = page_urls[number - 1];
+        listing.chrome.noindex = number > 1;
+        listing.chrome.home = listing.chrome.url == home_url;
         listing.page_number = static_cast<int>(number);
         listing.total_pages = static_cast<int>(total);
         listing.page_urls = page_urls;
@@ -1874,7 +2018,10 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
         writer.write(listing_file(options.output, section, static_cast<int>(number), at_root, clean_urls),
                      html);
 
-        locations.push_back(config.base_url + page_urls[number - 1]);
+        if (!listing.chrome.noindex) {
+          locations.push_back(SitemapEntry{config.base_url + page_urls[number - 1], {}});
+        }
+
         ++report.listings;
       }
 
@@ -1969,7 +2116,7 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
                                 : options.output / taxonomy / "index.html",
                      html);
 
-        locations.push_back(config.base_url + index.chrome.url);
+        locations.push_back(SitemapEntry{config.base_url + index.chrome.url, {}});
         ++report.listings;
       }
     }
@@ -2047,8 +2194,14 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
         }
       }
 
-      std::sort(locations.begin(), locations.end());
-      locations.erase(std::unique(locations.begin(), locations.end()), locations.end());
+      std::sort(locations.begin(), locations.end(), [](const SitemapEntry& left, const SitemapEntry& right) {
+        return left.location < right.location;
+      });
+      locations.erase(std::unique(locations.begin(), locations.end(),
+                                  [](const SitemapEntry& left, const SitemapEntry& right) {
+                                    return left.location == right.location;
+                                  }),
+                      locations.end());
 
       if (!shipped.contains("sitemap.xml")) {
         writer.write(options.output / "sitemap.xml", feed::sitemap(locations));
@@ -2086,6 +2239,7 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
         ListingView listing;
         listing.chrome = chrome_for("");
         listing.chrome.url = options.url_prefix + "/404";
+        listing.chrome.noindex = true;
 
         ViewContext context = view::build(listing);
 
@@ -2231,6 +2385,7 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
   report.changed = writer.changed();
   report.warnings = plan.warnings;
   report.warnings.insert(report.warnings.end(), warnings.begin(), warnings.end());
+  report.warnings.insert(report.warnings.end(), share_images.warnings().begin(), share_images.warnings().end());
 
   return report;
 }

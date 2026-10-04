@@ -50,6 +50,8 @@ SPEC {
       spec::it("taxonomises by tags", [=] { expect(config().taxonomies.size()).to_eq(std::size_t{1}); });
 
       spec::it("publishes an atom feed", [=] { expect(config().feed_formats[0]).to_eq("atom"); });
+
+      spec::it("names no share image", [=] { expect(config().image).to_eq(""); });
     });
 
     spec::context("reading values", [] {
@@ -58,6 +60,12 @@ SPEC {
       });
 
       spec::it("reads an integer", [] { expect(from(R"({"page-size":25})").page_size).to_eq(25); });
+
+      spec::it("reads the twitter handle", [] { expect(from(R"({"twitter":"@blogin"})").twitter).to_eq("@blogin"); });
+
+      spec::it("reads the share image", [] {
+        expect(from(R"({"image":"/assets/share.png"})").image).to_eq("/assets/share.png");
+      });
 
       spec::it("reads a boolean", [] { expect(from(R"({"clean-urls":true})").clean_urls).to_be_true(); });
 

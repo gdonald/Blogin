@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -57,6 +58,15 @@ std::string add_srcset(std::string_view html, const std::map<std::string, std::s
 // The first available image resizer, preferring ImageMagick for the same
 // results on every platform, then macOS sips. Empty when none is installed.
 std::string resizer();
+
+struct ImageSize {
+  int width = 0;
+  int height = 0;
+};
+
+// Read from the header of a PNG, GIF, JPEG, or WebP file, with no external
+// tool. Empty for any other format or a truncated header.
+std::optional<ImageSize> image_size(std::string_view bytes);
 
 // Zero when the tool cannot read the file.
 int image_width(const std::filesystem::path& file, std::string_view tool);

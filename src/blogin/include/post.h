@@ -18,10 +18,12 @@ namespace blogin {
 struct Post {
   std::string title;
   Date date;
+  Date updated;
   std::string slug;
   std::string description;
   std::string summary;
   std::string layout;
+  std::string image;
   std::string body;
   std::string filename;
 
@@ -30,6 +32,10 @@ struct Post {
 
   bool draft = false;
   bool toc = false;
+
+  // Asks search engines to leave the page out of their index, and leaves it out
+  // of the sitemap.
+  bool noindex = false;
 
   // Absent unless the front matter set it, so a section can order its posts by
   // hand instead of by date.
@@ -40,6 +46,8 @@ struct Post {
   std::vector<std::pair<std::string, std::string>> meta;
 
   std::string date_string() const { return date.valid() ? date.iso() : std::string{}; }
+
+  std::string updated_string() const { return updated.valid() ? updated.iso() : std::string{}; }
 
   // The terms this post carries for a taxonomy. "tags" reads the tag list;
   // anything else reads the meta key of that name.
