@@ -1,3 +1,5 @@
+#include <atomic>
+#include <cstddef>
 #include <string>
 #include <thread>
 #include <vector>
@@ -7,6 +9,7 @@
 #include "markdown.h"
 #include "support/spec.h"
 #include "template.h"
+#include "workers.h"
 
 using blogin::Arena;
 using blogin::CompiledTemplate;
@@ -41,6 +44,15 @@ std::vector<std::string> run_on_threads(const std::function<std::string()>& work
   }
 
   return results;
+}
+
+// Each call holds a kibibyte on the stack, so the depth is the stack it needs
+// in kibibytes. `volatile` keeps the compiler from folding the array away.
+std::size_t use_stack(std::size_t kibibytes) {
+  volatile char block[1024] = {};
+  block[0] = static_cast<char>(kibibytes);
+
+  return kibibytes == 0 ? static_cast<std::size_t>(block[0]) : use_stack(kibibytes - 1) + 1;
 }
 
 }  // namespace
@@ -92,6 +104,35 @@ SPEC {
           }
         });
       });
+    });
+  });
+}
+
+SPEC {
+  spec::describe("running on worker threads", [] {
+    spec::it("runs the task once on each thread", [] {
+      std::atomic<unsigned> runs{0};
+
+      blogin::run_on_workers(4, [&runs] { runs.fetch_add(1); });
+
+      expect(runs.load()).to_eq(4U);
+    });
+
+    spec::it("runs the task on the calling thread when no thread was started", [] {
+      std::atomic<unsigned> runs{0};
+
+      blogin::run_on_workers(0, [&runs] { runs.fetch_add(1); });
+
+      expect(runs.load()).to_eq(1U);
+    });
+
+    // macOS gives a new thread 512 KiB, which this would overflow.
+    spec::it("gives each thread a stack larger than a new thread gets on macOS", [] {
+      std::atomic<std::size_t> deepest{0};
+
+      blogin::run_on_workers(2, [&deepest] { deepest.store(use_stack(2048)); });
+
+      expect(deepest.load()).to_eq(std::size_t{2048});
     });
   });
 }

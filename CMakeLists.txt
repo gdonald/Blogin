@@ -346,6 +346,7 @@ add_library(blogin_core
   src/blogin/template_store.cpp
   src/blogin/view.cpp
   src/blogin/view_theme.cpp
+  src/blogin/workers.cpp
   src/blogin/writer.cpp
   src/blogin/build_state.cpp
   src/blogin/site.cpp

@@ -33,6 +33,7 @@
 #include "template_store.h"
 #include "text.h"
 #include "view.h"
+#include "workers.h"
 #include "writer.h"
 
 namespace blogin {
@@ -1563,16 +1564,7 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
     if (workers == 1 || pages.size() < 2) {
       worker();
     } else {
-      std::vector<std::thread> threads;
-
-      threads.reserve(workers);
-      for (unsigned index = 0; index < workers; ++index) {
-        threads.emplace_back(worker);
-      }
-
-      for (std::thread& thread : threads) {
-        thread.join();
-      }
+      run_on_workers(workers, worker);
     }
 
     if (failed.load()) {

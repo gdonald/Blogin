@@ -23,6 +23,12 @@
 - A `twitter` key in `blogin.json`, written as `twitter:site` and
   `twitter:creator`.
 
+### Fixed
+
+- Rendering threads now get an 8 MiB stack on every platform. macOS gives a
+  new thread 512 KiB, which an expression nested to the evaluator's limit could
+  overflow.
+
 ## 0.9.4
 
 ### Fixed

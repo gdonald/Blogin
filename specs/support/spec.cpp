@@ -1,4 +1,5 @@
 #include "support/spec.h"
+#include "workers.h"
 
 #include <algorithm>
 #include <atomic>
@@ -11,7 +12,6 @@
 #include <ranges>
 #include <stdexcept>
 #include <system_error>
-#include <thread>
 
 #include <unistd.h>
 
@@ -478,16 +478,7 @@ int run(int argc, char** argv) {
   if (jobs == 1) {
     worker();
   } else {
-    std::vector<std::thread> threads;
-
-    threads.reserve(jobs);
-    for (unsigned index = 0; index < jobs; ++index) {
-      threads.emplace_back(worker);
-    }
-
-    for (std::thread& thread : threads) {
-      thread.join();
-    }
+    blogin::run_on_workers(jobs, worker);
   }
 
   for (const std::size_t index : exclusive) {
