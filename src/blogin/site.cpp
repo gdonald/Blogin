@@ -1742,7 +1742,11 @@ std::expected<BuildReport, ParseError> build(const BuildOptions& options) {
     // section's is what resolving from the section's directory upward gives.
     const haml::Template* show = nullptr;
 
-    for (const std::string& candidate : {page.post.layout, std::string("show")}) {
+    const SectionConfig* section_config = config.section(page.section);
+    const std::string section_layout =
+      section_config != nullptr && section_config->layout.has_value() ? *section_config->layout : std::string{};
+
+    for (const std::string& candidate : {page.post.layout, section_layout, std::string("show")}) {
       if (!candidate.empty() && store->has(candidate, page.section)) {
         show = store->find(candidate, page.section);
         break;

@@ -42,7 +42,7 @@ constexpr std::string_view base_haml = R"HAML(!!! 5
 constexpr std::string_view show_haml = R"HAML(%article
   %h1= title
   - if show-dates
-    %p.meta= "#{date} · #{reading-time} min read"
+    %p.meta #{date} · #{reading-time} min read
   - if has-toc
     %nav.toc
       != toc-html

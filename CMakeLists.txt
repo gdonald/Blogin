@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(blogin
-  VERSION 0.9.4
+  VERSION 0.9.5
   DESCRIPTION "An insanely fast static site generator written in C++"
   LANGUAGES CXX
 )
@@ -433,6 +433,7 @@ add_executable(blogin_specs
   specs/asset_pipeline_spec.cpp
   specs/share_image_spec.cpp
   specs/seo_spec.cpp
+  specs/layout_choice_spec.cpp
   specs/scaffold_spec.cpp
   specs/cli_spec.cpp
   specs/http_spec.cpp

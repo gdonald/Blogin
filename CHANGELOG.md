@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.5
 
 ### Added
 
@@ -25,9 +25,38 @@
 
 ### Fixed
 
+- A long run of operators in a template expression, such as `1 + 1 + 1 ...`
+  thousands of terms long, overflowed the stack while it was evaluated. A chain
+  is now measured as it is parsed and refused past the same 64-level limit that
+  parentheses already had, with a "nested too deeply" error.
+- A section's `layout` in `blogin.json` was read and then ignored, so its posts
+  rendered through `show.haml`. They now render through the named layout, after
+  a post's own front-matter `layout` and before `show.haml`.
+- The scaffolded `show.haml` wrote the date line as an expression string, which
+  does not interpolate, so every post on a new site showed
+  `#{date} · #{reading-time} min read`. It is HAML text now and shows the date
+  and reading time.
 - Rendering threads now get an 8 MiB stack on every platform. macOS gives a
   new thread 512 KiB, which an expression nested to the evaluator's limit could
-  overflow.
+  overflow in a sanitizer build.
+
+### Testing
+
+- `scripts/test.sh` runs one stage at a time and stops at the first stage that
+  fails. That stage's output is printed and kept in `build/test-logs/`, along
+  with every other stage's. `--serial` is gone, and `-j` sets the cores each
+  stage gets.
+- A stage now stops at its first failing command. Before, bash ignored `set -e`
+  inside the stage, so a failed build went on to run the specs against the
+  previous binary.
+
+### Dependencies
+
+- The Debian base image of the build container moves from `34cd9e9` to
+  `f324c7f`.
+- The container build retries the apt.llvm.org key fetch for four minutes
+  instead of about 50 seconds.
+- `codecov/codecov-action` moves to 7.1.1, and the CodeQL actions to 4.38.0.
 
 ## 0.9.4
 

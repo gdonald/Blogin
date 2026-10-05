@@ -2,6 +2,7 @@
 #include <atomic>
 #include <filesystem>
 #include <ios>
+#include <iterator>
 #include <fstream>
 #include <format>
 #include <string>
@@ -88,6 +89,24 @@ SPEC {
       });
 
       spec::expect_golden("acceptance/scaffold.manifest", manifest_of(options.output));
+    });
+
+    // An expression string does not interpolate, so a scaffold that wrote the
+    // date line as `= "#{date} ..."` printed the braces on every post.
+    spec::it("writes a post's date and reading time rather than the code for them", [] {
+      const std::filesystem::path root = spec::scratch_directory("scaffold-meta");
+
+      blogin::scaffold::init(root, "none", false, "2026-03-04");
+
+      const auto config = blogin::Config::load(root / "blogin.json").value();
+      const blogin::BuildOptions options = blogin::BuildOptions::around(root / "content", config);
+
+      blogin::build(options);
+
+      std::ifstream input(options.output / "posts" / "hello-world" / "index.html", std::ios::binary);
+      const std::string page((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());
+
+      expect(page).to_contain("<p class=\"meta\">2026-03-04 · 1 min read</p>");
     });
 
     // A scaffolded site stopped building at three posts, because two of them
