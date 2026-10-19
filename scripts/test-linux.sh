@@ -14,6 +14,31 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 image="blogin-dev"
 
+builds='
+    cmake -S . -B build-linux/debug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++
+    cmake --build build-linux/debug -j"${BLOGIN_JOBS:-$(nproc)}"
+    ./build-linux/debug/blogin_specs --jobs "${BLOGIN_JOBS:-$(nproc)}"
+
+    cmake -S . -B build-linux/integer -DCMAKE_BUILD_TYPE=Debug -DBLOGIN_SANITIZE=ON \
+      -DBLOGIN_SANITIZE_INTEGER=ON -DCMAKE_CXX_COMPILER=clang++
+    cmake --build build-linux/integer -j"${BLOGIN_JOBS:-$(nproc)}"
+    ./build-linux/integer/blogin_specs --jobs "${BLOGIN_JOBS:-$(nproc)}"
+
+    BLOGIN_SANITIZE_BUILD_DIR=build-linux/integer ./scripts/sanitize-cli.sh
+
+    cmake -S . -B build-linux/tsan -DCMAKE_BUILD_TYPE=Debug -DBLOGIN_SANITIZE_THREAD=ON -DCMAKE_CXX_COMPILER=clang++
+    cmake --build build-linux/tsan -j"${BLOGIN_JOBS:-$(nproc)}"
+    ./build-linux/tsan/blogin_specs --jobs "${BLOGIN_JOBS:-$(nproc)}"
+  '
+
+# Set where this already runs inside the blogin-dev image, such as the home
+# lab's Jenkins, which has no Docker daemon to start a container with.
+if [[ "${BLOGIN_IN_CONTAINER:-0}" == "1" ]]; then
+  cd "$root"
+  BLOGIN_JOBS="${BLOGIN_JOBS:-}" bash -euo pipefail -c "$builds"
+  exit
+fi
+
 # --load because `docker build` is buildx wherever the plugin is installed, and
 # buildx leaves the result in its own cache rather than in the daemon's image
 # store unless it is told otherwise.
@@ -30,19 +55,4 @@ docker run --rm \
   -v "$root:/workspace" \
   -v blogin-linux-build:/workspace/build-linux \
   -w /workspace \
-  "$image" bash -euo pipefail -c '
-    cmake -S . -B build-linux/debug -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++
-    cmake --build build-linux/debug -j"${BLOGIN_JOBS:-$(nproc)}"
-    ./build-linux/debug/blogin_specs --jobs "${BLOGIN_JOBS:-$(nproc)}"
-
-    cmake -S . -B build-linux/integer -DCMAKE_BUILD_TYPE=Debug -DBLOGIN_SANITIZE=ON \
-      -DBLOGIN_SANITIZE_INTEGER=ON -DCMAKE_CXX_COMPILER=clang++
-    cmake --build build-linux/integer -j"${BLOGIN_JOBS:-$(nproc)}"
-    ./build-linux/integer/blogin_specs --jobs "${BLOGIN_JOBS:-$(nproc)}"
-
-    BLOGIN_SANITIZE_BUILD_DIR=build-linux/integer ./scripts/sanitize-cli.sh
-
-    cmake -S . -B build-linux/tsan -DCMAKE_BUILD_TYPE=Debug -DBLOGIN_SANITIZE_THREAD=ON -DCMAKE_CXX_COMPILER=clang++
-    cmake --build build-linux/tsan -j"${BLOGIN_JOBS:-$(nproc)}"
-    ./build-linux/tsan/blogin_specs --jobs "${BLOGIN_JOBS:-$(nproc)}"
-  '
+  "$image" bash -euo pipefail -c "$builds"

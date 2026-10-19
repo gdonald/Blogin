@@ -11,14 +11,21 @@ name: CI
 # build because the sanitizers, ThreadSanitizer, and coverage each instrument
 # the code differently.
 
+# Runs after the home lab's Jenkins build passes and reports the
+# continuous-integration/jenkins/branch commit status, so the cluster runs the
+# Linux stages first and GitHub's runners are used only for a commit that passed
+# them. A status event runs this file from the default branch, so each job
+# checks out the commit the status is for. A manual run tests the branch it is
+# started on.
 on:
-  push:
-    branches: [main]
-  pull_request:
+  status:
   workflow_dispatch:
 
+# Per commit rather than per branch: a status event's ref is always the
+# default branch, so grouping by ref would cancel one commit's run with
+# another's.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.sha || github.ref }}
   cancel-in-progress: true
 
 # Read-only by default. A job that needs to write says so itself, so a new job
@@ -35,6 +42,7 @@ jobs:
   # about every failure in one run beats learning about them one push at a time.
   macos:
     name: macOS ${{ matrix.stage }}
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: macos-15
     strategy:
       fail-fast: false
@@ -51,6 +59,8 @@ jobs:
           - dist
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       - name: Install Ninja
         run: brew install ninja
@@ -60,27 +70,36 @@ jobs:
 
   linux:
     name: Linux
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       - name: Build and test in the Debian container
         run: ./scripts/test.sh linux
 
   linux-static:
     name: Linux distribution binary
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       - name: Build statically and check it
         run: ./scripts/test.sh linux-static
 
   gcc:
     name: GCC
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       # Blogin ships built by clang. This job is a second opinion: GCC reports
       # shadowing and conversions clang accepts, and it builds against libstdc++
@@ -92,18 +111,24 @@ jobs:
 
   tidy:
     name: clang-tidy
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       - name: Check every translation unit
         run: ./scripts/test.sh tidy
 
   valgrind:
     name: Valgrind
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       # The one check that reports a read of uninitialised memory. The
       # sanitizers do not see that class of defect, and neither does coverage.
@@ -113,9 +138,12 @@ jobs:
 
   coverage:
     name: Coverage (macOS)
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: macos-15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       - name: Install Ninja
         run: brew install ninja
@@ -125,6 +153,7 @@ jobs:
 
   coverage-linux:
     name: Coverage (Linux)
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: ubuntu-24.04
     # At the job level so the upload step can test for the token in its `if`. A
     # step cannot read the env it declares itself.
@@ -132,6 +161,8 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       # The same floor on both platforms. Code reached only on one of them is
       # covered there and not here, so a number that holds on both is a number
@@ -158,9 +189,12 @@ jobs:
   # fuzz-weekly.yml, where they have time to find things.
   fuzz:
     name: Fuzz
+    if: github.event_name == 'workflow_dispatch' || (github.event.context == 'continuous-integration/jenkins/branch' && github.event.state == 'success')
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.sha || github.sha }}
 
       - name: Replay the corpus, then explore briefly
         run: |

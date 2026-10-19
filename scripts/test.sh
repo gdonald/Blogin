@@ -117,9 +117,15 @@ stage_codeql() {
 # Stages that need the container
 # ---------------------------------------------------------------------------
 
+# Set where this script already runs inside the blogin-dev image, such as the
+# home lab's Jenkins, which has no Docker daemon to start a container with. The
+# container stages then run their commands directly.
+in_container_already="${BLOGIN_IN_CONTAINER:-0}"
+
 # Built once per run, before the first container stage.
 build_image() {
-  if [[ "$image_built" == "yes" ]]; then
+  if [[ "$image_built" == "yes" || "$in_container_already" == "1" ]]; then
+    image_built=yes
     return
   fi
 
@@ -140,6 +146,11 @@ build_image() {
 }
 
 in_container() {
+  if [[ "$in_container_already" == "1" ]]; then
+    BLOGIN_JOBS=$jobs bash -euo pipefail -c "$1"
+    return
+  fi
+
   docker run --rm \
     -v "$root:/workspace" \
     -v blogin-linux-build:/workspace/$container_build_root \
@@ -382,7 +393,7 @@ main() {
   local docker_available=no
   local codeql_available=no
 
-  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  if [[ "$in_container_already" == "1" ]] || { command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; }; then
     docker_available=yes
   fi
 

@@ -373,6 +373,16 @@ Bug reports, patches, and questions are welcome. The workflow is the usual one.
 A pull request describes what changed and why. Title it for the behaviour, not
 for a file or a phase number.
 
+CI runs in two places, in order. The maintainer's Jenkins runs the Linux stages
+first, from `Jenkinsfile`, each in its own pod from the `docker/` image with
+`BLOGIN_IN_CONTAINER=1`, which runs a container stage's commands directly
+instead of through `docker run`. When those pass, Jenkins reports the
+`continuous-integration/jenkins/branch` status, and that starts
+`.github/workflows/ci.yml` on GitHub for the same commit, which runs every stage
+including macOS and fuzzing. Jenkins builds branches of this repository, so a
+pull request from a fork reaches GitHub's checks once the maintainer starts the
+workflow by hand.
+
 Every CI job runs one stage of `scripts/test.sh`, so a passing run locally is
 the same set of checks CI will run:
 
