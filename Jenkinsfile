@@ -5,7 +5,10 @@
 // The macOS stages and fuzzing stay on GitHub, which starts once this passes and
 // Jenkins reports the continuous-integration/jenkins/branch status.
 
-def stagePod = '''
+// A function rather than a variable: a `def` at the top of a Jenkinsfile is
+// local to the script body, and linuxStage() below cannot see it.
+def stagePod() {
+  return '''
   apiVersion: v1
   kind: Pod
   spec:
@@ -28,11 +31,12 @@ def stagePod = '''
             cpu: "4"
             memory: 6Gi
 '''
+}
 
 def linuxStage(String name) {
   return {
     stage(name) {
-      podTemplate(yaml: stagePod) {
+      podTemplate(yaml: stagePod()) {
         node(POD_LABEL) {
           container('dev') {
             checkout scm
