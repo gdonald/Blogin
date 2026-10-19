@@ -864,9 +864,7 @@ SPEC {
                   "Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
                   "Sec-WebSocket-Version: 13\r\n\r\n");
 
-      const std::string answer = upgrade_answer(client);
-
-      expect(answer).to_contain(R"("type":"failure")");
+      expect(client.receive_until(R"("type":"failure")")).to_contain(R"("type":"failure")");
     });
 
     spec::it("carries what went wrong", [] {
@@ -886,7 +884,7 @@ SPEC {
                   "Connection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
                   "Sec-WebSocket-Version: 13\r\n\r\n");
 
-      expect(upgrade_answer(client)).to_contain("no such name");
+      expect(client.receive_until("no such name")).to_contain("no such name");
     });
 
     // Clearing the overlay is what tells you the fix worked.
