@@ -549,13 +549,52 @@ SPEC {
 
         const auto first = blogin::build(options).value();
 
-        write(root / "blogin.json", read(root / "blogin.json"));
-        std::filesystem::last_write_time(root / "blogin.json", std::filesystem::file_time_type::clock::now());
+        blogin::BuildOptions changed = options;
+        changed.config.highlight = !options.config.highlight;
 
-        const auto config = blogin::Config::load(root / "blogin.json").value();
-        blogin::BuildOptions changed = blogin::BuildOptions::around(root / "content", config);
+        expect(blogin::build(changed)->rendered).to_eq(first.rendered);
+      });
 
-        expect(blogin::build(changed)->rendered).to_be_less_than(first.rendered + 1);
+      // The server keeps the configuration it read at startup, so blogin.json
+      // can say something the build was never given.
+      spec::it("renders nothing when blogin.json changes but the configuration given did not", [] {
+        const std::filesystem::path root = copy_site("blogin.dev");
+        const blogin::BuildOptions options = options_for(root);
+
+        blogin::build(options);
+
+        write(root / "blogin.json", read(root / "blogin.json") + "\n");
+
+        expect(blogin::build(options)->rendered).to_eq(std::size_t{0});
+      });
+
+      spec::it("renders everything with the new configuration after a build that used the old one", [] {
+        const std::filesystem::path root = copy_site("blogin.dev");
+        const blogin::BuildOptions options = options_for(root);
+
+        const auto first = blogin::build(options).value();
+
+        blogin::BuildOptions changed = options;
+        changed.config.highlight = !options.config.highlight;
+
+        blogin::build(changed);
+
+        expect(blogin::build(options)->rendered).to_eq(first.rendered);
+      });
+
+      spec::it("keeps the redirects of pages it did not render", [] {
+        const std::filesystem::path root = copy_site("blogin.dev");
+        const blogin::BuildOptions options = options_for(root);
+
+        write(options.content / "guide" / "moved.md",
+              "---\ntitle: Moved\naliases: [/old-place]\n---\nHere now.\n");
+        blogin::build(options);
+
+        const std::filesystem::path post = options.content / "guide" / "2026-07-12-configuration.md";
+        write(post, read(post) + "\n\nAn added paragraph.\n");
+        blogin::build(options);
+
+        expect(std::filesystem::exists(options.output / "old-place" / "index.html")).to_be_true();
       });
 
       spec::it("notices a post that was deleted", [] {

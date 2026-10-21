@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- The build fingerprint hashed the bytes of `blogin.json` instead of the
+  configuration the build was given. An edit to `blogin.json` while `blogin
+  serve` ran was rendered with the old configuration and recorded under the new
+  file's fingerprint, so after a restart no page was rendered again. The
+  fingerprint now hashes the configuration itself, which also covers a key
+  overridden on the command line, such as `--debug`.
+- An incremental build removed the alias redirects of every page it did not
+  render, because a reused page's aliases were not saved in the build state.
+
 ## 0.9.5
 
 ### Added

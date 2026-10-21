@@ -355,6 +355,22 @@ std::string share_image_key(const ShareImage& image) {
   return image.url.empty() ? std::string{} : std::format("{} {}x{}", image.url, image.width, image.height);
 }
 
+template <typename Item>
+Value list_value(const std::vector<Item>& items) {
+  Value list = Value::array();
+
+  for (const Item& item : items) {
+    list.push(Value(item));
+  }
+
+  return list;
+}
+
+template <typename Item>
+Value optional_value(const std::optional<Item>& item) {
+  return item.has_value() ? Value(*item) : Value();
+}
+
 // What a page has to remember so the next build can describe it without
 // reading it: everything listings, feeds, and the search index ask for.
 Value metadata_of(const Page& page) {
@@ -389,6 +405,7 @@ Value metadata_of(const Page& page) {
   out.set("reading-time", Value(static_cast<std::int64_t>(page.reading_time)));
   out.set("tags", std::move(tags));
   out.set("meta", std::move(meta));
+  out.set("aliases", list_value(page.post.aliases));
 
   // Recorded so the next build can tell whether the pages either side of this
   // one moved. They are what a post's own page links to, and neither of them
@@ -443,6 +460,10 @@ void apply_metadata(Page& page, const Value& metadata) {
 
   for (const auto& entry : metadata["meta"].members()) {
     page.post.meta.emplace_back(entry.first, std::string(entry.second.as_string()));
+  }
+
+  for (const Value& alias : metadata["aliases"].items()) {
+    page.post.aliases.emplace_back(alias.as_string());
   }
 
   Value tags = Value::array();
@@ -930,11 +951,76 @@ AssetPlan plan_assets(const BuildOptions& options, const Config& config,
   return plan;
 }
 
+// The configuration the build was given, which is not always what blogin.json
+// says: the server holds the file as it read it at startup, and a command line
+// flag can override a key.
+std::string config_material(const Config& config) {
+  Value out = Value::object();
+  out.set("title", Value(config.title));
+  out.set("base-url", Value(config.base_url));
+  out.set("output-dir", Value(config.output_dir));
+  out.set("author", Value(config.author));
+  out.set("image", Value(config.image));
+  out.set("twitter", Value(config.twitter));
+  out.set("home-section", Value(config.home_section));
+  out.set("css-framework", Value(config.css_framework));
+  out.set("theme", Value(config.theme));
+  out.set("page-size", Value(config.page_size));
+  out.set("summary-length", Value(config.summary_length));
+  out.set("reading-wpm", Value(config.reading_wpm));
+  out.set("related-count", Value(config.related_count));
+  out.set("search-text-length", Value(config.search_text_length));
+  out.set("search-cap", Value(config.search_cap));
+  out.set("clean-urls", Value(config.clean_urls));
+  out.set("debug", Value(config.debug));
+  out.set("search", Value(config.search));
+  out.set("highlight", Value(config.highlight));
+  out.set("robots", Value(config.robots));
+  out.set("minify", Value(config.minify));
+  out.set("fingerprint", Value(config.fingerprint));
+  out.set("image-widths", list_value(config.image_widths));
+  out.set("taxonomies", list_value(config.taxonomies));
+  out.set("feed-formats", list_value(config.feed_formats));
+  out.set("languages", list_value(config.languages));
+
+  Value languages = Value::array();
+
+  for (const LanguageConfig& language : config.language_config) {
+    Value one = Value::object();
+    one.set("code", Value(language.code));
+    one.set("title", optional_value(language.title));
+
+    languages.push(std::move(one));
+  }
+
+  out.set("language-config", std::move(languages));
+
+  Value sections = Value::array();
+
+  for (const SectionConfig& section : config.sections) {
+    Value one = Value::object();
+    one.set("name", Value(section.name));
+    one.set("page-size", optional_value(section.page_size));
+    one.set("label", optional_value(section.label));
+    one.set("order", optional_value(section.order));
+    one.set("nav", optional_value(section.nav));
+    one.set("layout", optional_value(section.layout));
+    one.set("index-dates", optional_value(section.index_dates));
+    one.set("show-dates", optional_value(section.show_dates));
+
+    sections.push(std::move(one));
+  }
+
+  out.set("sections", std::move(sections));
+
+  return to_json(out);
+}
+
 // Everything outside the content tree that could change any page. One value,
 // and any difference rebuilds the lot, which is fast in the common case and
 // correct in every case.
 std::string global_fingerprint(const BuildOptions& options) {
-  std::string material;
+  std::string material = config_material(options.config);
 
   // What a page is rendered from. A difference here can change any output, so
   // the bytes are what count.
@@ -942,8 +1028,6 @@ std::string global_fingerprint(const BuildOptions& options) {
     material += path.generic_string();
     material += source_hash(path);
   };
-
-  add_file(options.content.parent_path() / "blogin.json");
 
   for (const std::filesystem::path& directory :
        {options.layouts, options.theme_layouts, options.data, options.shortcodes}) {
