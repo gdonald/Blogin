@@ -15,7 +15,7 @@
 # the day one lands, and nothing updates those pins the way Dependabot updates
 # the digest above.
 
-FROM debian@sha256:4c25275446ca371766b8b093c696782eabce06263fccacb8d5d813b3dc44b308
+FROM debian@sha256:9c6e381421d0f48d1b8133e573f33c185ee16cbf505eda9c4a8a4791b25ea8a6
 
 ARG LLVM_VERSION=21
 ARG DEBIAN_FRONTEND=noninteractive
